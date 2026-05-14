@@ -624,7 +624,7 @@ async function delAnn(id){if(!confirm('Löschen?'))return;await SB.from('announc
 
 // ========== SONGS ==========
 async function renderSongs(){
-  const{data}=await SB.from('songs').select('*').order('title');
+  const{data}=await SB.from('songs').select('*').order('liedanfang',{nullsFirst:false}).order('title');
   cachedSongs=data||[];buildFilters();displaySongs(filteredSongs());
 }
 function buildFilters(){
@@ -640,22 +640,30 @@ function buildFilters(){
 function filteredSongs(){
   const q=(document.getElementById('song-search')?.value||'').toLowerCase();
   return cachedSongs.filter(s=>{
-    if(q&&!['title','komponist','textdichter','liedanfang','arrangeur','uebersetzer'].some(k=>(s[k]||'').toLowerCase().includes(q)))return false;
+    if(q&&!['title','liedanfang','refrain','komponist','textdichter','arrangeur','uebersetzer'].some(k=>(s[k]||'').toLowerCase().includes(q)))return false;
     if(songFilter.besetzung&&s.besetzung!==songFilter.besetzung)return false;
     if(songFilter.thema&&s.thema!==songFilter.thema)return false;
     if(songFilter.anlass&&s.anlass!==songFilter.anlass)return false;
     if(songFilter.person){const p=songFilter.person.toLowerCase();if(!['komponist','textdichter','arrangeur','uebersetzer'].some(k=>(s[k]||'').toLowerCase().includes(p)))return false;}
     return true;
+  }).sort((a,b)=>{
+    // Sort by liedanfang first, fallback to title
+    const ka=(a.liedanfang||a.title||'').toLowerCase();
+    const kb=(b.liedanfang||b.title||'').toLowerCase();
+    return ka.localeCompare(kb,'de');
   });
 }
 function filterSongs(){displaySongs(filteredSongs());}
 function displaySongs(songs){
   const el=document.getElementById('song-list');
   if(!songs.length){el.innerHTML='<div class="empty"><p>Keine Lieder gefunden</p></div>';return;}
-  el.innerHTML=songs.map(s=>`<div class="card" onclick="openSongDetail('${s.id}')">
-    <div class="crow"><div style="flex:1"><div class="ct">${esc(s.title)}</div><div class="cs">${esc(s.komponist)||'Unbekannt'}${s.arrangeur?' · Arr. '+esc(s.arrangeur):''}</div></div>
-    <div>${s.besetzung?`<span class="badge">${esc(s.besetzung)}</span>`:''}</div></div>
-    ${s.thema||s.anlass?`<div class="cmeta">${s.thema?`<span class="badge blue">${esc(s.thema)}</span>`:''}${s.anlass?`<span class="badge green">${esc(s.anlass)}</span>`:''}</div>`:''}</div>`).join('');
+  el.innerHTML=songs.map(s=>{
+    const haupttext=s.liedanfang?`${esc(s.liedanfang)} <span style="color:var(--text3)">|</span> ${esc(s.title)}`:esc(s.title);
+    return`<div class="card" onclick="openSongDetail('${s.id}')">
+      <div class="crow"><div style="flex:1"><div class="ct">${haupttext}</div><div class="cs">${esc(s.komponist)||'Unbekannt'}${s.arrangeur?' · Arr. '+esc(s.arrangeur):''}</div></div>
+      <div>${s.besetzung?`<span class="badge">${esc(s.besetzung)}</span>`:''}</div></div>
+      ${s.thema||s.anlass?`<div class="cmeta">${s.thema?`<span class="badge blue">${esc(s.thema)}</span>`:''}${s.anlass?`<span class="badge green">${esc(s.anlass)}</span>`:''}</div>`:''}</div>`;
+  }).join('');
 }
 
 async function openSongDetail(id){
@@ -760,31 +768,40 @@ async function delSong(id){await SB.from('songs').delete().eq('id',id);closeModa
 // ========== CSV IMPORT/EXPORT ==========
 async function importCSV(event){
   const file=event.target.files[0];if(!file)return;
-  // Read with proper encoding
-  const buffer=await file.arrayBuffer();
-  const decoder=new TextDecoder('utf-8');
-  let text=decoder.decode(buffer);
-  // Remove BOM if present
+  // Try UTF-8 first, then Latin-1 as fallback for Excel exports
+  let text='';
+  try{
+    const buf=await file.arrayBuffer();
+    // Try UTF-8 with BOM first
+    let dec=new TextDecoder('utf-8');
+    text=dec.decode(buf);
+    // Check if result has many replacement chars → try latin1
+    const badChars=(text.match(/\uFFFD/g)||[]).length;
+    if(badChars>5){
+      dec=new TextDecoder('windows-1252');
+      text=dec.decode(buf);
+    }
+  }catch(e){text=await file.text();}
+  // Remove BOM
   if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  // Split lines – handle \r\n and \n
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length<2){T('CSV leer oder ungültig','err');return;}
-  // Auto-detect delimiter: semicolon or comma
-  const firstLine=lines[0];
-  const sep=firstLine.includes(';')&&firstLine.split(';').length>firstLine.split(',').length?';':',';
+  // Auto-detect delimiter
+  const first=lines[0];
+  const sep=first.split(';').length>first.split(',').length?';':',';
   const headers=lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase().trim());
-  // Show detected headers for debugging
-  console.log('CSV delimiter:', sep);
+  console.log('CSV: delimiter='+sep+', headers='+headers.join('|')+', rows='+(lines.length-1));
   if(!headers.includes('title')&&!headers.includes('titel')){
-    T(`Spalte "title" nicht gefunden. Gefunden: ${headers.slice(0,4).join(', ')}…`,'err');
+    T(`Spalte "title" nicht gefunden. Erkannte Spalten: ${headers.slice(0,5).join(', ')}…`,'err');
     event.target.value='';return;
   }
-  // Map german 'titel' to 'title'
-  const hi=h=>headers.indexOf(h);
   const getVal=(vals,name)=>{
-    const alt={'title':['titel','name'],'liedanfang':['anfang','beginn'],'komponist':['composer','music'],'textdichter':['text','lyricist','dichter']};
-    let idx=hi(name);
-    if(idx<0&&alt[name])for(const a of alt[name]){idx=hi(a);if(idx>=0)break;}
-    return idx>=0?(vals[idx]||'').trim().replace(/^"|"$/g,''):'';
+    const aliases={'title':['titel'],'liedanfang':['anfang'],'komponist':['composer'],'textdichter':['dichter','lyricist']};
+    let idx=headers.indexOf(name);
+    if(idx<0&&aliases[name])for(const a of aliases[name]){idx=headers.indexOf(a);if(idx>=0)break;}
+    if(idx<0||idx>=vals.length)return'';
+    return vals[idx].replace(/^"|"$/g,'').trim();
   };
   const songs=[];
   for(let i=1;i<lines.length;i++){
@@ -805,15 +822,51 @@ async function importCSV(event){
       links:[],created_by:currentUser.id
     });
   }
-  if(!songs.length){T(`Keine Lieder mit "title"-Spalte gefunden. Trennzeichen: "${sep}"  Kopfzeile: ${headers.slice(0,5).join('|')}…`,'err');event.target.value='';return;}
-  // Insert in batches of 50
-  let imported=0;
-  for(let i=0;i<songs.length;i+=50){
-    const{error}=await SB.from('songs').insert(songs.slice(i,i+50));
-    if(error){T('Fehler: '+error.message,'err');event.target.value='';return;}
-    imported+=Math.min(50,songs.length-i);
+  if(!songs.length){T('Keine gültigen Zeilen gefunden','err');event.target.value='';return;}
+  T(`${songs.length} Lieder gefunden, vergleiche mit Datenbank…`);
+  // Load existing songs for comparison
+  const{data:existing}=await SB.from('songs').select('id,title,liedanfang');
+  const existingMap={};
+  (existing||[]).forEach(s=>{
+    // Index by liedanfang (primary) and title (fallback)
+    if(s.liedanfang)existingMap[s.liedanfang.toLowerCase().trim()]=s.id;
+    existingMap['t:'+s.title.toLowerCase().trim()]=s.id;
+  });
+  const toInsert=[];const toUpdate=[];
+  songs.forEach(s=>{
+    const keyLied=(s.liedanfang||'').toLowerCase().trim();
+    const keyTitle='t:'+s.title.toLowerCase().trim();
+    const existId=keyLied&&existingMap[keyLied]?existingMap[keyLied]:existingMap[keyTitle];
+    if(existId){
+      const{created_by,...upd}=s;
+      toUpdate.push({id:existId,...upd});
+    } else {
+      toInsert.push(s);
+    }
+  });
+  T(`${toInsert.length} neu · ${toUpdate.length} aktualisieren…`);
+  let imported=0,updated=0,errors=0;
+  // Insert new songs in batches
+  for(let i=0;i<toInsert.length;i+=50){
+    const{error}=await SB.from('songs').insert(toInsert.slice(i,i+50));
+    if(error){
+      for(const s of toInsert.slice(i,i+50)){
+        const{error:e2}=await SB.from('songs').insert(s);
+        if(!e2)imported++;else{console.warn('Skip "'+s.title+'":',e2.message);errors++;}
+      }
+    } else imported+=Math.min(50,toInsert.length-i);
+    T(`Neu: ${imported}/${toInsert.length} · Aktualisiert: ${updated}/${toUpdate.length}…`);
   }
-  event.target.value='';T(`${imported} Lieder importiert`,'ok');renderSongs();
+  // Update existing songs one by one (upsert by id)
+  for(let i=0;i<toUpdate.length;i++){
+    const{id,...fields}=toUpdate[i];
+    const{error}=await SB.from('songs').update(fields).eq('id',id);
+    if(!error)updated++;else{console.warn('Update error:',error.message);errors++;}
+    if(i%20===0)T(`Neu: ${imported}/${toInsert.length} · Aktualisiert: ${updated}/${toUpdate.length}…`);
+  }
+  event.target.value='';
+  renderSongs();
+  T(`✅ ${imported} neu importiert · ${updated} aktualisiert${errors?` · ${errors} Fehler`:''}`,'ok');
 }
 function parseCSVLine(line,sep=','){
   const result=[];let cur='';let inQ=false;

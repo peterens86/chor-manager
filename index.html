@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chor">
+<link rel="manifest" href="manifest.json">
+<title>Chor Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0f0f1a;--bg2:#1a1a2e;--card:#1e1e35;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.15);
+  --accent:#c9a84c;--accent2:#e8c76d;
+  --text:#f0ece4;--text2:#a8a4b0;--text3:#6b6878;
+  --danger:#e05555;--success:#4caf82;--info:#5b8dee;--warn:#e8a020;
+  --r:10px;--r2:16px;
+  --fd:'Playfair Display',Georgia,serif;--fb:'DM Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;}
+#app{display:flex;flex-direction:column;height:100%;}
+
+/* CONFIG */
+#cfg-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px;}
+.cfg-card{background:var(--card);border:0.5px solid rgba(201,168,76,.4);border-radius:var(--r2);padding:28px;max-width:400px;width:100%;}
+.cfg-card h2{font-family:var(--fd);color:var(--accent);font-size:22px;margin-bottom:12px;}
+.cfg-card p{color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:10px;}
+.cfg-card code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--accent2);}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;overflow-y:auto;z-index:200;}
+.login-logo{font-family:var(--fd);font-size:36px;color:var(--accent);margin-bottom:6px;text-align:center;}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:28px;text-align:center;}
+.login-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:24px;width:100%;max-width:380px;}
+.login-card h2{font-family:var(--fd);font-size:20px;margin-bottom:16px;}
+.ltabs{display:flex;margin-bottom:18px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);}
+.ltab{flex:1;padding:8px;text-align:center;font-size:13px;cursor:pointer;background:transparent;color:var(--text2);}
+.ltab.active{background:rgba(201,168,76,.15);color:var(--accent2);}
+.lerr{font-size:13px;color:var(--danger);margin-top:8px;display:none;}
+
+/* TOPBAR */
+#topbar{background:var(--bg2);border-bottom:0.5px solid var(--border);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:56px;flex-shrink:0;}
+#topbar h1{font-family:var(--fd);font-size:20px;font-weight:600;color:var(--accent);}
+.ub{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;position:relative;}
+.av{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bg);flex-shrink:0;}
+.ndot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--danger);border:2px solid var(--bg2);}
+
+/* NAV */
+#nav{background:var(--bg2);border-top:0.5px solid var(--border);display:flex;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom);}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px;gap:3px;cursor:pointer;font-size:9px;color:var(--text3);transition:color .2s;user-select:none;position:relative;}
+.ni svg{width:20px;height:20px;stroke-width:1.5;fill:none;stroke:currentColor;}
+.ni.active{color:var(--accent);}
+.ni:active{opacity:.7;}
+.nbadge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--danger);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.page{display:none;min-height:100%;padding:16px;}
+.page.active{display:block;}
+
+/* CARDS */
+.card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s;}
+.card:active{border-color:var(--border2);}
+.crow{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.ct{font-family:var(--fd);font-size:16px;font-weight:500;color:var(--text);line-height:1.3;}
+.cs{font-size:12px;color:var(--text2);margin-top:3px;}
+.cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(201,168,76,.15);color:var(--accent2);border:0.5px solid rgba(201,168,76,.3);}
+.badge.blue{background:rgba(91,141,238,.15);color:#8fb3f5;border-color:rgba(91,141,238,.3);}
+.badge.green{background:rgba(76,175,130,.15);color:#6dc49a;border-color:rgba(76,175,130,.3);}
+.badge.red{background:rgba(224,85,85,.15);color:#f08080;border-color:rgba(224,85,85,.3);}
+.badge.warn{background:rgba(232,160,32,.15);color:#f5c06a;border-color:rgba(232,160,32,.3);}
+
+/* HEADERS */
+.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.hrow h2{font-family:var(--fd);font-size:22px;font-weight:600;}
+.ph{margin-bottom:16px;}
+.ph h2{font-family:var(--fd);font-size:22px;font-weight:600;}
+.ph p{font-size:13px;color:var(--text2);margin-top:4px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r);font-family:var(--fb);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s,transform .1s;}
+.btn:active{transform:scale(.97);}
+.btn-p{background:var(--accent);color:var(--bg);}
+.btn-g{background:transparent;color:var(--text2);border:0.5px solid var(--border2);}
+.btn-d{background:rgba(224,85,85,.15);color:var(--danger);border:0.5px solid rgba(224,85,85,.3);}
+.btn-i{background:rgba(91,141,238,.15);color:#8fb3f5;border:0.5px solid rgba(91,141,238,.3);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-ic{width:36px;height:36px;padding:0;border-radius:var(--r);background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);color:var(--accent);}
+
+/* CAMERA SCAN BTN */
+.scan-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--r);background:rgba(91,141,238,.12);border:0.5px solid rgba(91,141,238,.3);color:#8fb3f5;font-size:14px;cursor:pointer;width:100%;margin-bottom:12px;}
+.scan-btn svg{width:20px;height:20px;stroke:#8fb3f5;fill:none;stroke-width:1.8;flex-shrink:0;}
+
+/* SEARCH */
+.sbar{display:flex;align-items:center;gap:8px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:0 12px;margin-bottom:10px;}
+.sbar svg{width:18px;height:18px;stroke:var(--text3);fill:none;stroke-width:1.8;flex-shrink:0;}
+.sbar input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:var(--fb);padding:10px 0;}
+.sbar input::placeholder{color:var(--text3);}
+.frow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.fchip{padding:5px 12px;border-radius:20px;font-size:12px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;transition:all .15s;}
+.fchip.active{background:rgba(201,168,76,.15);border-color:var(--accent);color:var(--accent2);}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;flex-direction:column;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .25s;}
+.mo.open{opacity:1;pointer-events:all;}
+.md{background:var(--bg2);border-radius:20px 20px 0 0;border-top:0.5px solid var(--border2);max-height:94vh;display:flex;flex-direction:column;transform:translateY(40px);transition:transform .25s;}
+.mo.open .md{transform:translateY(0);}
+.mhandle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 0;}
+.mh{padding:12px 16px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mh h3{font-family:var(--fd);font-size:18px;font-weight:600;}
+.mclose{width:30px;height:30px;border-radius:50%;background:var(--card);border:none;color:var(--text2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mb{overflow-y:auto;padding:16px;flex:1;}
+.mf{padding:12px 16px;border-top:0.5px solid var(--border);display:flex;gap:10px;}
+
+/* FORM */
+.fg{margin-bottom:14px;}
+.fl{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block;letter-spacing:.04em;text-transform:uppercase;}
+.fi{width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;color:var(--text);font-size:14px;font-family:var(--fb);outline:none;transition:border-color .15s;}
+.fi:focus{border-color:var(--accent);}
+.fi::placeholder{color:var(--text3);}
+select.fi{appearance:none;}
+textarea.fi{resize:vertical;min-height:80px;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fs{margin-bottom:20px;}
+.fst{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--border);}
+
+/* DETAIL */
+.df{margin-bottom:14px;}
+.dl{font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;}
+.dv{font-size:15px;color:var(--text);}
+.dv a{color:var(--info);text-decoration:none;}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;}
+.ddiv{height:0.5px;background:var(--border);margin:14px 0;}
+
+/* PROGRAM ITEMS */
+.pitem{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;}
+.pnum{width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,.15);color:var(--accent2);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ptitle{font-size:14px;font-weight:500;}
+.psub{font-size:12px;color:var(--text2);margin-top:2px;}
+.proles{margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);}
+.prole-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;}
+.prole-label{color:var(--text3);}
+
+/* ATTENDANCE */
+.atti{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--border);}
+.attb{display:flex;gap:6px;}
+.ab{width:30px;height:30px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--card);color:var(--text3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ab.yes{background:rgba(76,175,130,.15);border-color:rgba(76,175,130,.4);color:var(--success);}
+.ab.no{background:rgba(224,85,85,.15);border-color:rgba(224,85,85,.4);color:var(--danger);}
+
+/* CALENDAR */
+.chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.cmonth{font-family:var(--fd);font-size:20px;font-weight:600;}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:16px;}
+.cdow{font-size:10px;color:var(--text3);text-align:center;padding:4px 0;font-weight:500;}
+.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;position:relative;font-size:13px;}
+.cday:hover{background:rgba(255,255,255,.05);}
+.cday.today{background:rgba(201,168,76,.15);color:var(--accent);font-weight:600;}
+.cday.has-event::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--accent);}
+.cday.other-month{color:var(--text3);}
+.cevt{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent);}
+.cevt.probe{border-left-color:var(--info);}
+.cevt.konzert{border-left-color:var(--success);}
+
+/* ANNOUNCEMENTS */
+.acard{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;}
+.acard.urgent{border-color:rgba(224,85,85,.5);background:rgba(224,85,85,.07);}
+.acard.high{border-color:rgba(232,160,32,.4);}
+.acard.unread::before{content:'';display:block;width:8px;height:8px;border-radius:50%;background:var(--accent);float:right;margin-top:4px;}
+
+/* ANALYTICS */
+.qchip{padding:8px 14px;border-radius:var(--r);font-size:13px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;margin-bottom:8px;display:block;width:100%;text-align:left;}
+.qchip:active{border-color:var(--accent);color:var(--accent2);}
+.rtable{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
+.rtable th{text-align:left;padding:8px 10px;background:rgba(255,255,255,.05);color:var(--text2);font-size:11px;letter-spacing:.04em;text-transform:uppercase;}
+.rtable td{padding:8px 10px;border-bottom:0.5px solid var(--border);}
+.rtable tr:last-child td{border-bottom:none;}
+
+/* CHAT */
+.chatbox{min-height:160px;max-height:45vh;overflow-y:auto;padding:12px;background:rgba(0,0,0,.2);border-radius:var(--r);border:0.5px solid var(--border);margin-bottom:12px;}
+.cmsg{margin-bottom:10px;}
+.cmsg.user .bbl{background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;display:inline-block;max-width:85%;float:right;clear:both;}
+.cmsg.bot .bbl{background:var(--card);border:0.5px solid var(--border);border-radius:12px 12px 12px 4px;padding:8px 12px;font-size:13px;display:inline-block;max-width:92%;clear:both;white-space:pre-wrap;}
+
+/* CAMERA OVERLAY */
+#cam-overlay{position:fixed;inset:0;background:#000;z-index:500;display:none;flex-direction:column;}
+#cam-video{flex:1;object-fit:cover;width:100%;}
+#cam-canvas{display:none;}
+.cam-bar{background:rgba(0,0,0,.7);padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;}
+.cam-shutter{width:64px;height:64px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5);cursor:pointer;flex-shrink:0;}
+.cam-close{color:#fff;font-size:28px;cursor:pointer;width:44px;text-align:center;}
+.cam-hint{color:rgba(255,255,255,.7);font-size:12px;flex:1;text-align:center;line-height:1.4;}
+.cam-frame{position:absolute;inset:15%;border:2px solid rgba(201,168,76,.7);border-radius:12px;pointer-events:none;}
+.cam-corner{position:absolute;width:20px;height:20px;border-color:var(--accent);border-style:solid;}
+.cam-corner.tl{top:-2px;left:-2px;border-width:3px 0 0 3px;}
+.cam-corner.tr{top:-2px;right:-2px;border-width:3px 3px 0 0;}
+.cam-corner.bl{bottom:-2px;left:-2px;border-width:0 0 3px 3px;}
+.cam-corner.br{bottom:-2px;right:-2px;border-width:0 3px 3px 0;}
+
+/* SCAN RESULT */
+#scan-result-modal .scan-preview{width:100%;max-height:180px;object-fit:cover;border-radius:var(--r);margin-bottom:14px;}
+.scan-field{background:rgba(201,168,76,.06);border:0.5px solid rgba(201,168,76,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;}
+.scan-field .sl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.scan-field .sv{font-size:14px;color:var(--text);}
+.processing{display:flex;align-items:center;gap:10px;padding:20px;justify-content:center;color:var(--text2);font-size:14px;}
+.spin{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* STATS */
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.scard{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px;}
+.snum{font-family:var(--fd);font-size:28px;font-weight:600;color:var(--accent);}
+.slabel{font-size:12px;color:var(--text2);margin-top:2px;}
+
+/* MISC */
+.st{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 8px;}
+.empty{text-align:center;padding:48px 24px;}
+.empty p{color:var(--text3);font-size:14px;}
+.loading{display:flex;align-items:center;gap:10px;padding:40px;justify-content:center;color:var(--text3);}
+.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:0.5px solid var(--border2);border-radius:24px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;transition:all .3s;z-index:300;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+::-webkit-scrollbar{width:0;}
+
+/* EVENT PROGRAM EDIT ROW */
+.ep-row{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;}
+.ep-row-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.ep-row-num{width:24px;height:24px;border-radius:50%;background:rgba(201,168,76,.15);color:var(--accent2);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ep-roles{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<!-- CONFIG SCREEN -->
+<div id="cfg-screen">
+  <div class="cfg-card">
+    <h2>⚙️ Supabase konfigurieren</h2>
+    <p>Bitte trage deine Supabase-Zugangsdaten ein. Diese findest du unter <code>Settings → API</code>.</p>
+    <input class="fi" id="cfg-url" type="text" placeholder="https://xxxx.supabase.co" style="margin-bottom:10px">
+    <input class="fi" id="cfg-key" type="text" placeholder="Anon/Public Key (eyJ…)" style="margin-bottom:10px">
+    <p style="margin-bottom:10px">Für die Kamera-Scan-Funktion benötigst du einen <strong>Anthropic API Key</strong>:</p>
+    <input class="fi" id="cfg-anthropic" type="text" placeholder="sk-ant-… (optional)" style="margin-bottom:14px">
+    <p style="font-size:11px;color:var(--text3)">Alle Daten werden nur lokal in diesem Browser gespeichert.</p>
+    <button class="btn btn-p" style="width:100%;margin-top:10px" onclick="saveConfig()">Speichern & starten</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">♪ Chor Manager</div>
+  <div class="login-sub">Lied- und Veranstaltungsverwaltung</div>
+  <div class="login-card">
+    <div class="ltabs">
+      <div class="ltab active" id="lt-login" onclick="switchTab('login')">Anmelden</div>
+      <div class="ltab" id="lt-reg" onclick="switchTab('reg')">Registrieren</div>
+    </div>
+    <div id="lf-login">
+      <div class="fg"><label class="fl">E-Mail</label><input class="fi" id="l-email" type="email" placeholder="name@chor.de"></div>
+      <div class="fg"><label class="fl">Passwort</label><input class="fi" id="l-pass" type="password" placeholder="Passwort"></div>
+      <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="doLogin()">Anmelden</button>
+      <div class="lerr" id="l-err"></div>
+    </div>
+    <div id="lf-reg" style="display:none">
+      <div class="fg"><label class="fl">Name *</label><input class="fi" id="r-name" placeholder="Vor- und Nachname"></div>
+      <div class="fg"><label class="fl">E-Mail *</label><input class="fi" id="r-email" type="email"></div>
+      <div class="fg"><label class="fl">Telefon</label><input class="fi" id="r-phone" type="tel" placeholder="+49 …"></div>
+      <div class="fg"><label class="fl">Stimmgruppe</label>
+        <select class="fi" id="r-stimme"><option value="">– wählen –</option><option>Sopran</option><option>Mezzosopran</option><option>Alt</option><option>Tenor</option><option>Bariton</option><option>Bass</option></select>
+      </div>
+      <div class="fg"><label class="fl">Passwort *</label><input class="fi" id="r-pass" type="password" placeholder="Min. 6 Zeichen"></div>
+      <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="doRegister()">Registrieren</button>
+      <div class="lerr" id="r-err"></div>
+      <p style="font-size:11px;color:var(--text3);margin-top:10px">Nach der Registrierung bitte E-Mail bestätigen. Ein Admin schaltet dein Konto frei.</p>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div id="topbar">
+    <h1>♪ Chor Manager</h1>
+    <div class="ub" onclick="openProfile()">
+      <div class="av" id="tb-av">?</div>
+      <span id="tb-name"></span>
+      <div class="ndot" id="ndot" style="display:none"></div>
+    </div>
+  </div>
+
+  <div id="content">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="ph"><h2 id="d-greet">Guten Tag</h2><p id="d-sub"></p></div>
+      <div id="d-anns"></div>
+      <div class="srow">
+        <div class="scard"><div class="snum" id="ds-songs">–</div><div class="slabel">Lieder</div></div>
+        <div class="scard"><div class="snum" id="ds-events">–</div><div class="slabel">Veranstaltungen</div></div>
+      </div>
+      <div class="st">Nächste Termine</div><div id="d-cal"></div>
+      <div class="st">Bevorstehende Veranstaltungen</div><div id="d-events"></div>
+    </div>
+
+    <!-- MITTEILUNGEN -->
+    <div class="page" id="page-ann">
+      <div class="hrow"><h2>Mitteilungen</h2><button class="btn btn-ic" id="ann-add-btn" onclick="openAnnForm()" style="display:none">+</button></div>
+      <div id="ann-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
+    </div>
+
+    <!-- LIEDER -->
+    <div class="page" id="page-songs">
+      <div class="hrow"><h2>Repertoire</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ic" id="song-scan-nav-btn" onclick="startScan('song')" title="Foto scannen" style="display:none">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+          <button class="btn btn-ic" id="song-add-btn" onclick="openSongForm()" style="display:none">+</button>
+        </div>
+      </div>
+      <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Titel, Komponist…" oninput="filterSongs()" id="song-search"></div>
+      <div class="frow" id="song-filters"></div>
+      <div id="song-list"></div>
+    </div>
+
+    <!-- VERANSTALTUNGEN -->
+    <div class="page" id="page-events">
+      <div class="hrow"><h2>Veranstaltungen</h2><button class="btn btn-ic" id="ev-add-btn" onclick="openEventForm()" style="display:none">+</button></div>
+      <div id="ev-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
+    </div>
+
+    <!-- KALENDER -->
+    <div class="page" id="page-cal">
+      <div class="hrow"><h2>Kalender</h2><button class="btn btn-ic" id="cal-add-btn" onclick="openCalForm()" style="display:none">+</button></div>
+      <div id="cal-wrap"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="page" id="page-stats">
+      <div class="ph"><h2>Auswertungen</h2><p>Statistiken &amp; Chat-Abfragen</p></div>
+      <div class="st">Schnellabfragen</div>
+      <button class="qchip" onclick="runQ('last_sung')">🎵 Wann wurde jedes Lied zuletzt gesungen?</button>
+      <button class="qchip" onclick="runQ('never')">🔇 Lieder die noch nie gesungen wurden</button>
+      <button class="qchip" onclick="runQ('ranking')">📊 Häufigkeitsranking</button>
+      <button class="qchip" onclick="runQ('suggestions')">💡 Liedvorschläge</button>
+      <div class="st">Zeitraumabfrage</div>
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg"><label class="fl">Von</label><input class="fi" type="date" id="q-from"></div>
+        <div class="fg"><label class="fl">Bis</label><input class="fi" type="date" id="q-to"></div>
+      </div>
+      <button class="btn btn-g" style="width:100%;margin-bottom:16px" onclick="runQ('period')">Zeitraum auswerten</button>
+      <div class="st">Chat-Abfragen</div>
+      <div class="chatbox" id="chat-msgs"></div>
+      <div style="display:flex;gap:8px">
+        <input class="fi" id="chat-in" placeholder="z.B. Wie oft haben wir Hallelujah gesungen?" onkeydown="if(event.key==='Enter')sendChat()" style="flex:1">
+        <button class="btn btn-p btn-sm" onclick="sendChat()">→</button>
+      </div>
+      <div id="q-result" style="margin-top:16px"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="ph"><h2>Admin</h2></div>
+      <div id="settings-body"></div>
+    </div>
+  </div><!-- content -->
+
+  <!-- NAV -->
+  <div id="nav">
+    <div class="ni active" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Start</div>
+    <div class="ni" onclick="showPage('ann')" id="ni-ann"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="nbadge" id="ann-badge" style="display:none">0</span>News</div>
+    <div class="ni" onclick="showPage('songs')"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Lieder</div>
+    <div class="ni" onclick="showPage('events')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Termine</div>
+    <div class="ni" onclick="showPage('cal')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Kalender</div>
+    <div class="ni" onclick="showPage('stats')"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats</div>
+    <div class="ni" id="ni-settings" onclick="showPage('settings')" style="display:none"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Admin</div>
+  </div>
+</div><!-- app -->
+
+<!-- CAMERA OVERLAY -->
+<div id="cam-overlay">
+  <div style="position:relative;flex:1;overflow:hidden">
+    <video id="cam-video" autoplay playsinline muted></video>
+    <canvas id="cam-canvas"></canvas>
+    <div class="cam-frame">
+      <div class="cam-corner tl"></div><div class="cam-corner tr"></div>
+      <div class="cam-corner bl"></div><div class="cam-corner br"></div>
+    </div>
+    <div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;text-align:center" id="cam-instruction">Notenblatt / Liederbuch in den Rahmen halten</div>
+  </div>
+  <div class="cam-bar">
+    <div class="cam-close" onclick="stopCam()">✕</div>
+    <div style="flex:1;text-align:center">
+      <div class="cam-shutter" onclick="capturePhoto()"></div>
+    </div>
+    <div style="width:44px"></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<!-- Song Detail -->
+<div class="mo" id="m-song-detail"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3 id="sd-title">Lied</h3><button class="mclose" onclick="closeModal('m-song-detail')">×</button></div>
+  <div class="mb" id="sd-body"></div>
+  <div class="mf" id="sd-footer"></div>
+</div></div>
+
+<!-- Song Form -->
+<div class="mo" id="m-song-form"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3 id="sf-title-h">Lied</h3><button class="mclose" onclick="closeModal('m-song-form')">×</button></div>
+  <div class="mb" id="sf-body"></div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-song-form')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveSong()" style="flex:2">Speichern</button>
+  </div>
+</div></div>
+
+<!-- Scan Result / Confirm -->
+<div class="mo" id="m-scan-result"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3 id="sr-title">Scan-Ergebnis</h3><button class="mclose" onclick="closeModal('m-scan-result')">×</button></div>
+  <div class="mb" id="sr-body"></div>
+  <div class="mf" id="sr-footer"></div>
+</div></div>
+
+<!-- Event Detail -->
+<div class="mo" id="m-ev-detail"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3 id="ed-title">Veranstaltung</h3><button class="mclose" onclick="closeModal('m-ev-detail')">×</button></div>
+  <div class="mb" id="ed-body"></div>
+  <div class="mf" id="ed-footer"></div>
+</div></div>
+
+<!-- Event Form -->
+<div class="mo" id="m-ev-form"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3 id="ef-title-h">Veranstaltung</h3><button class="mclose" onclick="closeModal('m-ev-form')">×</button></div>
+  <div class="mb" id="ef-body"></div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-ev-form')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveEvent()" style="flex:2">Speichern</button>
+  </div>
+</div></div>
+
+<!-- Announcement Form -->
+<div class="mo" id="m-ann-form"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3>Mitteilung erstellen</h3><button class="mclose" onclick="closeModal('m-ann-form')">×</button></div>
+  <div class="mb">
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="af-title"></div>
+    <div class="fg"><label class="fl">Nachricht *</label><textarea class="fi" id="af-body" style="min-height:120px"></textarea></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Priorität</label><select class="fi" id="af-prio"><option value="normal">Normal</option><option value="high">Wichtig</option><option value="urgent">Dringend</option></select></div>
+      <div class="fg"><label class="fl">Ablaufdatum</label><input class="fi" type="date" id="af-exp"></div>
+    </div>
+  </div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-ann-form')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveAnn()" style="flex:2">Senden</button>
+  </div>
+</div></div>
+
+<!-- Calendar Event Form -->
+<div class="mo" id="m-cal-form"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3 id="cf-title-h">Termin</h3><button class="mclose" onclick="closeModal('m-cal-form')">×</button></div>
+  <div class="mb">
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="cf-title"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Datum *</label><input class="fi" type="date" id="cf-datum"></div>
+      <div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="cf-time"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Bis Datum</label><input class="fi" type="date" id="cf-bis"></div>
+      <div class="fg"><label class="fl">Bis Uhrzeit</label><input class="fi" type="time" id="cf-bis-t"></div>
+    </div>
+    <div class="fg"><label class="fl">Ort</label><input class="fi" id="cf-ort"></div>
+    <div class="fg"><label class="fl">Typ</label><select class="fi" id="cf-typ"><option value="probe">Probe</option><option value="konzert">Konzert</option><option value="sonstiges">Sonstiges</option></select></div>
+    <div class="fg"><label class="fl">Beschreibung</label><textarea class="fi" id="cf-desc"></textarea></div>
+  </div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-cal-form')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveCalEvt()" style="flex:2">Speichern</button>
+  </div>
+</div></div>
+
+<!-- Profile -->
+<div class="mo" id="m-profile"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3>Mein Profil</h3><button class="mclose" onclick="closeModal('m-profile')">×</button></div>
+  <div class="mb" id="prof-body"></div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-profile')" style="flex:1">Schließen</button>
+    <button class="btn btn-p" onclick="saveProfile()" style="flex:2">Speichern</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== CONFIG =====
+const CFG_KEY='choirCfg';
+let SB=null, currentUser=null, currentProfile=null;
+let cachedSongs=[], cachedEvents=[], calDate=new Date();
+let editSongId=null, editEvId=null, editCalId=null;
+let songFilter={search:'',besetzung:'',thema:'',anlass:''};
+let scanMode='song'; // 'song' or 'event'
+let scanEventId=null;
+let capturedImageB64=null;
+
+function getCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}catch{return{}}}
+function saveConfig(){
+  const url=document.getElementById('cfg-url').value.trim();
+  const key=document.getElementById('cfg-key').value.trim();
+  const ant=document.getElementById('cfg-anthropic').value.trim();
+  if(!url||!key){alert('Supabase URL und Key erforderlich');return;}
+  localStorage.setItem(CFG_KEY,JSON.stringify({url,key,ant}));
+  location.reload();
+}
+
+// ===== UTILS =====
+function T(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.style.borderColor=type==='err'?'rgba(224,85,85,.4)':type==='ok'?'rgba(76,175,130,.4)':'';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fD(d){if(!d)return'';const p=String(d).split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:d;}
+function fT(t){if(!t)return'';return String(t).substring(0,5);}
+function today(){return new Date().toISOString().slice(0,10);}
+
+// ===== AUTH =====
+async function doLogin(){
+  const e=document.getElementById('l-email').value.trim();
+  const p=document.getElementById('l-pass').value;
+  const err=document.getElementById('l-err');err.style.display='none';
+  const{data,error}=await SB.auth.signInWithPassword({email:e,password:p});
+  if(error){err.textContent=error.message;err.style.display='block';return;}
+  await loadProfile(data.user);startApp();
+}
+async function doRegister(){
+  const name=document.getElementById('r-name').value.trim();
+  const email=document.getElementById('r-email').value.trim();
+  const phone=document.getElementById('r-phone').value.trim();
+  const stimme=document.getElementById('r-stimme').value;
+  const pass=document.getElementById('r-pass').value;
+  const err=document.getElementById('r-err');err.style.display='none';
+  if(!name||!email||!pass){err.textContent='Pflichtfelder ausfüllen';err.style.display='block';return;}
+  const{error}=await SB.auth.signUp({email,password:pass,options:{data:{name,phone,stimme}}});
+  if(error){err.textContent=error.message;err.style.display='block';return;}
+  err.style.color='var(--success)';err.textContent='Registrierung erfolgreich! Bitte E-Mail bestätigen.';err.style.display='block';
+}
+async function doLogout(){await SB.auth.signOut();currentUser=null;currentProfile=null;document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
+function switchTab(t){
+  document.getElementById('lf-login').style.display=t==='login'?'':'none';
+  document.getElementById('lf-reg').style.display=t==='reg'?'':'none';
+  document.getElementById('lt-login').classList.toggle('active',t==='login');
+  document.getElementById('lt-reg').classList.toggle('active',t==='reg');
+}
+async function loadProfile(user){currentUser=user;const{data}=await SB.from('profiles').select('*').eq('id',user.id).single();currentProfile=data;}
+
+// ===== APP =====
+function startApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  const p=currentProfile||{};
+  document.getElementById('tb-name').textContent=p.name||'';
+  document.getElementById('tb-av').textContent=(p.name||'?').charAt(0).toUpperCase();
+  const isAdmin=p.role==='admin';
+  if(isAdmin){
+    document.getElementById('ni-settings').style.display='flex';
+    ['song-add-btn','song-scan-nav-btn','ev-add-btn','ann-add-btn','cal-add-btn'].forEach(id=>document.getElementById(id).style.display='');
+  }
+  SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
+  showPage('dashboard');
+}
+
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const pages=['dashboard','ann','songs','events','cal','stats','settings'];
+  const navItems=document.querySelectorAll('.ni');
+  const idx=pages.indexOf(name);
+  if(idx>=0&&navItems[idx])navItems[idx].classList.add('active');
+  const loaders={dashboard:renderDash,ann:renderAnn,songs:renderSongs,events:renderEvents,cal:renderCal,stats:initStats,settings:renderSettings};
+  if(loaders[name])loaders[name]();
+}
+
+// ===== UNREAD =====
+async function loadUnread(){
+  const{data}=await SB.from('announcements').select('id,announcement_reads(user_id)').order('created_at',{ascending:false});
+  if(!data)return;
+  const n=data.filter(a=>!(a.announcement_reads||[]).some(r=>r.user_id===currentUser.id)).length;
+  document.getElementById('ann-badge').textContent=n;
+  document.getElementById('ann-badge').style.display=n?'flex':'none';
+  document.getElementById('ndot').style.display=n?'block':'none';
+}
+
+// ===== DASHBOARD =====
+async function renderDash(){
+  const h=new Date().getHours();
+  document.getElementById('d-greet').textContent=`${h<12?'Guten Morgen':h<18?'Guten Tag':'Guten Abend'}, ${(currentProfile||{}).name||''}!`;
+  const[{count:sc},{count:ec}]=await Promise.all([SB.from('songs').select('*',{count:'exact',head:true}),SB.from('events').select('*',{count:'exact',head:true})]);
+  document.getElementById('ds-songs').textContent=sc||0;document.getElementById('ds-events').textContent=ec||0;
+  const{data:anns}=await SB.from('announcements').select('*,announcement_reads(user_id)').order('created_at',{ascending:false}).limit(5);
+  const unread=(anns||[]).filter(a=>!(a.announcement_reads||[]).some(r=>r.user_id===currentUser.id));
+  document.getElementById('d-anns').innerHTML=unread.length?`<div class="st">Ungelesene Mitteilungen (${unread.length})</div>`+unread.slice(0,2).map(a=>`<div class="acard ${a.priority} unread" onclick="markRead('${a.id}');showPage('ann')"><b style="font-size:14px">${esc(a.title)}</b><div style="font-size:13px;color:var(--text2);margin-top:4px">${esc(a.body.substring(0,90))}${a.body.length>90?'…':''}</div></div>`).join(''):'';
+  const{data:cevts}=await SB.from('calendar_events').select('*').gte('datum',today()).order('datum').limit(4);
+  document.getElementById('d-cal').innerHTML=(cevts||[]).length?cevts.map(e=>`<div class="cevt ${e.typ}"><div style="font-weight:500;font-size:14px">${esc(e.title)}</div><div style="font-size:12px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>';
+  const{data:evts}=await SB.from('events').select('*').gte('datum',today()).order('datum').limit(3);
+  document.getElementById('d-events').innerHTML=(evts||[]).length?evts.map(e=>`<div class="card" onclick="openEvDetail('${e.id}')"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Veranstaltungen</p>';
+  loadUnread();
+}
+
+// ===== ANNOUNCEMENTS =====
+async function renderAnn(){
+  const{data}=await SB.from('announcements').select('*,announcement_reads(user_id),profiles(name)').order('created_at',{ascending:false});
+  const el=document.getElementById('ann-list');
+  if(!data?.length){el.innerHTML='<div class="empty"><p>Keine Mitteilungen</p></div>';return;}
+  const now=new Date();
+  el.innerHTML=data.filter(a=>!a.expires_at||new Date(a.expires_at)>now).map(a=>{
+    const read=(a.announcement_reads||[]).some(r=>r.user_id===currentUser.id);
+    return`<div class="acard ${a.priority} ${read?'':'unread'}" onclick="markRead('${a.id}')">
+      <b style="font-size:15px">${esc(a.title)}</b>
+      <div style="font-size:13px;color:var(--text2);margin-top:5px;line-height:1.5">${esc(a.body)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">${fD(a.created_at?.slice(0,10))} · ${esc((a.profiles||{}).name||'Admin')} · <span class="badge ${a.priority==='urgent'?'red':a.priority==='high'?'warn':''}">${a.priority==='urgent'?'Dringend':a.priority==='high'?'Wichtig':'Normal'}</span></div>
+      ${currentProfile?.role==='admin'?`<button class="btn btn-d btn-sm" style="margin-top:8px" onclick="event.stopPropagation();delAnn('${a.id}')">Löschen</button>`:''}
+    </div>`;
+  }).join('');loadUnread();
+}
+async function markRead(id){await SB.from('announcement_reads').upsert({announcement_id:id,user_id:currentUser.id},{onConflict:'announcement_id,user_id'});loadUnread();}
+function openAnnForm(){document.getElementById('af-title').value='';document.getElementById('af-body').value='';document.getElementById('af-exp').value='';openModal('m-ann-form');}
+async function saveAnn(){
+  const title=document.getElementById('af-title').value.trim();const body=document.getElementById('af-body').value.trim();
+  if(!title||!body){T('Titel und Text erforderlich','err');return;}
+  await SB.from('announcements').insert({title,body,priority:document.getElementById('af-prio').value,expires_at:document.getElementById('af-exp').value||null,created_by:currentUser.id});
+  closeModal('m-ann-form');renderAnn();T('Mitteilung gesendet','ok');
+}
+async function delAnn(id){if(!confirm('Löschen?'))return;await SB.from('announcements').delete().eq('id',id);renderAnn();}
+
+// ===== SONGS =====
+async function renderSongs(){
+  const{data}=await SB.from('songs').select('*').order('title');
+  cachedSongs=data||[];buildFilters();displaySongs(filteredSongs());
+}
+function buildFilters(){
+  const bes=[...new Set(cachedSongs.map(s=>s.besetzung).filter(Boolean))];
+  const the=[...new Set(cachedSongs.map(s=>s.thema).filter(Boolean))];
+  const anl=[...new Set(cachedSongs.map(s=>s.anlass).filter(Boolean))];
+  const el=document.getElementById('song-filters');el.innerHTML='';
+  [...bes,...the,...anl].forEach(v=>{
+    const c=document.createElement('div');c.className='fchip'+(songFilter.besetzung===v||songFilter.thema===v||songFilter.anlass===v?' active':'');c.textContent=v;
+    c.onclick=()=>{if(bes.includes(v))songFilter.besetzung=songFilter.besetzung===v?'':v;else if(the.includes(v))songFilter.thema=songFilter.thema===v?'':v;else songFilter.anlass=songFilter.anlass===v?'':v;buildFilters();displaySongs(filteredSongs());};
+    el.appendChild(c);
+  });
+}
+function filteredSongs(){
+  const q=(document.getElementById('song-search')?.value||'').toLowerCase();
+  return cachedSongs.filter(s=>{
+    if(q&&!['title','komponist','textdichter','liedanfang','arrangeur'].some(k=>(s[k]||'').toLowerCase().includes(q)))return false;
+    if(songFilter.besetzung&&s.besetzung!==songFilter.besetzung)return false;
+    if(songFilter.thema&&s.thema!==songFilter.thema)return false;
+    if(songFilter.anlass&&s.anlass!==songFilter.anlass)return false;
+    return true;
+  });
+}
+function filterSongs(){displaySongs(filteredSongs());}
+function displaySongs(songs){
+  const el=document.getElementById('song-list');
+  if(!songs.length){el.innerHTML='<div class="empty"><p>Keine Lieder gefunden</p></div>';return;}
+  el.innerHTML=songs.map(s=>`<div class="card" onclick="openSongDetail('${s.id}')">
+    <div class="crow"><div style="flex:1"><div class="ct">${esc(s.title)}</div><div class="cs">${esc(s.komponist)||'Unbekannt'}${s.arrangeur?' · Arr. '+esc(s.arrangeur):''}</div></div>
+    <div>${s.besetzung?`<span class="badge">${esc(s.besetzung)}</span>`:''}</div></div>
+    ${s.thema||s.anlass?`<div class="cmeta">${s.thema?`<span class="badge blue">${esc(s.thema)}</span>`:''}${s.anlass?`<span class="badge green">${esc(s.anlass)}</span>`:''}</div>`:''}</div>`).join('');
+}
+async function openSongDetail(id){
+  const s=cachedSongs.find(x=>x.id===id)||{};
+  document.getElementById('sd-title').textContent=s.title||'Lied';
+  function df(label,val,type){
+    if(!val)return`<div class="df"><div class="dl">${label}</div><div class="dv" style="color:var(--text3)">–</div></div>`;
+    if(type==='badge')return`<div class="df"><div class="dl">${label}</div><div class="dv"><span class="badge">${esc(val)}</span></div></div>`;
+    if(type==='full')return`<div class="df" style="grid-column:1/-1"><div class="dl">${label}</div><div class="dv">${esc(val)}</div></div>`;
+    return`<div class="df"><div class="dl">${label}</div><div class="dv">${esc(val)}</div></div>`;
+  }
+  document.getElementById('sd-body').innerHTML=`
+    <div class="dgrid" style="margin-bottom:14px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}</div>
+    <div class="ddiv"></div>
+    <div class="dgrid" style="margin-bottom:14px">${df('Komponist',s.komponist)}${df('Textdichter',s.textdichter)}${df('Arrangeur',s.arrangeur)}${df('Übersetzer',s.uebersetzer)}</div>
+    <div class="ddiv"></div>
+    <div class="dgrid" style="margin-bottom:14px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
+    ${(s.links||[]).length?`<div class="ddiv"></div><div class="dl">Links</div><div style="margin-top:6px">${s.links.map(l=>`<a href="${esc(l)}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;background:var(--card);border:0.5px solid var(--border);font-size:12px;color:var(--info);margin:3px;text-decoration:none">${esc(l.replace(/https?:\/\//,'').substring(0,32))}</a>`).join('')}</div>`:''}
+    ${s.notizen?`<div class="ddiv"></div>${df('Notizen',s.notizen,'full')}`:''}`;
+  const footer=document.getElementById('sd-footer');footer.innerHTML='';
+  if(currentProfile?.role==='admin'){
+    const eb=document.createElement('button');eb.className='btn btn-g';eb.style.flex='1';eb.textContent='Bearbeiten';
+    eb.onclick=()=>{closeModal('m-song-detail');openSongForm(id);};
+    const db=document.createElement('button');db.className='btn btn-d';db.style.flex='1';db.textContent='Löschen';
+    db.onclick=()=>{if(confirm('Löschen?'))delSong(id);};
+    footer.appendChild(eb);footer.appendChild(db);
+  }
+  openModal('m-song-detail');
+}
+function openSongForm(id=null, prefill={}){
+  editSongId=id;
+  const s=id?cachedSongs.find(x=>x.id===id)||{}:prefill;
+  document.getElementById('sf-title-h').textContent=id?'Lied bearbeiten':'Lied hinzufügen';
+  document.getElementById('sf-body').innerHTML=buildSongFormHTML(s);
+  openModal('m-song-form');
+}
+function buildSongFormHTML(s){
+  return`<div class="fs"><div class="fst">Allgemein</div>
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="sf-title" value="${esc(s.title||'')}"></div>
+    <div class="fr"><div class="fg"><label class="fl">Liedanfang</label><input class="fi" id="sf-anf" value="${esc(s.liedanfang||'')}"></div><div class="fg"><label class="fl">Refrainanfang</label><input class="fi" id="sf-ref" value="${esc(s.refrain||'')}"></div></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Besetzung</label><select class="fi" id="sf-bes">${['','SATB','TTBB','SSAA','SSA','SAB','SSATBB','Gemischter Chor','Männerchor','Frauenchor'].map(b=>`<option value="${b}" ${(s.besetzung||'')==b?'selected':''}>${b||'– wählen –'}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Thema</label><input class="fi" id="sf-thema" value="${esc(s.thema||'')}"></div>
+    </div>
+    <div class="fg"><label class="fl">Anlass</label><input class="fi" id="sf-anlass" value="${esc(s.anlass||'')}"></div>
+  </div>
+  <div class="fs"><div class="fst">Personen</div>
+    <div class="fr"><div class="fg"><label class="fl">Komponist</label><input class="fi" id="sf-komp" value="${esc(s.komponist||'')}"></div><div class="fg"><label class="fl">Textdichter</label><input class="fi" id="sf-text" value="${esc(s.textdichter||'')}"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Arrangeur</label><input class="fi" id="sf-arr" value="${esc(s.arrangeur||'')}"></div><div class="fg"><label class="fl">Übersetzer</label><input class="fi" id="sf-ueb" value="${esc(s.uebersetzer||'')}"></div></div>
+  </div>
+  <div class="fs"><div class="fst">Rechtliches</div>
+    <div class="fr"><div class="fg"><label class="fl">Rechte</label><input class="fi" id="sf-recht" value="${esc(s.rechte||'')}"></div><div class="fg"><label class="fl">Lizenz</label><input class="fi" id="sf-liz" value="${esc(s.lizenz||'')}"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Originaltitel</label><input class="fi" id="sf-orig" value="${esc(s.originaltitel||'')}"></div><div class="fg"><label class="fl">Quelle</label><input class="fi" id="sf-quelle" value="${esc(s.quelle||'')}"></div></div>
+  </div>
+  <div class="fs"><div class="fst">Links & Notizen</div>
+    <div class="fg"><label class="fl">YouTube / Spotify</label><input class="fi" id="sf-link" value="${esc((s.links||[])[0]||'')}" placeholder="https://…"></div>
+    <div class="fg"><label class="fl">Notizen</label><textarea class="fi" id="sf-notiz">${esc(s.notizen||'')}</textarea></div>
+  </div>`;
+}
+async function saveSong(){
+  const title=document.getElementById('sf-title').value.trim();
+  if(!title){T('Bitte Titel eingeben','err');return;}
+  const lv=document.getElementById('sf-link').value.trim();
+  const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),komponist:document.getElementById('sf-komp').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
+  let error;
+  if(editSongId){({error}=await SB.from('songs').update(payload).eq('id',editSongId));}
+  else{({error}=await SB.from('songs').insert({...payload,created_by:currentUser.id}));}
+  if(error){T('Fehler: '+error.message,'err');return;}
+  closeModal('m-song-form');renderSongs();T(editSongId?'Lied aktualisiert':'Lied hinzugefügt','ok');
+}
+async function delSong(id){await SB.from('songs').delete().eq('id',id);closeModal('m-song-detail');renderSongs();T('Lied gelöscht');}
+
+// ===== CAMERA SCAN =====
+let camStream=null;
+
+function startScan(mode, evId=null){
+  scanMode=mode; scanEventId=evId; capturedImageB64=null;
+  const overlay=document.getElementById('cam-overlay');
+  overlay.style.display='flex';
+  const instr=document.getElementById('cam-instruction');
+  instr.textContent=mode==='event'?'Notenblatt fotografieren – Lied wird automatisch erkannt':'Notenblatt oder Liederbuch in den Rahmen halten';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}})
+    .then(stream=>{camStream=stream;document.getElementById('cam-video').srcObject=stream;})
+    .catch(()=>{overlay.style.display='none';T('Kamerazugriff verweigert','err');});
+}
+
+function stopCam(){
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  document.getElementById('cam-overlay').style.display='none';
+}
+
+function capturePhoto(){
+  const video=document.getElementById('cam-video');
+  const canvas=document.getElementById('cam-canvas');
+  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  capturedImageB64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
+  stopCam();
+  if(scanMode==='song') processScanForSong(capturedImageB64);
+  else processScanForEvent(capturedImageB64, scanEventId);
+}
+
+async function processScanForSong(b64){
+  document.getElementById('sr-title').textContent='Scan wird ausgewertet…';
+  document.getElementById('sr-body').innerHTML=`<div class="processing"><div class="spin"></div>Claude analysiert das Bild…</div>`;
+  document.getElementById('sr-footer').innerHTML='';
+  openModal('m-scan-result');
+  const cfg=getCfg();
+  if(!cfg.ant){
+    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger);font-size:14px">Kein Anthropic API Key konfiguriert. Bitte in den Einstellungen ergänzen.</p>`;
+    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
+    return;
+  }
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':cfg.ant,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-opus-4-5',max_tokens:1000,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+          {type:'text',text:`Du siehst ein Foto eines Notenblatts oder Liederbuchs. Extrahiere alle verfügbaren Informationen über das Lied und gib sie als JSON zurück. Antworte NUR mit einem JSON-Objekt, kein anderer Text. Format:
+{"title":"","liedanfang":"","refrain":"","besetzung":"","thema":"","anlass":"","komponist":"","textdichter":"","arrangeur":"","uebersetzer":"","rechte":"","originaltitel":"","quelle":"","lizenz":"","notizen":""}
+Felder die nicht erkennbar sind bleiben leere Strings. Besetzung als Abkürzung wenn erkennbar (SATB, TTBB etc.).`}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    const text=data.content?.[0]?.text||'{}';
+    let parsed={};
+    try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}catch{T('Konnte Ergebnis nicht lesen','err');}
+    showScanResult(parsed, b64);
+  }catch(e){
+    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger);font-size:14px">Fehler: ${esc(e.message)}</p>`;
+    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
+  }
+}
+
+function showScanResult(parsed, b64){
+  document.getElementById('sr-title').textContent='Erkannte Informationen';
+  const img=`data:image/jpeg;base64,${b64}`;
+  const fields=[['Titel',parsed.title],['Liedanfang',parsed.liedanfang],['Komponist',parsed.komponist],['Textdichter',parsed.textdichter],['Arrangeur',parsed.arrangeur],['Besetzung',parsed.besetzung],['Thema',parsed.thema],['Anlass',parsed.anlass],['Quelle',parsed.quelle],['Rechte',parsed.rechte],['Lizenz',parsed.lizenz],['Originaltitel',parsed.originaltitel],['Übersetzer',parsed.uebersetzer]].filter(([,v])=>v);
+  document.getElementById('sr-body').innerHTML=`
+    <img src="${img}" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--r);margin-bottom:14px">
+    ${fields.length?fields.map(([l,v])=>`<div class="scan-field"><div class="sl">${l}</div><div class="sv">${esc(v)}</div></div>`).join(''):'<p style="color:var(--text2)">Keine Lied-Informationen erkannt. Du kannst das Formular manuell ausfüllen.</p>'}
+    ${parsed.notizen?`<div class="scan-field"><div class="sl">Notizen</div><div class="sv">${esc(parsed.notizen)}</div></div>`:''}`;
+  document.getElementById('sr-footer').innerHTML='';
+  const cancelBtn=document.createElement('button');cancelBtn.className='btn btn-g';cancelBtn.style.flex='1';cancelBtn.textContent='Abbrechen';cancelBtn.onclick=()=>closeModal('m-scan-result');
+  const addBtn=document.createElement('button');addBtn.className='btn btn-p';addBtn.style.flex='2';addBtn.textContent='In Datenbank aufnehmen';
+  addBtn.onclick=()=>{closeModal('m-scan-result');openSongForm(null,parsed);};
+  document.getElementById('sr-footer').appendChild(cancelBtn);
+  document.getElementById('sr-footer').appendChild(addBtn);
+}
+
+async function processScanForEvent(b64, evId){
+  document.getElementById('sr-title').textContent='Lied wird erkannt…';
+  document.getElementById('sr-body').innerHTML=`<div class="processing"><div class="spin"></div>Claude analysiert das Foto…</div>`;
+  document.getElementById('sr-footer').innerHTML='';
+  openModal('m-scan-result');
+  const cfg=getCfg();
+  if(!cfg.ant){
+    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger)">Kein Anthropic API Key konfiguriert.</p>`;
+    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
+    return;
+  }
+  // Fetch existing songs for matching
+  const{data:songs}=await SB.from('songs').select('id,title,komponist,liedanfang');
+  const songList=(songs||[]).map(s=>`ID:${s.id} | ${s.title}${s.komponist?' ('+s.komponist+')':''}${s.liedanfang?' – Anfang: '+s.liedanfang:''}`).join('\n');
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':cfg.ant,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-opus-4-5',max_tokens:800,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+          {type:'text',text:`Du siehst ein Foto eines Notenblatts oder Liederbuchs. Identifiziere das Lied.
+
+Vorhandene Lieder in der Datenbank:
+${songList||'(Noch keine Lieder)'}
+
+Antworte NUR mit JSON, kein anderer Text:
+{"matched_id":"ID des passenden Lieds oder null","confidence":"high/medium/low","recognized":{"title":"","komponist":"","liedanfang":"","besetzung":"","textdichter":"","arrangeur":"","quelle":"","rechte":"","lizenz":"","thema":"","anlass":"","originaltitel":"","uebersetzer":""},"reason":"Kurze Begründung"}
+
+Wenn ein Lied aus der Datenbank passt, setze matched_id. Wenn nicht erkannt oder nicht in DB, setze matched_id:null und fülle recognized aus.`}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    const text=data.content?.[0]?.text||'{}';
+    let parsed={};
+    try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}catch{}
+    showEventScanResult(parsed, b64, evId);
+  }catch(e){
+    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger)">Fehler: ${esc(e.message)}</p>`;
+    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
+  }
+}
+
+async function showEventScanResult(parsed, b64, evId){
+  const img=`data:image/jpeg;base64,${b64}`;
+  const rec=parsed.recognized||{};
+  if(parsed.matched_id){
+    const song=cachedSongs.find(s=>s.id===parsed.matched_id)||(await SB.from('songs').select('*').eq('id',parsed.matched_id).single()).data;
+    document.getElementById('sr-title').textContent='Lied erkannt';
+    document.getElementById('sr-body').innerHTML=`
+      <img src="${img}" style="width:100%;max-height:140px;object-fit:cover;border-radius:var(--r);margin-bottom:14px">
+      <div style="background:rgba(76,175,130,.08);border:0.5px solid rgba(76,175,130,.3);border-radius:var(--r);padding:14px;margin-bottom:10px">
+        <div style="font-weight:500;font-size:16px;margin-bottom:4px">${esc(song?.title||rec.title||'?')}</div>
+        <div style="font-size:13px;color:var(--text2)">${esc(song?.komponist||rec.komponist||'')}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Konfidenz: ${esc(parsed.confidence||'')} · ${esc(parsed.reason||'')}</div>
+      </div>`;
+    document.getElementById('sr-footer').innerHTML='';
+    const cb=document.createElement('button');cb.className='btn btn-g';cb.style.flex='1';cb.textContent='Abbrechen';cb.onclick=()=>closeModal('m-scan-result');
+    const ab=document.createElement('button');ab.className='btn btn-p';ab.style.flex='2';ab.textContent='Zum Programm hinzufügen';
+    ab.onclick=async()=>{await addSongToEventProgram(evId,parsed.matched_id);closeModal('m-scan-result');openEvDetail(evId);T('Lied hinzugefügt','ok');};
+    document.getElementById('sr-footer').appendChild(cb);document.getElementById('sr-footer').appendChild(ab);
+  } else {
+    document.getElementById('sr-title').textContent='Lied nicht in Datenbank';
+    const fields=[['Titel',rec.title],['Komponist',rec.komponist],['Besetzung',rec.besetzung],['Liedanfang',rec.liedanfang]].filter(([,v])=>v);
+    document.getElementById('sr-body').innerHTML=`
+      <img src="${img}" style="width:100%;max-height:140px;object-fit:cover;border-radius:var(--r);margin-bottom:14px">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:12px">Das Lied wurde nicht in der Datenbank gefunden. Erkannte Informationen:</p>
+      ${fields.map(([l,v])=>`<div class="scan-field"><div class="sl">${l}</div><div class="sv">${esc(v)}</div></div>`).join('')}
+      <p style="font-size:12px;color:var(--text3);margin-top:10px">Möchtest du das Lied zuerst in die Datenbank aufnehmen?</p>`;
+    document.getElementById('sr-footer').innerHTML='';
+    const cb=document.createElement('button');cb.className='btn btn-g';cb.style.flex='1';cb.textContent='Abbrechen';cb.onclick=()=>closeModal('m-scan-result');
+    const db=document.createElement('button');db.className='btn btn-i';db.style.flex='1.5';db.textContent='In DB aufnehmen';
+    db.onclick=()=>{closeModal('m-scan-result');openSongForm(null,{...rec,_afterSave:{action:'addToEvent',evId}});};
+    const skipBtn=document.createElement('button');skipBtn.className='btn btn-g';skipBtn.style.flex='1.5';skipBtn.textContent='Manuell wählen';
+    skipBtn.onclick=()=>{closeModal('m-scan-result');openEvForm(evId);};
+    document.getElementById('sr-footer').appendChild(cb);document.getElementById('sr-footer').appendChild(db);document.getElementById('sr-footer').appendChild(skipBtn);
+  }
+}
+
+async function addSongToEventProgram(evId, songId){
+  const{data:existing}=await SB.from('event_program').select('position').eq('event_id',evId).order('position',{ascending:false}).limit(1);
+  const nextPos=(existing?.[0]?.position||0)+1;
+  await SB.from('event_program').insert({event_id:evId,song_id:songId,position:nextPos,dirigent:'',klavier:'',instrumente:''});
+}
+
+// ===== EVENTS =====
+async function renderEvents(){
+  const{data}=await SB.from('events').select('*,event_program(position,song_id,songs(title,besetzung))').order('datum');
+  cachedEvents=data||[];
+  const el=document.getElementById('ev-list');
+  if(!cachedEvents.length){el.innerHTML='<div class="empty"><p>Keine Veranstaltungen</p></div>';return;}
+  const now=today();
+  const up=cachedEvents.filter(e=>e.datum>=now);
+  const pa=cachedEvents.filter(e=>e.datum<now);
+  let html='';
+  if(up.length)html+='<div class="st">Bevorstehend</div>'+up.map(evCard).join('');
+  if(pa.length)html+='<div class="st">Vergangen</div>'+pa.map(evCard).join('');
+  el.innerHTML=html;
+}
+function evCard(e){
+  const n=(e.event_program||[]).length;
+  return`<div class="card" onclick="openEvDetail('${e.id}')">
+    <div class="crow"><div style="flex:1"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)}${e.uhrzeit?' · '+fT(e.uhrzeit):''}</div><div class="cs">${esc(e.ort||'')}</div></div>
+    <div>${n?`<span class="badge blue">${n} Lieder</span>`:''}</div></div>
+    ${e.dirigent?`<div class="cmeta"><span class="badge green">Dir: ${esc(e.dirigent)}</span></div>`:''}</div>`;
+}
+
+async function openEvDetail(id){
+  const{data:e}=await SB.from('events').select('*,event_program(id,position,song_id,dirigent,klavier,instrumente,songs(title,besetzung)),event_tasks(*),attendance(member_id,status,profiles(name,stimme))').eq('id',id).single();
+  if(!e)return;
+  const isAdmin=currentProfile?.role==='admin';
+  const prog=(e.event_program||[]).sort((a,b)=>a.position-b.position);
+  const tasks=e.event_tasks||[];
+  const members=e.attendance||[];
+  document.getElementById('ed-title').textContent=e.title;
+
+  const progHTML=prog.length?prog.map(p=>`<div class="pitem">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="pnum">${p.position}</div>
+      <div style="flex:1"><div class="ptitle">${esc(p.songs?.title||'?')}</div><div class="psub">${esc(p.songs?.besetzung||'')}</div></div>
+    </div>
+    ${(p.dirigent||p.klavier||p.instrumente)?`<div class="proles">${p.dirigent?`<div class="prole-row"><span class="prole-label">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div class="prole-row"><span class="prole-label">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div class="prole-row"><span class="prole-label">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}
+  </div>`).join(''):'<p style="color:var(--text3);font-size:13px">Kein Programm</p>';
+
+  document.getElementById('ed-body').innerHTML=`
+    <div class="dgrid" style="margin-bottom:14px">
+      <div class="df"><div class="dl">Datum</div><div class="dv">${fD(e.datum)}</div></div>
+      <div class="df"><div class="dl">Uhrzeit</div><div class="dv">${fT(e.uhrzeit)||'–'}</div></div>
+      <div class="df" style="grid-column:1/-1"><div class="dl">Ort</div><div class="dv">${esc(e.ort||'–')}</div></div>
+    </div>
+    <div class="ddiv"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="dl">Programm</div>
+      ${isAdmin?`<button class="btn btn-i btn-sm" onclick="startScan('event','${e.id}')">📷 Scan</button>`:''}
+    </div>
+    ${progHTML}
+    <div class="ddiv"></div>
+    <div class="dl" style="margin-bottom:8px">Allgemeine Rollen</div>
+    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);overflow:hidden">
+      ${[['Dirigent',e.dirigent],['Klavier',e.klavier],['Weitere Instrumente',e.instrumente]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:0.5px solid var(--border)"><span style="color:var(--text2);font-size:13px">${l}</span><span style="font-size:13px;font-weight:500">${esc(v)}</span></div>`).join('')}
+      ${tasks.map(t=>`<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:0.5px solid var(--border)"><span style="color:var(--text2);font-size:13px">${esc(t.aufgabe)}</span><span style="font-size:13px;font-weight:500">${esc(t.person)}</span></div>`).join('')}
+    </div>
+    <div class="ddiv"></div>
+    <div class="dl" style="margin-bottom:8px">Anwesenheit</div>
+    ${members.map(m=>`<div class="atti"><div><span style="font-size:14px">${esc(m.profiles?.name||'?')}</span> <span style="font-size:12px;color:var(--text3)">${esc(m.profiles?.stimme||'')}</span></div>
+      <div class="attb"><button class="ab ${m.status==='yes'?'yes':''}" onclick="setAtt('${e.id}','${m.member_id}','yes')">✓</button><button class="ab ${m.status==='no'?'no':''}" onclick="setAtt('${e.id}','${m.member_id}','no')">✗</button></div></div>`).join('')}
+    ${e.notizen?`<div class="ddiv"></div><div class="dl">Notizen</div><div style="font-size:14px;margin-top:4px">${esc(e.notizen)}</div>`:''}`;
+
+  const footer=document.getElementById('ed-footer');footer.innerHTML='';
+  if(isAdmin){
+    const eb=document.createElement('button');eb.className='btn btn-g';eb.style.flex='1';eb.textContent='Bearbeiten';
+    eb.onclick=()=>{closeModal('m-ev-detail');openEvForm(e.id);};
+    const db=document.createElement('button');db.className='btn btn-d';db.style.flex='1';db.textContent='Löschen';
+    db.onclick=()=>{if(confirm('Löschen?'))delEvent(e.id);};
+    footer.appendChild(eb);footer.appendChild(db);
+  }
+  openModal('m-ev-detail');
+}
+
+async function setAtt(evId,mId,val){
+  await SB.from('attendance').upsert({event_id:evId,member_id:mId,status:val},{onConflict:'event_id,member_id'});
+  openEvDetail(evId);
+}
+
+async function openEvForm(id=null){
+  editEvId=id;
+  const{data:songs}=await SB.from('songs').select('id,title').order('title');
+  const{data:members}=await SB.from('profiles').select('id,name').order('name');
+  let e={};
+  if(id){const{data}=await SB.from('events').select('*,event_program(*),event_tasks(*)').eq('id',id).single();e=data||{};}
+  document.getElementById('ef-title-h').textContent=id?'Veranstaltung bearbeiten':'Veranstaltung hinzufügen';
+  const prog=(e.event_program||[]).sort((a,b)=>a.position-b.position);
+  const songOpts=(songs||[]).map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join('');
+
+  // Program rows with per-song roles
+  const progRowsHTML=prog.map((p,i)=>buildProgRowHTML(i+1,p,songs||[])).join('');
+  const aufgRowsHTML=(e.event_tasks||[]).map(t=>`<div class="fr aufg-row" style="margin-bottom:8px"><input class="fi aufg-person" value="${esc(t.person)}" placeholder="Person"><input class="fi aufg-task" value="${esc(t.aufgabe)}" placeholder="Aufgabe"></div>`).join('');
+
+  document.getElementById('ef-body').innerHTML=`
+    <div class="fs"><div class="fst">Allgemein</div>
+      <div class="fg"><label class="fl">Titel *</label><input class="fi" id="ef-title" value="${esc(e.title||'')}"></div>
+      <div class="fr"><div class="fg"><label class="fl">Datum</label><input class="fi" type="date" id="ef-datum" value="${e.datum||''}"></div><div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="ef-uhrzeit" value="${fT(e.uhrzeit||'')}"></div></div>
+      <div class="fg"><label class="fl">Ort</label><input class="fi" id="ef-ort" value="${esc(e.ort||'')}"></div>
+    </div>
+    <div class="fs"><div class="fst">Programm <span style="font-weight:400;font-size:10px">(inkl. Rollen pro Lied)</span></div>
+      <div id="prog-rows">${progRowsHTML}</div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button type="button" class="btn btn-g btn-sm" style="flex:1" onclick="addProgRow(${JSON.stringify(songs||[]).replace(/"/g,'&quot;')})">+ Lied wählen</button>
+        ${currentProfile?.role==='admin'?`<button type="button" class="btn btn-i btn-sm" style="flex:1" onclick="startScan('event','${id||'new'}')">📷 Foto scannen</button>`:''}
+      </div>
+    </div>
+    <div class="fs"><div class="fst">Allgemeine Rollen</div>
+      <div class="fr"><div class="fg"><label class="fl">Dirigent</label><input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}"></div><div class="fg"><label class="fl">Klavier</label><input class="fi" id="ef-klav" value="${esc(e.klavier||'')}"></div></div>
+      <div class="fg"><label class="fl">Weitere Instrumente</label><input class="fi" id="ef-instr" value="${esc(e.instrumente||'')}"></div>
+    </div>
+    <div class="fs"><div class="fst">Aufgaben</div>
+      <div id="aufg-rows">${aufgRowsHTML}</div>
+      <button type="button" class="btn btn-g btn-sm" onclick="addAufgRow()">+ Aufgabe</button>
+    </div>
+    <div class="fs"><div class="fst">Notizen</div><textarea class="fi" id="ef-notiz">${esc(e.notizen||'')}</textarea></div>`;
+  window._efSongs=songs||[]; window._efMembers=members||[];
+  openModal('m-ev-form');
+}
+
+function buildProgRowHTML(pos, p={}, songs=[]){
+  const songOpts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title)}</option>`).join('');
+  return`<div class="ep-row prog-ep-row">
+    <div class="ep-row-header">
+      <div class="ep-row-num">${pos}</div>
+      <select class="fi prog-song" style="flex:1">${songs.length?`<option value="">– Lied –</option>${songOpts}`:''}</select>
+      <button type="button" class="btn btn-d btn-sm" onclick="this.closest('.prog-ep-row').remove();renumberProgRows()" style="width:30px;height:30px;padding:0">✕</button>
+    </div>
+    <div class="ep-roles">
+      <input class="fi prog-dir" placeholder="Dirigent" value="${esc(p.dirigent||'')}">
+      <input class="fi prog-klav" placeholder="Klavier" value="${esc(p.klavier||'')}">
+      <input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}">
+    </div>
+  </div>`;
+}
+
+function renumberProgRows(){
+  document.querySelectorAll('.prog-ep-row .ep-row-num').forEach((el,i)=>el.textContent=i+1);
+}
+
+function addProgRow(songs){
+  const container=document.getElementById('prog-rows');
+  const pos=container.querySelectorAll('.prog-ep-row').length+1;
+  const div=document.createElement('div');
+  div.innerHTML=buildProgRowHTML(pos,{},Array.isArray(songs)?songs:window._efSongs||[]);
+  container.appendChild(div.firstElementChild);
+}
+
+function addAufgRow(){
+  const div=document.createElement('div');div.className='fr aufg-row';div.style.marginBottom='8px';
+  div.innerHTML=`<input class="fi aufg-person" placeholder="Person"><input class="fi aufg-task" placeholder="Aufgabe">`;
+  document.getElementById('aufg-rows').appendChild(div);
+}
+
+async function saveEvent(){
+  const title=document.getElementById('ef-title').value.trim();
+  if(!title){T('Bitte Titel eingeben','err');return;}
+  const payload={title,datum:document.getElementById('ef-datum').value||null,uhrzeit:document.getElementById('ef-uhrzeit').value||null,ort:document.getElementById('ef-ort').value.trim(),dirigent:document.getElementById('ef-dir').value.trim(),klavier:document.getElementById('ef-klav').value.trim(),instrumente:document.getElementById('ef-instr').value.trim(),notizen:document.getElementById('ef-notiz').value.trim(),updated_at:new Date().toISOString()};
+  let evId=editEvId;
+  if(editEvId){await SB.from('events').update(payload).eq('id',editEvId);}
+  else{const{data}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();evId=data?.id;}
+  if(!evId){T('Fehler','err');return;}
+  // Program with per-song roles
+  await SB.from('event_program').delete().eq('event_id',evId);
+  const progRows=[...document.querySelectorAll('.prog-ep-row')];
+  const progInsert=progRows.map((row,i)=>({
+    event_id:evId,
+    song_id:row.querySelector('.prog-song')?.value||null,
+    position:i+1,
+    dirigent:row.querySelector('.prog-dir')?.value.trim()||'',
+    klavier:row.querySelector('.prog-klav')?.value.trim()||'',
+    instrumente:row.querySelector('.prog-instr')?.value.trim()||'',
+  })).filter(p=>p.song_id);
+  if(progInsert.length)await SB.from('event_program').insert(progInsert);
+  // Tasks
+  await SB.from('event_tasks').delete().eq('event_id',evId);
+  const pEls=[...document.querySelectorAll('.aufg-person')];
+  const tEls=[...document.querySelectorAll('.aufg-task')];
+  const taskInsert=pEls.map((el,i)=>({event_id:evId,person:el.value.trim(),aufgabe:tEls[i]?.value.trim()||''})).filter(t=>t.person&&t.aufgabe);
+  if(taskInsert.length)await SB.from('event_tasks').insert(taskInsert);
+  // Attendance placeholders
+  if((window._efMembers||[]).length&&!editEvId){
+    await SB.from('attendance').upsert((window._efMembers).map(m=>({event_id:evId,member_id:m.id,status:''})),{onConflict:'event_id,member_id',ignoreDuplicates:true});
+  }
+  closeModal('m-ev-form');renderEvents();T(editEvId?'Veranstaltung aktualisiert':'Veranstaltung hinzugefügt','ok');
+}
+async function delEvent(id){await SB.from('events').delete().eq('id',id);closeModal('m-ev-detail');renderEvents();T('Veranstaltung gelöscht');}
+
+// ===== CALENDAR =====
+async function renderCal(){
+  const el=document.getElementById('cal-wrap');
+  const y=calDate.getFullYear(),m=calDate.getMonth();
+  const fd=(new Date(y,m,1).getDay()+6)%7;
+  const dim=new Date(y,m+1,0).getDate();
+  const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-${String(m+1).padStart(2,'0')}-01`).lte('datum',`${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`);
+  const ebd={};(evts||[]).forEach(e=>{const d=parseInt(e.datum.split('-')[2]);if(!ebd[d])ebd[d]=[];ebd[d].push(e);});
+  const now=new Date(); const itm=now.getFullYear()===y&&now.getMonth()===m;
+  let cells='';
+  for(let i=0;i<fd;i++)cells+='<div class="cday other-month"></div>';
+  for(let d=1;d<=dim;d++)cells+=`<div class="cday ${itm&&d===now.getDate()?'today':''} ${ebd[d]?'has-event':''}">${d}</div>`;
+  const isAdmin=currentProfile?.role==='admin';
+  el.innerHTML=`<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-1)">‹</button><div class="cmonth">${mn[m]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(1)">›</button></div>
+    <div class="cgrid">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<div class="cdow">${d}</div>`).join('')}${cells}</div>
+    <div class="st">Termine diesen Monat</div>
+    ${(evts||[]).length?(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>`<div class="cevt ${e.typ}" ${isAdmin?`onclick="openCalForm('${e.id}')"`:''}  style="${isAdmin?'cursor:pointer':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:500;font-size:14px">${esc(e.title)}</div><div style="font-size:12px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div></div>
+        <span class="badge ${e.typ==='konzert'?'green':e.typ==='probe'?'blue':''}">${e.typ}</span>
+      </div>
+      ${isAdmin?`<button class="btn btn-d btn-sm" style="margin-top:8px" onclick="event.stopPropagation();delCalEvt('${e.id}')">Löschen</button>`:''}
+    </div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+}
+function calNav(d){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);renderCal();}
+function openCalForm(id=null){
+  editCalId=id;
+  document.getElementById('cf-title-h').textContent=id?'Termin bearbeiten':'Termin hinzufügen';
+  if(!id){['cf-title','cf-datum','cf-time','cf-bis','cf-bis-t','cf-ort','cf-desc'].forEach(i=>document.getElementById(i).value='');document.getElementById('cf-typ').value='probe';}
+  else SB.from('calendar_events').select('*').eq('id',id).single().then(({data:e})=>{if(e){document.getElementById('cf-title').value=e.title||'';document.getElementById('cf-datum').value=e.datum||'';document.getElementById('cf-time').value=fT(e.uhrzeit||'');document.getElementById('cf-bis').value=e.bis_datum||'';document.getElementById('cf-bis-t').value=fT(e.bis_uhrzeit||'');document.getElementById('cf-ort').value=e.ort||'';document.getElementById('cf-typ').value=e.typ||'probe';document.getElementById('cf-desc').value=e.beschreibung||'';}});
+  openModal('m-cal-form');
+}
+async function saveCalEvt(){
+  const title=document.getElementById('cf-title').value.trim(),datum=document.getElementById('cf-datum').value;
+  if(!title||!datum){T('Titel und Datum erforderlich','err');return;}
+  const p={title,datum,uhrzeit:document.getElementById('cf-time').value||null,bis_datum:document.getElementById('cf-bis').value||null,bis_uhrzeit:document.getElementById('cf-bis-t').value||null,ort:document.getElementById('cf-ort').value.trim(),typ:document.getElementById('cf-typ').value,beschreibung:document.getElementById('cf-desc').value.trim()};
+  if(editCalId)await SB.from('calendar_events').update(p).eq('id',editCalId);
+  else await SB.from('calendar_events').insert({...p,created_by:currentUser.id});
+  closeModal('m-cal-form');renderCal();T(editCalId?'Termin aktualisiert':'Termin hinzugefügt','ok');
+}
+async function delCalEvt(id){if(!confirm('Termin löschen?'))return;await SB.from('calendar_events').delete().eq('id',id);renderCal();}
+
+// ===== ANALYTICS =====
+function initStats(){
+  const msgs=document.getElementById('chat-msgs');
+  if(!msgs.children.length)addBot('Hallo! Ich helfe mit Auswertungen.\n\nBeispiele:\n• Wann haben wir [Titel] zuletzt gesungen?\n• Wie oft haben wir [Titel] gesungen?\n• Lieder die noch nie gesungen wurden\n• Liedvorschläge\n• Welche Lieder haben wir 2024 gesungen?');
+}
+function addBot(txt){const el=document.getElementById('chat-msgs');const d=document.createElement('div');d.className='cmsg bot';d.innerHTML=`<div class="bbl">${txt.replace(/\n/g,'<br>')}</div>`;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function addUser(txt){const el=document.getElementById('chat-msgs');const d=document.createElement('div');d.className='cmsg user';d.innerHTML=`<div class="bbl">${esc(txt)}</div>`;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+async function sendChat(){
+  const inp=document.getElementById('chat-in');const q=inp.value.trim();if(!q)return;
+  inp.value='';addUser(q);const r=await queryEngine(q);addBot(r);
+}
+async function queryEngine(q){
+  const ql=q.toLowerCase();
+  const{data:songs}=await SB.from('songs').select('id,title,thema,anlass,besetzung');
+  const{data:stats}=await SB.from('song_performance_stats').select('*');
+  const matched=(songs||[]).find(s=>ql.includes(s.title.toLowerCase()));
+  const isLast=ql.includes('zuletzt')||ql.includes('wann');
+  const isOften=ql.includes('wie oft')||ql.includes('häufig');
+  const isNever=ql.includes('noch nie')||ql.includes('nie gesungen');
+  const isSug=ql.includes('vorschlag')||ql.includes('lange nicht')||ql.includes('empfehlung');
+  const isRank=ql.includes('ranking')||ql.includes('häufigsten');
+  const year=/\b(20\d\d)\b/.exec(ql)?.[1];
+  if(matched){
+    const st=(stats||[]).find(s=>s.song_id===matched.id);
+    if(!st||!st.total_performances)return`"${matched.title}" wurde noch nie bei einer erfassten Veranstaltung gesungen.`;
+    if(isOften)return`"${matched.title}" wurde ${st.total_performances}× gesungen.\nZuletzt: ${fD(st.last_performed)}\nErstmals: ${fD(st.first_performed)}`;
+    if(isLast)return`"${matched.title}" zuletzt gesungen am ${fD(st.last_performed)} (${st.total_performances}×).`;
+    return`"${matched.title}": ${st.total_performances}×\nZuletzt: ${fD(st.last_performed)}\nErstmals: ${fD(st.first_performed)}`;
+  }
+  if(year){
+    const{data:evts}=await SB.from('events').select('id,title,datum,event_program(song_id,songs(title))').gte('datum',`${year}-01-01`).lte('datum',`${year}-12-31`);
+    if(!evts?.length)return`Im Jahr ${year} wurden keine Veranstaltungen erfasst.`;
+    const cnt={};evts.forEach(e=>(e.event_program||[]).forEach(p=>{const t=p.songs?.title||'?';cnt[t]=(cnt[t]||0)+1;}));
+    const rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+    return rows.length?`Lieder in ${year}:\n`+rows.map(([t,c])=>`• ${t}: ${c}×`).join('\n'):`In ${year} keine Lieder erfasst.`;
+  }
+  if(isNever){
+    const sungIds=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
+    const ns=(songs||[]).filter(s=>!sungIds.has(s.id));
+    return ns.length?`Noch nie gesungen (${ns.length}):\n`+ns.map(s=>`• ${s.title}`).join('\n'):'Alle Lieder wurden schon gesungen!';
+  }
+  if(isSug){
+    const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>a.last_performed.localeCompare(b.last_performed)).slice(0,5);
+    const sungIds=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
+    const ns=(songs||[]).filter(s=>!sungIds.has(s.id)).slice(0,3);
+    let r='Liedvorschläge:\n\n📅 Lange nicht gesungen:\n'+sorted.map(s=>`• ${s.title} (${fD(s.last_performed)})`).join('\n');
+    if(ns.length)r+='\n\n🆕 Noch nie gesungen:\n'+ns.map(s=>`• ${s.title}`).join('\n');
+    return r;
+  }
+  if(isRank){
+    const sorted=(stats||[]).sort((a,b)=>b.total_performances-a.total_performances).slice(0,10);
+    return sorted.length?'Ranking:\n'+sorted.map((s,i)=>`${i+1}. ${s.title}: ${s.total_performances}×`).join('\n'):'Noch keine Daten.';
+  }
+  if(isLast){
+    const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>b.last_performed.localeCompare(a.last_performed)).slice(0,8);
+    return sorted.length?'Zuletzt gesungen:\n'+sorted.map(s=>`• ${s.title}: ${fD(s.last_performed)}`).join('\n'):'Noch keine Daten.';
+  }
+  return'Nicht verstanden. Versuche z.B.:\n• "Wann haben wir [Liedtitel] zuletzt gesungen?"\n• "Wie oft haben wir [Titel] gesungen?"\n• "Lieder die noch nie gesungen wurden"\n• "Liedvorschläge"\n• "Ranking"\n• "Lieder 2024"';
+}
+
+async function runQ(type){
+  const el=document.getElementById('q-result');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Wird ausgewertet…</div>';
+  const{data:stats}=await SB.from('song_performance_stats').select('*');
+  const{data:songs}=await SB.from('songs').select('id,title,thema,anlass,besetzung,komponist');
+  let html='',csvRows=[];
+  if(type==='last_sung'){
+    const d=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>b.last_performed.localeCompare(a.last_performed));
+    csvRows=[['Titel','Komponist','Zuletzt gesungen','Anzahl'],...d.map(s=>[s.title,s.komponist||'',fD(s.last_performed),s.total_performances])];
+    html=tbl(['Titel','Zuletzt','Anzahl'],d.map(s=>[esc(s.title),fD(s.last_performed),s.total_performances]));
+  }else if(type==='never'){
+    const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
+    const d=(songs||[]).filter(s=>!si.has(s.id));
+    csvRows=[['Titel','Komponist','Besetzung'],...d.map(s=>[s.title,s.komponist||'',s.besetzung||''])];
+    html=tbl(['Titel','Komponist','Besetzung'],d.map(s=>[esc(s.title),esc(s.komponist||'–'),esc(s.besetzung||'–')]));
+  }else if(type==='ranking'){
+    const d=(stats||[]).sort((a,b)=>b.total_performances-a.total_performances);
+    csvRows=[['#','Titel','Anzahl','Zuletzt'],...d.map((s,i)=>[i+1,s.title,s.total_performances,fD(s.last_performed)||'–'])];
+    html=tbl(['#','Titel','Anzahl','Zuletzt'],d.map((s,i)=>[i+1,esc(s.title),s.total_performances,fD(s.last_performed)||'–']));
+  }else if(type==='suggestions'){
+    const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>a.last_performed.localeCompare(b.last_performed)).slice(0,10);
+    const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
+    const ns=(songs||[]).filter(s=>!si.has(s.id)).slice(0,5);
+    csvRows=[['Titel','Zuletzt','Anzahl'],...sorted.map(s=>[s.title,fD(s.last_performed),s.total_performances]),...ns.map(s=>[s.title,'Noch nie',0])];
+    html='<div class="st">Lange nicht gesungen</div>'+tbl(['Titel','Zuletzt','Anzahl'],sorted.map(s=>[esc(s.title),fD(s.last_performed),s.total_performances]))+'<div class="st">Noch nie gesungen</div>'+tbl(['Titel','Besetzung'],ns.map(s=>[esc(s.title),esc(s.besetzung||'–')]));
+  }else if(type==='period'){
+    const from=document.getElementById('q-from').value,to=document.getElementById('q-to').value;
+    if(!from||!to){el.innerHTML='<p style="color:var(--danger);font-size:13px">Bitte Von- und Bis-Datum wählen</p>';return;}
+    const{data:evts}=await SB.from('events').select('id,title,datum,event_program(song_id,songs(title,besetzung,komponist))').gte('datum',from).lte('datum',to);
+    const cnt={};(evts||[]).forEach(e=>(e.event_program||[]).forEach(p=>{const k=p.song_id;if(!cnt[k])cnt[k]={title:p.songs?.title||'?',besetzung:p.songs?.besetzung||'',komponist:p.songs?.komponist||'',n:0};cnt[k].n++;}));
+    const d=Object.values(cnt).sort((a,b)=>b.n-a.n);
+    csvRows=[['Titel','Komponist','Besetzung','Anzahl'],...d.map(s=>[s.title,s.komponist,s.besetzung,s.n])];
+    html=`<p style="font-size:13px;color:var(--text2);margin-bottom:8px">${fD(from)} – ${fD(to)} · ${(evts||[]).length} Veranstaltungen</p>`+tbl(['Titel','Besetzung','Anzahl'],d.map(s=>[esc(s.title),esc(s.besetzung||'–'),s.n]));
+  }
+  el.innerHTML=html+`<button class="btn btn-g" style="width:100%;margin-top:10px" onclick='exportCSV(${JSON.stringify(csvRows)})'>CSV exportieren</button>`;
+}
+function tbl(hdr,rows){
+  if(!rows.length)return'<p style="color:var(--text3);font-size:13px">Keine Daten</p>';
+  return`<div style="overflow-x:auto"><table class="rtable"><thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function exportCSV(rows){
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));a.download='chor-auswertung.csv';a.click();T('CSV exportiert','ok');
+}
+
+// ===== SETTINGS =====
+async function renderSettings(){
+  if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins sichtbar.</p>';return;}
+  const{data:members}=await SB.from('profiles').select('*').order('name');
+  const cfg=getCfg();
+  document.getElementById('settings-body').innerHTML=`
+    <div class="st">Mitglieder (${(members||[]).length})</div>
+    ${(members||[]).map(m=>`<div class="card" style="cursor:default">
+      <div class="crow">
+        <div><div style="font-weight:500">${esc(m.name)}</div>
+          <div style="font-size:12px;color:var(--text2)">${esc(m.stimme||'')} ${m.email?'· '+esc(m.email):''} ${m.phone?'· '+esc(m.phone):''}</div>
+          ${m.address?`<div style="font-size:12px;color:var(--text3)">${esc(m.address)}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          <span class="badge ${m.role==='admin'?'warn':''}">${m.role==='admin'?'Admin':'Mitglied'}</span>
+          ${m.id!==currentUser.id?`<button class="btn btn-g btn-sm" onclick="toggleRole('${m.id}','${m.role}')">${m.role==='admin'?'Zu Mitglied':'Zu Admin'}</button>`:''}
+        </div>
+      </div>
+    </div>`).join('')}
+    <div class="st" style="margin-top:20px">API-Konfiguration</div>
+    <div class="card" style="cursor:default">
+      <div class="dl">Supabase URL</div><div class="dv" style="font-size:12px;word-break:break-all;margin-bottom:8px">${esc(cfg.url||'–')}</div>
+      <div class="dl">Anthropic Key</div><div class="dv" style="font-size:12px">${cfg.ant?cfg.ant.substring(0,20)+'…':'Nicht konfiguriert'}</div>
+      <button class="btn btn-g btn-sm" style="margin-top:10px" onclick="localStorage.removeItem('${CFG_KEY}');location.reload()">Konfiguration zurücksetzen</button>
+    </div>`;
+}
+async function toggleRole(id,role){
+  const nr=role==='admin'?'member':'admin';
+  if(!confirm(`Rolle wechseln zu "${nr==='admin'?'Admin':'Mitglied'}"?`))return;
+  await SB.from('profiles').update({role:nr}).eq('id',id);renderSettings();T('Rolle geändert','ok');
+}
+
+// ===== PROFILE =====
+function openProfile(){
+  const p=currentProfile||{};
+  document.getElementById('prof-body').innerHTML=`
+    <div class="fs"><div class="fst">Persönliche Daten</div>
+      <div class="fg"><label class="fl">Name</label><input class="fi" id="pm-name" value="${esc(p.name||'')}"></div>
+      <div class="fr"><div class="fg"><label class="fl">E-Mail</label><input class="fi" id="pm-email" value="${esc(p.email||'')}" type="email"></div><div class="fg"><label class="fl">Telefon</label><input class="fi" id="pm-phone" value="${esc(p.phone||'')}" type="tel"></div></div>
+      <div class="fg"><label class="fl">Adresse</label><input class="fi" id="pm-addr" value="${esc(p.address||'')}"></div>
+      <div class="fg"><label class="fl">Stimmgruppe</label><select class="fi" id="pm-stimme">${['','Sopran','Mezzosopran','Alt','Tenor','Bariton','Bass'].map(s=>`<option value="${s}" ${p.stimme===s?'selected':''}>${s||'– wählen –'}</option>`).join('')}</select></div>
+    </div>
+    <div class="fs"><div class="fst">Konto</div>
+      <div class="df"><div class="dl">Rolle</div><div class="dv"><span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span></div></div>
+      <button class="btn btn-d" style="width:100%;margin-top:8px" onclick="doLogout()">Abmelden</button>
+    </div>`;
+  openModal('m-profile');
+}
+async function saveProfile(){
+  const u={name:document.getElementById('pm-name').value.trim(),phone:document.getElementById('pm-phone').value.trim(),address:document.getElementById('pm-addr').value.trim(),stimme:document.getElementById('pm-stimme').value};
+  await SB.from('profiles').update(u).eq('id',currentUser.id);
+  currentProfile={...currentProfile,...u};
+  document.getElementById('tb-name').textContent=u.name;
+  document.getElementById('tb-av').textContent=u.name.charAt(0).toUpperCase();
+  closeModal('m-profile');T('Profil gespeichert','ok');
+}
+
+// ===== MODAL CLOSE =====
+document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+// ===== INIT =====
+(async function init(){
+  const cfg=getCfg();
+  if(!cfg.url||!cfg.key){document.getElementById('cfg-screen').style.display='flex';return;}
+  SB=window.supabase.createClient(cfg.url,cfg.key);
+  const{data:{session}}=await SB.auth.getSession();
+  if(session?.user){await loadProfile(session.user);startApp();}
+  else{document.getElementById('login-screen').style.display='flex';}
+})();
+</script>
+</body>
+</html>

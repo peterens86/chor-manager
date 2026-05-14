@@ -815,15 +815,47 @@ async function importCSV(event){
     if(idx<0||idx>=vals.length)return'';
     return vals[idx].replace(/^"|"$/g,'').trim();
   };
+  // Check if title column is actually populated - if not, title might be embedded in liedanfang
+  const firstDataVals=parseCSVLine(lines[1]||'',sep);
+  const titleIdx=headers.indexOf('title')>=0?headers.indexOf('title'):headers.indexOf('titel');
+  const liedanfangIdx=headers.indexOf('liedanfang');
+  const titleColEmpty=titleIdx>=0&&!(firstDataVals[titleIdx]||'').trim();
+  const titleEmbedded=titleColEmpty&&liedanfangIdx>=0&&(firstDataVals[liedanfangIdx]||'').includes(',');
+  console.log(`title col empty: ${titleColEmpty}, title embedded in liedanfang: ${titleEmbedded}`);
+  // DEBUG: show first data row
+  if(lines.length>1){
+    const debugVals=parseCSVLine(lines[1],sep);
+    console.log('First data row vals[0..4]:',debugVals.slice(0,5));
+    console.log('title index in headers:',headers.indexOf('title'),headers.indexOf('titel'));
+    console.log('All headers:',headers);
+  }
   const songs=[];
   let skipped=0;
   for(let i=1;i<lines.length;i++){
     if(!lines[i].trim())continue;
     const vals=parseCSVLine(lines[i],sep);
-    const title=getVal(vals,'title');
+    let title=getVal(vals,'title');
+    let liedanfang=getVal(vals,'liedanfang');
+    // If title column is empty, try to get title from liedanfang column (format: "Liedanfang, Titel")
+    if(!title&&liedanfang){
+      if(liedanfang.includes(',')){
+        const commaIdx=liedanfang.indexOf(',');
+        const possibleTitle=liedanfang.substring(commaIdx+1).trim();
+        const possibleAnfang=liedanfang.substring(0,commaIdx).trim();
+        // Only split if the part after comma looks like a real title (not empty)
+        if(possibleTitle){
+          title=possibleTitle;
+          liedanfang=possibleAnfang;
+        } else {
+          title=liedanfang; // Use full liedanfang as title
+        }
+      } else {
+        title=liedanfang; // No comma → use liedanfang as title
+      }
+    }
     if(!title){skipped++;continue;}
     songs.push({
-      title,liedanfang:getVal(vals,'liedanfang'),refrain:getVal(vals,'refrain'),
+      title,liedanfang,refrain:getVal(vals,'refrain'),
       besetzung:getVal(vals,'besetzung'),thema:getVal(vals,'thema'),anlass:getVal(vals,'anlass'),
       textdichter:getVal(vals,'textdichter'),textdichter_lz:getVal(vals,'textdichter_lz'),
       komponist:getVal(vals,'komponist'),komponist_lz:getVal(vals,'komponist_lz'),

@@ -803,7 +803,7 @@ async function importCSV(event){
   for(const c of firstLine){if(c==='"')inQ=!inQ;else if(!inQ){if(c===',')commaCount++;else if(c===';')semiCount++;}}
   const sep=semiCount>=commaCount?';':',';
   const headers=parseCSVLine(firstLine,sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase().trim());
-  console.log(`CSV: delimiter="${sep}" commas=${commaCount} semis=${semiCount} rows=${lines.length-1} headers=${headers.slice(0,5).join('|')}`);
+  console.log(`CSV: delimiter="${sep}" rows=${lines.length-1}`);
   if(!headers.includes('title')&&!headers.includes('titel')){
     T(`Spalte "title" nicht gefunden. Erkannte Spalten: ${headers.slice(0,5).join(', ')}…`,'err');
     event.target.value='';return;
@@ -815,47 +815,17 @@ async function importCSV(event){
     if(idx<0||idx>=vals.length)return'';
     return vals[idx].replace(/^"|"$/g,'').trim();
   };
-  // Check if title column is actually populated - if not, title might be embedded in liedanfang
-  const firstDataVals=parseCSVLine(lines[1]||'',sep);
-  const titleIdx=headers.indexOf('title')>=0?headers.indexOf('title'):headers.indexOf('titel');
-  const liedanfangIdx=headers.indexOf('liedanfang');
-  const titleColEmpty=titleIdx>=0&&!(firstDataVals[titleIdx]||'').trim();
-  const titleEmbedded=titleColEmpty&&liedanfangIdx>=0&&(firstDataVals[liedanfangIdx]||'').includes(',');
-  console.log(`title col empty: ${titleColEmpty}, title embedded in liedanfang: ${titleEmbedded}`);
-  // DEBUG: show first data row
-  if(lines.length>1){
-    const debugVals=parseCSVLine(lines[1],sep);
-    console.log('First data row vals[0..4]:',debugVals.slice(0,5));
-    console.log('title index in headers:',headers.indexOf('title'),headers.indexOf('titel'));
-    console.log('All headers:',headers);
-  }
+  
   const songs=[];
   let skipped=0;
   for(let i=1;i<lines.length;i++){
     if(!lines[i].trim())continue;
     const vals=parseCSVLine(lines[i],sep);
-    let title=getVal(vals,'title');
-    let liedanfang=getVal(vals,'liedanfang');
-    // If title column is empty, try to get title from liedanfang column (format: "Liedanfang, Titel")
-    if(!title&&liedanfang){
-      if(liedanfang.includes(',')){
-        const commaIdx=liedanfang.indexOf(',');
-        const possibleTitle=liedanfang.substring(commaIdx+1).trim();
-        const possibleAnfang=liedanfang.substring(0,commaIdx).trim();
-        // Only split if the part after comma looks like a real title (not empty)
-        if(possibleTitle){
-          title=possibleTitle;
-          liedanfang=possibleAnfang;
-        } else {
-          title=liedanfang; // Use full liedanfang as title
-        }
-      } else {
-        title=liedanfang; // No comma → use liedanfang as title
-      }
-    }
+    const liedanfang=getVal(vals,'liedanfang');
+    const title=getVal(vals,'title')||liedanfang; // Fallback: liedanfang als Titel
     if(!title){skipped++;continue;}
     songs.push({
-      title,liedanfang,refrain:getVal(vals,'refrain'),
+      title,liedanfang:getVal(vals,'liedanfang'),refrain:getVal(vals,'refrain'),
       besetzung:getVal(vals,'besetzung'),thema:getVal(vals,'thema'),anlass:getVal(vals,'anlass'),
       textdichter:getVal(vals,'textdichter'),textdichter_lz:getVal(vals,'textdichter_lz'),
       komponist:getVal(vals,'komponist'),komponist_lz:getVal(vals,'komponist_lz'),
@@ -867,15 +837,7 @@ async function importCSV(event){
       links:[],created_by:currentUser.id
     });
   }
-  console.log(`CSV parsed: ${songs.length} valid, ${skipped} skipped (no title), total lines=${lines.length-1}`);
-  if(skipped>0){
-    // Show first skipped line for debugging
-    for(let i=1;i<lines.length;i++){
-      const vals=parseCSVLine(lines[i],sep);
-      const title=getVal(vals,'title');
-      if(!title&&lines[i].trim()){console.log('First skipped line:',lines[i].substring(0,100),'vals[0]=',vals[0],'vals[1]=',vals[1]);break;}
-    }
-  }
+  console.log(`CSV: ${songs.length} valid, ${skipped} skipped, total ${lines.length-1}`);
   if(!songs.length){T('Keine gültigen Zeilen gefunden','err');event.target.value='';return;}
   T(`${songs.length} Lieder gefunden, vergleiche mit Datenbank…`);
   // Load existing songs for comparison
@@ -1130,12 +1092,17 @@ async function renderCal(){
     const fd=(new Date(y,m,1).getDay()+6)%7,dim=new Date(y,m+1,0).getDate();
     const from=`${y}-${String(m+1).padStart(2,'0')}-01`;
     const to=`${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`;
-    const{data:evts}=await SB.from('calendar_events').select('*').lte('datum',to).gte('bis_datum',from).order('datum');
+    const[{data:evts},{data:veranst}]=await Promise.all([
+      SB.from('calendar_events').select('*').lte('datum',to).gte('bis_datum',from).order('datum'),
+      SB.from('events').select('id,title,datum').gte('datum',from).lte('datum',to).order('datum')
+    ]);
+    // Merge Veranstaltungen as calendar items (red)
+    const allEvts=[...(evts||[]),...(veranst||[]).map(v=>({...v,bis_datum:v.datum,color:'#e05555',category:'Veranstaltung',_isVeranst:true}))];
     const holidays=getNRWHolidays(y);
     const schoolDays=getSchoolHolidayDays(y);
     // Single-day events per day
     const ebd={};
-    (evts||[]).forEach(e=>{
+    allEvts.forEach(e=>{
       const start=new Date(Math.max(new Date(e.datum),new Date(from)));
       const end=new Date(Math.min(new Date(e.bis_datum||e.datum),new Date(to)));
       let d=new Date(start);
@@ -1169,22 +1136,19 @@ async function renderCal(){
       </div>`;
     }
     // Build multi-day event bars as overlay rows
-    const multiEvts=(evts||[]).filter(e=>e.datum!==(e.bis_datum||e.datum));
-    // Sort multi-day events by start date
+    const multiEvts=allEvts.filter(e=>e.datum!==(e.bis_datum||e.datum));
     multiEvts.sort((a,b)=>a.datum.localeCompare(b.datum));
-    // For each multi-day event, compute grid column span
     const multiRows=multiEvts.map(e=>{
       const eStart=new Date(Math.max(new Date(e.datum),new Date(from)));
       const eEnd=new Date(Math.min(new Date(e.bis_datum),new Date(to)));
       const startDay=eStart.getDate();
       const endDay=eEnd.getDate();
-      // Grid column = day + fd (for empty prefix cells)
       const colStart=startDay+fd;
       const colEnd=endDay+fd+1;
       const color=e.color||catColor(e.category);
-      return`<div style="grid-column:${colStart}/${colEnd};background:${esc(color)};border-radius:3px;padding:1px 4px;font-size:8px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;margin:1px 1px 0;line-height:1.5" onclick="highlightCalEvt('${e.id}')" title="${esc(e.title)} (${fD(e.datum)} – ${fD(e.bis_datum||e.datum)})">${esc(e.title)}</div>`;
+      return`<div style="grid-column:${colStart}/${colEnd};background:${esc(color)};border-radius:3px;padding:1px 4px;font-size:8px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;margin:1px 1px 0;line-height:1.5" onclick="${e._isVeranst?`openEvDetail('${e.id}')`:`highlightCalEvt('${e.id}')`}" title="${esc(e.title)}">${esc(e.title)}</div>`;
     }).join('');
-    const upEvts=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
+    const upEvts=allEvts.sort((a,b)=>a.datum.localeCompare(b.datum));
     const holList=Object.entries(holidays).filter(([d])=>d.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort(([a],[b])=>a.localeCompare(b));
     const ferList=getNRWSchoolHolidays(y).filter(f=>{const fm=new Date(f.from).getMonth()+1,tm=new Date(f.to).getMonth()+1,my=m+1;return fm<=my&&tm>=my;});
     el.innerHTML=viewTabs+
@@ -1203,30 +1167,38 @@ async function renderCal(){
     const from=`${y}-${String(m+1).padStart(2,'0')}-01`;
     const m3end=new Date(y,m+3,0);
     const to=`${m3end.getFullYear()}-${String(m3end.getMonth()+1).padStart(2,'0')}-${String(m3end.getDate()).padStart(2,'0')}`;
-    const{data:evts}=await SB.from('calendar_events').select('*').lte('datum',to).gte('bis_datum',from).order('datum');
+    const[{data:evts},{data:veranst}]=await Promise.all([
+      SB.from('calendar_events').select('*').lte('datum',to).gte('bis_datum',from).order('datum'),
+      SB.from('events').select('id,title,datum').gte('datum',from).lte('datum',to).order('datum')
+    ]);
+    const allEvts3=[...(evts||[]),...(veranst||[]).map(v=>({...v,bis_datum:v.datum,color:'#e05555',category:'Veranstaltung',_isVeranst:true}))];
     const holidays={...getNRWHolidays(y),...getNRWHolidays(y+1)};
     const schoolDays={...getSchoolHolidayDays(y),...getSchoolHolidayDays(y+1)};
     let minis='';
-    for(let i=0;i<3;i++){const mm=(m+i)%12;const yy=y+Math.floor((m+i)/12);minis+=buildMiniCal(yy,mm,evts||[],holidays,schoolDays);}
-    const upEvts=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
+    for(let i=0;i<3;i++){const mm=(m+i)%12;const yy=y+Math.floor((m+i)/12);minis+=buildMiniCal(yy,mm,allEvts3,holidays,schoolDays);}
+    const upEvts=allEvts3.sort((a,b)=>a.datum.localeCompare(b.datum));
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-3)">‹</button><div class="cmonth">${mn[m]} – ${mn[(m+2)%12]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(3)">›</button></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">${minis}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--text2)"><span>🔴 Feiertag</span><span>📚 Schulferien</span>${cachedCategories.map(c=>`<span style="display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;border-radius:2px;background:${esc(c.color)};flex-shrink:0"></span>${esc(c.name)}</span>`).join('')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--text2)"><span>🔴 Feiertag</span><span>📚 Schulferien</span><span style="display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;border-radius:2px;background:#e05555;flex-shrink:0"></span>Veranstaltung</span>${cachedCategories.map(c=>`<span style="display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;border-radius:2px;background:${esc(c.color)};flex-shrink:0"></span>${esc(c.name)}</span>`).join('')}</div>
       <div class="st">Termine</div>
       <div id="cal-evt-list">${upEvts.length?upEvts.map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
 
   } else {
-    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-01-01`).lte('datum',`${y}-12-31`).order('datum');
+    const[{data:evts},{data:veranst}]=await Promise.all([
+      SB.from('calendar_events').select('*').gte('datum',`${y}-01-01`).lte('datum',`${y}-12-31`).order('datum'),
+      SB.from('events').select('id,title,datum').gte('datum',`${y}-01-01`).lte('datum',`${y}-12-31`).order('datum')
+    ]);
+    const allEvtsY=[...(evts||[]),...(veranst||[]).map(v=>({...v,bis_datum:v.datum,color:'#e05555',category:'Veranstaltung',_isVeranst:true}))];
     const holidays=getNRWHolidays(y);
     const schoolDays=getSchoolHolidayDays(y);
     let minis='';
-    for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,evts||[],holidays,schoolDays);
+    for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,allEvtsY,holidays,schoolDays);
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-12)">‹</button><div class="cmonth">Jahr ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(12)">›</button></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">${minis}</div>
       <div class="st">Alle Termine ${y}</div>
-      <div id="cal-evt-list">${(evts||[]).length?(evts||[]).map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
+      <div id="cal-evt-list">${allEvtsY.length?allEvtsY.sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
   }
 }
 
@@ -1234,7 +1206,8 @@ function evtListItem(e,isAdmin){
   const color=e.color||catColor(e.category);
   const isMultiDay=e.bis_datum&&e.bis_datum!==e.datum;
   const isKeinChor=(e.category||'').toLowerCase().replace(/\s+/g,'')===('Kein Chor').toLowerCase().replace(/\s+/g,'');
-  return`<div class="cevt" id="evtli-${e.id}" data-evtid="${e.id}" data-evtdate="${e.datum}" style="border-left-color:${esc(color)};${isKeinChor?'opacity:.8':''}transition:background .3s">
+  const isVeranst=!!e._isVeranst;
+  return`<div class="cevt" id="evtli-${e.id}" data-evtid="${e.id}" data-evtdate="${e.datum}" style="border-left-color:${esc(color)};${isKeinChor?'opacity:.8':''}transition:background .3s" ${isVeranst?`onclick="openEvDetail('${e.id}')" style="border-left-color:${esc(color)};cursor:pointer"`:''}>
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div style="flex:1">
         <div style="font-weight:500;font-size:13px;${isKeinChor?'text-decoration:line-through;color:var(--text3)':''}">${esc(e.title)}</div>
@@ -1248,7 +1221,7 @@ function evtListItem(e,isAdmin){
         ${isMultiDay?'<span class="badge blue" style="font-size:9px">Mehrtägig</span>':''}
       </div>
     </div>
-    ${isAdmin?`<div style="display:flex;gap:5px;margin-top:6px"><button class="btn btn-g btn-sm" style="font-size:11px" onclick="openCalForm('${e.id}',null)">Bearbeiten</button><button class="btn btn-d btn-sm" style="font-size:11px" onclick="delCalEvt('${e.id}',${!!e.series_id})">Löschen</button></div>`:''}
+    ${!isVeranst&&isAdmin?`<div style="display:flex;gap:5px;margin-top:6px"><button class="btn btn-g btn-sm" style="font-size:11px" onclick="openCalForm('${e.id}',null)">Bearbeiten</button><button class="btn btn-d btn-sm" style="font-size:11px" onclick="delCalEvt('${e.id}',${!!e.series_id})">Löschen</button></div>`:''}
   </div>`;
 }
 

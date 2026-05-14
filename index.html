@@ -1092,7 +1092,7 @@ document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Ent
 (async function init(){
   const cfg=getCfg();
   if(!cfg.url||!cfg.key){document.getElementById('cfg-screen').style.display='flex';return;}
-  SB=window.supabase.createClient(cfg.url,cfg.key);
+  SB=window.supabase.createClient('https://nzgmznxwtvmjatbhbmcp.supabase.co','sb_publishable_rTWG_fw_Us_yA4ZayeR9sw_glQ-rrP-');
   const{data:{session}}=await SB.auth.getSession();
   if(session?.user){await loadProfile(session.user);startApp();}
   else{document.getElementById('login-screen').style.display='flex';}

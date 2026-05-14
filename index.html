@@ -785,14 +785,25 @@ async function importCSV(event){
   if(!text){text=new TextDecoder('windows-1252').decode(buf);}
   // Remove BOM
   if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
-  // Split lines – handle \r\n and \n
-  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  // Quote-aware line splitting (handles newlines inside quoted fields)
+  const lines=[];let curLine='';let inQLn=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(c==='"')inQLn=!inQLn;
+    if((c==='\n'||c==='\r')&&!inQLn){
+      if(curLine.trim())lines.push(curLine);
+      curLine='';if(c==='\r'&&text[i+1]==='\n')i++;
+    }else curLine+=c;
+  }
+  if(curLine.trim())lines.push(curLine);
   if(lines.length<2){T('CSV leer oder ungültig','err');return;}
-  // Auto-detect delimiter
-  const first=lines[0];
-  const sep=first.split(';').length>first.split(',').length?';':',';
-  const headers=lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase().trim());
-  console.log('CSV: delimiter='+sep+', headers='+headers.join('|')+', rows='+(lines.length-1));
+  // Quote-aware delimiter detection
+  const firstLine=lines[0];
+  let commaCount=0,semiCount=0,inQ=false;
+  for(const c of firstLine){if(c==='"')inQ=!inQ;else if(!inQ){if(c===',')commaCount++;else if(c===';')semiCount++;}}
+  const sep=semiCount>=commaCount?';':',';
+  const headers=parseCSVLine(firstLine,sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase().trim());
+  console.log(`CSV: delimiter="${sep}" commas=${commaCount} semis=${semiCount} rows=${lines.length-1} headers=${headers.slice(0,5).join('|')}`);
   if(!headers.includes('title')&&!headers.includes('titel')){
     T(`Spalte "title" nicht gefunden. Erkannte Spalten: ${headers.slice(0,5).join(', ')}…`,'err');
     event.target.value='';return;

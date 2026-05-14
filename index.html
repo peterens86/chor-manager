@@ -822,10 +822,10 @@ async function importCSV(event){
     if(!lines[i].trim())continue;
     const vals=parseCSVLine(lines[i],sep);
     const liedanfang=getVal(vals,'liedanfang');
-    const title=getVal(vals,'title')||liedanfang; // Fallback: liedanfang als Titel
+    const title=getVal(vals,'title')||liedanfang;
     if(!title){skipped++;continue;}
     songs.push({
-      title,liedanfang:getVal(vals,'liedanfang'),refrain:getVal(vals,'refrain'),
+      title,liedanfang,refrain:getVal(vals,'refrain'),
       besetzung:getVal(vals,'besetzung'),thema:getVal(vals,'thema'),anlass:getVal(vals,'anlass'),
       textdichter:getVal(vals,'textdichter'),textdichter_lz:getVal(vals,'textdichter_lz'),
       komponist:getVal(vals,'komponist'),komponist_lz:getVal(vals,'komponist_lz'),

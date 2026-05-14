@@ -954,7 +954,7 @@ async function loadCategories(){
   const{data}=await SB.from('cal_categories').select('*').order('name');
   cachedCategories=data||[
     {id:'chorprobe',name:'Chorprobe',color:'#5b8dee'},
-    {id:'gottesdienst',name:'Gottesdienst',color:'#c9a84c'},
+    {id:'gottesdienst',name:'Gottesdienst',color:'#e05555'},
     {id:'konzert',name:'Konzert',color:'#4caf82'},
     {id:'sonstiges',name:'Sonstiges',color:'#a8a4b0'}
   ];
@@ -970,11 +970,13 @@ function buildMiniCal(y,m,allEvts,holidays,schoolDays){
   const dim=new Date(y,m+1,0).getDate();
   const now=new Date();const itm=now.getFullYear()===y&&now.getMonth()===m;
   const mn=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  // Parse date string as LOCAL date (avoid UTC offset shifting day)
+  function parseLocal(ds){const[y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d);}
   // Build day->events map including multi-day events
   const ebd={};
   (allEvts||[]).forEach(e=>{
-    const start=new Date(e.datum);
-    const end=new Date(e.bis_datum||e.datum);
+    const start=parseLocal(e.datum);
+    const end=parseLocal(e.bis_datum||e.datum);
     let d=new Date(start);
     while(d<=end){
       if(d.getFullYear()===y&&d.getMonth()===m){
@@ -1380,7 +1382,7 @@ async function renderSettings(){
     <div class="st" style="margin-top:16px">Kalender-Kategorien</div>
     ${cachedCategories.map(c=>`<div class="card" style="cursor:default">
       <div style="display:flex;align-items:center;gap:10px">
-        <input type="color" value="${esc(c.color)}" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:2px" onchange="updateCatColor('${c.id}',this.value)">
+        <input type="color" value="${esc(c.color)}" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:2px" oninput="updateCatColor('${c.id}',this.value)" onchange="updateCatColor('${c.id}',this.value)">
         <input class="fi" value="${esc(c.name)}" style="flex:1;padding:6px 10px" onchange="updateCatName('${c.id}',this.value)" placeholder="Kategoriename">
         <button class="btn btn-d btn-sm" onclick="deleteCat('${c.id}')">✕</button>
       </div>
@@ -1421,7 +1423,7 @@ async function addCat(){
 async function updateCatColor(id,color){
   await SB.from('cal_categories').update({color}).eq('id',id);
   await loadCategories();
-  T('Farbe gespeichert','ok');
+  // Update color picker border to match new color
 }
 async function updateCatName(id,name){
   if(!name.trim())return;

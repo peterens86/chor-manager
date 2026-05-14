@@ -816,11 +816,12 @@ async function importCSV(event){
     return vals[idx].replace(/^"|"$/g,'').trim();
   };
   const songs=[];
+  let skipped=0;
   for(let i=1;i<lines.length;i++){
     if(!lines[i].trim())continue;
     const vals=parseCSVLine(lines[i],sep);
     const title=getVal(vals,'title');
-    if(!title)continue;
+    if(!title){skipped++;continue;}
     songs.push({
       title,liedanfang:getVal(vals,'liedanfang'),refrain:getVal(vals,'refrain'),
       besetzung:getVal(vals,'besetzung'),thema:getVal(vals,'thema'),anlass:getVal(vals,'anlass'),
@@ -833,6 +834,15 @@ async function importCSV(event){
       schrank:getVal(vals,'schrank'),notizen:getVal(vals,'notizen'),
       links:[],created_by:currentUser.id
     });
+  }
+  console.log(`CSV parsed: ${songs.length} valid, ${skipped} skipped (no title), total lines=${lines.length-1}`);
+  if(skipped>0){
+    // Show first skipped line for debugging
+    for(let i=1;i<lines.length;i++){
+      const vals=parseCSVLine(lines[i],sep);
+      const title=getVal(vals,'title');
+      if(!title&&lines[i].trim()){console.log('First skipped line:',lines[i].substring(0,100),'vals[0]=',vals[0],'vals[1]=',vals[1]);break;}
+    }
   }
   if(!songs.length){T('Keine gültigen Zeilen gefunden','err');event.target.value='';return;}
   T(`${songs.length} Lieder gefunden, vergleiche mit Datenbank…`);

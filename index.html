@@ -238,27 +238,12 @@ textarea.fi{resize:vertical;min-height:80px;}
   <div class="login-logo">♪ Chor Manager</div>
   <div class="login-sub">Lied- und Veranstaltungsverwaltung</div>
   <div class="login-card">
-    <div class="ltabs">
-      <div class="ltab active" id="lt-login" onclick="switchTab('login')">Anmelden</div>
-      <div class="ltab" id="lt-reg" onclick="switchTab('reg')">Registrieren</div>
-    </div>
+    <h2>Anmelden</h2>
     <div id="lf-login">
       <div class="fg"><label class="fl">E-Mail</label><input class="fi" id="l-email" type="email" placeholder="name@chor.de"></div>
       <div class="fg"><label class="fl">Passwort</label><input class="fi" id="l-pass" type="password" placeholder="Passwort"></div>
       <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="doLogin()">Anmelden</button>
       <div class="lerr" id="l-err"></div>
-    </div>
-    <div id="lf-reg" style="display:none">
-      <div class="fg"><label class="fl">Name *</label><input class="fi" id="r-name" placeholder="Vor- und Nachname"></div>
-      <div class="fg"><label class="fl">E-Mail *</label><input class="fi" id="r-email" type="email"></div>
-      <div class="fg"><label class="fl">Telefon</label><input class="fi" id="r-phone" type="tel" placeholder="+49 …"></div>
-      <div class="fg"><label class="fl">Stimmgruppe</label>
-        <select class="fi" id="r-stimme"><option value="">– wählen –</option><option>Sopran</option><option>Mezzosopran</option><option>Alt</option><option>Tenor</option><option>Bariton</option><option>Bass</option></select>
-      </div>
-      <div class="fg"><label class="fl">Passwort *</label><input class="fi" id="r-pass" type="password" placeholder="Min. 6 Zeichen"></div>
-      <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="doRegister()">Registrieren</button>
-      <div class="lerr" id="r-err"></div>
-      <p style="font-size:11px;color:var(--text3);margin-top:10px">Nach der Registrierung bitte E-Mail bestätigen. Ein Admin schaltet dein Konto frei.</p>
     </div>
   </div>
 </div>
@@ -345,6 +330,17 @@ textarea.fi{resize:vertical;min-height:80px;}
       <div class="ph"><h2>Admin</h2></div>
       <div id="settings-body"></div>
     </div>
+
+    <!-- MEDIEN -->
+    <div class="page" id="page-media">
+      <div class="hrow"><h2>Medien</h2><button class="btn btn-ic" id="media-add-btn" onclick="openMediaUpload()" style="display:none">+</button></div>
+      <div class="frow" id="media-filters">
+        <div class="fchip active" onclick="filterMedia('all',this)">Alle</div>
+        <div class="fchip" onclick="filterMedia('image',this)">🖼 Bilder</div>
+        <div class="fchip" onclick="filterMedia('audio',this)">🎵 Audio</div>
+      </div>
+      <div id="media-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
+    </div>
   </div><!-- content -->
 
   <!-- NAV -->
@@ -355,6 +351,7 @@ textarea.fi{resize:vertical;min-height:80px;}
     <div class="ni" onclick="showPage('events')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Termine</div>
     <div class="ni" onclick="showPage('cal')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Kalender</div>
     <div class="ni" onclick="showPage('stats')"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats</div>
+    <div class="ni" onclick="showPage('media')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Medien</div>
     <div class="ni" id="ni-settings" onclick="showPage('settings')" style="display:none"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Admin</div>
   </div>
 </div><!-- app -->
@@ -451,6 +448,51 @@ textarea.fi{resize:vertical;min-height:80px;}
   </div>
 </div></div>
 
+<!-- Media Upload Modal -->
+<div class="mo" id="m-media-form"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3>Medien hochladen</h3><button class="mclose" onclick="closeModal('m-media-form')">×</button></div>
+  <div class="mb">
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="mf-title" placeholder="Bezeichnung der Datei"></div>
+    <div class="fg"><label class="fl">Beschreibung</label><input class="fi" id="mf-desc" placeholder="Optional"></div>
+    <div class="fg"><label class="fl">Datei auswählen (Bild oder MP3) *</label>
+      <input type="file" id="mf-file" accept="image/*,audio/mp3,audio/mpeg" class="fi" style="padding:8px">
+    </div>
+    <div id="mf-preview" style="margin-top:8px"></div>
+  </div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-media-form')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="uploadMedia()" style="flex:2" id="mf-upload-btn">Hochladen</button>
+  </div>
+</div></div>
+
+<!-- Add Member Modal (Admin) -->
+<div class="mo" id="m-add-member"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3>Mitglied hinzufügen</h3><button class="mclose" onclick="closeModal('m-add-member')">×</button></div>
+  <div class="mb">
+    <div class="fr">
+      <div class="fg"><label class="fl">Vorname *</label><input class="fi" id="am-vname" placeholder="Vorname"></div>
+      <div class="fg"><label class="fl">Nachname *</label><input class="fi" id="am-nname" placeholder="Nachname"></div>
+    </div>
+    <div class="fg"><label class="fl">E-Mail *</label><input class="fi" id="am-email" type="email"></div>
+    <div class="fg"><label class="fl">Passwort *</label><input class="fi" id="am-pass" type="password" placeholder="Min. 6 Zeichen"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Telefon</label><input class="fi" id="am-phone" type="tel"></div>
+      <div class="fg"><label class="fl">Stimmgruppe</label>
+        <select class="fi" id="am-stimme"><option value="">– wählen –</option><option>Sopran</option><option>Alt</option><option>Tenor</option><option>Bass</option></select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Zusatzrolle</label>
+      <select class="fi" id="am-role2"><option value="">Keine</option><option value="dirigent">Dirigent</option><option value="klavier">Klavier</option><option value="dirigent,klavier">Dirigent & Klavier</option></select>
+    </div>
+  </div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-add-member')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="addMember()" style="flex:2">Hinzufügen</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -486,7 +528,12 @@ async function doLogin(){
   const err=document.getElementById('l-err');err.style.display='none';
   const{data,error}=await SB.auth.signInWithPassword({email:e,password:p});
   if(error){err.textContent=error.message;err.style.display='block';return;}
-  await loadProfile(data.user);startApp();
+  await loadProfile(data.user);
+  if(currentProfile?.active===false){
+    await SB.auth.signOut();currentUser=null;currentProfile=null;
+    err.textContent='Dein Konto wurde deaktiviert. Bitte wende dich an den Admin.';err.style.display='block';return;
+  }
+  startApp();
 }
 async function doRegister(){
   const name=document.getElementById('r-name').value.trim();
@@ -514,12 +561,13 @@ function startApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   const p=currentProfile||{};
-  document.getElementById('tb-name').textContent=p.name||'';
-  document.getElementById('tb-av').textContent=(p.name||'?').charAt(0).toUpperCase();
+  const vname=(p.name||'').split(' ')[0]||p.name||'';
+  document.getElementById('tb-name').textContent=vname;
+  document.getElementById('tb-av').textContent=(vname||'?').charAt(0).toUpperCase();
   const isAdmin=p.role==='admin';
   if(isAdmin){
     document.getElementById('ni-settings').style.display='flex';
-    ['song-add-btn','ev-add-btn','ann-add-btn','cal-add-btn'].forEach(id=>document.getElementById(id).style.display='');
+    ['song-add-btn','ev-add-btn','ann-add-btn','cal-add-btn','media-add-btn'].forEach(id=>document.getElementById(id).style.display='');
   }
   SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
   showPage('dashboard');
@@ -529,11 +577,11 @@ function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const pages=['dashboard','ann','songs','events','cal','stats','settings'];
+  const pages=['dashboard','ann','songs','events','cal','stats','media','settings'];
   const navItems=document.querySelectorAll('.ni');
   const idx=pages.indexOf(name);
   if(idx>=0&&navItems[idx])navItems[idx].classList.add('active');
-  const loaders={dashboard:renderDash,ann:renderAnn,songs:renderSongs,events:renderEvents,cal:renderCal,stats:initStats,settings:renderSettings};
+  const loaders={dashboard:renderDash,ann:renderAnn,songs:renderSongs,events:renderEvents,cal:renderCal,stats:initStats,media:renderMedia,settings:renderSettings};
   if(loaders[name])loaders[name]();
 }
 
@@ -550,7 +598,8 @@ async function loadUnread(){
 // ===== DASHBOARD =====
 async function renderDash(){
   const h=new Date().getHours();
-  document.getElementById('d-greet').textContent=`${h<12?'Guten Morgen':h<18?'Guten Tag':'Guten Abend'}, ${(currentProfile||{}).name||''}!`;
+  const vname=((currentProfile||{}).name||'').split(' ')[0];
+  document.getElementById('d-greet').textContent=`${h<12?'Guten Morgen':h<18?'Guten Tag':'Guten Abend'}, ${vname||''}!`;
   const[{count:sc},{count:ec}]=await Promise.all([SB.from('songs').select('*',{count:'exact',head:true}),SB.from('events').select('*',{count:'exact',head:true})]);
   document.getElementById('ds-songs').textContent=sc||0;document.getElementById('ds-events').textContent=ec||0;
   const{data:anns}=await SB.from('announcements').select('*,announcement_reads(user_id)').order('created_at',{ascending:false}).limit(5);
@@ -1031,56 +1080,220 @@ function exportCSV(rows){
 async function renderSettings(){
   if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins sichtbar.</p>';return;}
   const{data:members}=await SB.from('profiles').select('*').order('name');
-  const cfg=getCfg();
   document.getElementById('settings-body').innerHTML=`
-    <div class="st">Mitglieder (${(members||[]).length})</div>
-    ${(members||[]).map(m=>`<div class="card" style="cursor:default">
-      <div class="crow">
-        <div><div style="font-weight:500">${esc(m.name)}</div>
-          <div style="font-size:12px;color:var(--text2)">${esc(m.stimme||'')} ${m.email?'· '+esc(m.email):''} ${m.phone?'· '+esc(m.phone):''}</div>
-          ${m.address?`<div style="font-size:12px;color:var(--text3)">${esc(m.address)}</div>`:''}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="st" style="margin:0">Mitglieder (${(members||[]).length})</div>
+      <button class="btn btn-p btn-sm" onclick="openAddMember()">+ Mitglied</button>
+    </div>
+    ${(members||[]).map(m=>{
+      const vname=m.name.split(' ')[0];
+      const isMe=m.id===currentUser.id;
+      const isActive=m.active!==false;
+      return`<div class="card" style="cursor:default;${!isActive?'opacity:.5':''}">
+        <div class="crow">
+          <div>
+            <div style="font-weight:500">${esc(m.name)}</div>
+            <div style="font-size:12px;color:var(--text2)">${esc(m.stimme||'')} ${m.email?'· '+esc(m.email):''} ${m.phone?'· '+esc(m.phone):''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+            <span class="badge ${m.role==='admin'?'warn':''}">${m.role==='admin'?'Admin':'Mitglied'}</span>
+            ${m.role2?`<span class="badge blue">${esc(m.role2.split(',').map(r=>r==='dirigent'?'Dirigent':'Klavier').join(' & '))}</span>`:''}
+            ${!isActive?'<span class="badge red">Deaktiviert</span>':''}
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-          <span class="badge ${m.role==='admin'?'warn':''}">${m.role==='admin'?'Admin':'Mitglied'}</span>
-          ${m.id!==currentUser.id?`<button class="btn btn-g btn-sm" onclick="toggleRole('${m.id}','${m.role}')">${m.role==='admin'?'Zu Mitglied':'Zu Admin'}</button>`:''}
-        </div>
-      </div>
-    </div>`).join('')}
-    <div class="st" style="margin-top:20px">API-Konfiguration</div>
+        ${!isMe?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" onclick="toggleMemberRole('${m.id}','${m.role}')">${m.role==='admin'?'Zu Mitglied':'Zu Admin'}</button>
+          <button class="btn btn-g btn-sm" onclick="toggleRole2('${m.id}','${m.role2||''}')">Zusatzrolle</button>
+          <button class="btn ${isActive?'btn-d':'btn-i'} btn-sm" onclick="toggleActive('${m.id}',${isActive})">${isActive?'Deaktivieren':'Aktivieren'}</button>
+        </div>`:''}
+      </div>`;
+    }).join('')}
+    <div class="st" style="margin-top:20px">Repertoire Import</div>
     <div class="card" style="cursor:default">
-      <div class="dl">Supabase URL</div><div class="dv" style="font-size:12px;word-break:break-all;margin-bottom:8px">${esc(cfg.url||'–')}</div>
-      <div class="dl">Anthropic Key</div><div class="dv" style="font-size:12px">${cfg.ant?cfg.ant.substring(0,20)+'…':'Nicht konfiguriert'}</div>
-      <button class="btn btn-g btn-sm" style="margin-top:10px" onclick="localStorage.removeItem('${CFG_KEY}');location.reload()">Konfiguration zurücksetzen</button>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:10px">CSV-Datei importieren. Spalten: title, komponist, textdichter, arrangeur, besetzung, thema, anlass, liedanfang, refrain, quelle, rechte, lizenz, originaltitel, uebersetzer, notizen</p>
+      <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="importCSV(event)">
+      <button class="btn btn-g" style="width:100%" onclick="document.getElementById('csv-import').click()">CSV importieren</button>
     </div>`;
 }
-async function toggleRole(id,role){
+
+async function openAddMember(){
+  ['am-vname','am-nname','am-email','am-pass','am-phone'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('am-stimme').value='';
+  document.getElementById('am-role2').value='';
+  openModal('m-add-member');
+}
+
+async function addMember(){
+  const vname=document.getElementById('am-vname').value.trim();
+  const nname=document.getElementById('am-nname').value.trim();
+  const email=document.getElementById('am-email').value.trim();
+  const pass=document.getElementById('am-pass').value;
+  if(!vname||!email||!pass){T('Vorname, E-Mail und Passwort erforderlich','err');return;}
+  const name=(vname+' '+nname).trim();
+  const stimme=document.getElementById('am-stimme').value;
+  const role2=document.getElementById('am-role2').value;
+  const phone=document.getElementById('am-phone').value.trim();
+  // Create user via Supabase Admin (uses service role if available, else signUp)
+  const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{name,stimme,phone,role2}}});
+  if(error){T('Fehler: '+error.message,'err');return;}
+  // Update profile with extra fields
+  if(data?.user){
+    await SB.from('profiles').upsert({id:data.user.id,name,email,phone,stimme,role2,role:'member',active:true});
+  }
+  closeModal('m-add-member');renderSettings();T('Mitglied hinzugefügt','ok');
+}
+
+async function toggleMemberRole(id,role){
   const nr=role==='admin'?'member':'admin';
   if(!confirm(`Rolle wechseln zu "${nr==='admin'?'Admin':'Mitglied'}"?`))return;
   await SB.from('profiles').update({role:nr}).eq('id',id);renderSettings();T('Rolle geändert','ok');
 }
 
+async function toggleRole2(id,current){
+  const opts=['','dirigent','klavier','dirigent,klavier'];
+  const labels=['Keine','Dirigent','Klavier','Dirigent & Klavier'];
+  const cur=opts.indexOf(current);
+  const next=(cur+1)%opts.length;
+  await SB.from('profiles').update({role2:opts[next]||null}).eq('id',id);
+  renderSettings();T(`Zusatzrolle: ${labels[next]}`,'ok');
+}
+
+async function toggleActive(id,isActive){
+  const msg=isActive?'Mitglied wirklich deaktivieren? Es kann sich dann nicht mehr anmelden.':'Mitglied wieder aktivieren?';
+  if(!confirm(msg))return;
+  await SB.from('profiles').update({active:!isActive}).eq('id',id);
+  renderSettings();T(isActive?'Mitglied deaktiviert':'Mitglied aktiviert','ok');
+}
+
+// ===== CSV IMPORT =====
+async function importCSV(event){
+  const file=event.target.files[0];if(!file)return;
+  const text=await file.text();
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(lines.length<2){T('CSV leer oder ungültig','err');return;}
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,'').toLowerCase());
+  const songs=[];
+  for(let i=1;i<lines.length;i++){
+    const vals=lines[i].split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+    const obj={};headers.forEach((h,j)=>obj[h]=vals[j]||'');
+    if(obj.title)songs.push({title:obj.title,komponist:obj.komponist||'',textdichter:obj.textdichter||'',arrangeur:obj.arrangeur||'',besetzung:obj.besetzung||'',thema:obj.thema||'',anlass:obj.anlass||'',liedanfang:obj.liedanfang||'',refrain:obj.refrain||'',quelle:obj.quelle||'',rechte:obj.rechte||'',lizenz:obj.lizenz||'',originaltitel:obj.originaltitel||'',uebersetzer:obj.uebersetzer||'',notizen:obj.notizen||'',links:[],created_by:currentUser.id});
+  }
+  if(!songs.length){T('Keine Lieder in CSV gefunden','err');return;}
+  const{error}=await SB.from('songs').insert(songs);
+  if(error){T('Fehler: '+error.message,'err');return;}
+  event.target.value='';
+  T(`${songs.length} Lieder importiert`,'ok');
+  renderSongs();
+}
+
+// ===== MEDIA =====
+let mediaFilter='all';
+async function renderMedia(){
+  const el=document.getElementById('media-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Lade…</div>';
+  const{data,error}=await SB.from('media').select('*,profiles(name)').order('created_at',{ascending:false});
+  if(error){el.innerHTML='<p style="color:var(--danger);font-size:13px">Fehler beim Laden. Bitte SQL-Schema aktualisieren.</p>';return;}
+  const items=(data||[]).filter(m=>mediaFilter==='all'||m.type===mediaFilter);
+  if(!items.length){el.innerHTML='<div class="empty"><p>Keine Medien vorhanden</p></div>';return;}
+  el.innerHTML=items.map(m=>`<div class="card" style="cursor:default">
+    <div class="crow">
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:15px">${esc(m.title)}</div>
+        <div style="font-size:12px;color:var(--text2)">${m.type==='image'?'🖼 Bild':'🎵 Audio'} · ${esc((m.profiles||{}).name||'')} · ${fD(m.created_at?.slice(0,10))}</div>
+        ${m.description?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${esc(m.description)}</div>`:''}
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      ${m.type==='image'?`<img src="${esc(m.url)}" style="width:100%;max-height:200px;object-fit:cover;border-radius:var(--r)" onerror="this.style.display='none'">`
+      :`<audio controls style="width:100%;margin-top:4px"><source src="${esc(m.url)}"></audio>`}
+    </div>
+    ${currentProfile?.role==='admin'?`<button class="btn btn-d btn-sm" style="margin-top:8px" onclick="deleteMedia('${m.id}','${esc(m.path||'')}')">Löschen</button>`:''}
+  </div>`).join('');
+}
+
+function filterMedia(type,el){
+  mediaFilter=type;
+  document.querySelectorAll('#media-filters .fchip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderMedia();
+}
+
+function openMediaUpload(){
+  document.getElementById('mf-title').value='';
+  document.getElementById('mf-desc').value='';
+  document.getElementById('mf-file').value='';
+  document.getElementById('mf-preview').innerHTML='';
+  document.getElementById('mf-file').onchange=previewMedia;
+  openModal('m-media-form');
+}
+
+function previewMedia(){
+  const file=document.getElementById('mf-file').files[0];
+  const prev=document.getElementById('mf-preview');
+  if(!file){prev.innerHTML='';return;}
+  const url=URL.createObjectURL(file);
+  if(file.type.startsWith('image/')){prev.innerHTML=`<img src="${url}" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--r)">`;}
+  else{prev.innerHTML=`<audio controls style="width:100%"><source src="${url}"></audio>`;}
+}
+
+async function uploadMedia(){
+  const title=document.getElementById('mf-title').value.trim();
+  const file=document.getElementById('mf-file').files[0];
+  if(!title||!file){T('Titel und Datei erforderlich','err');return;}
+  const btn=document.getElementById('mf-upload-btn');
+  btn.textContent='Wird hochgeladen…';btn.disabled=true;
+  const ext=file.name.split('.').pop();
+  const path=`${currentUser.id}/${Date.now()}.${ext}`;
+  const type=file.type.startsWith('image/')?'image':'audio';
+  const{error:upErr}=await SB.storage.from('choir-media').upload(path,file);
+  if(upErr){T('Upload-Fehler: '+upErr.message,'err');btn.textContent='Hochladen';btn.disabled=false;return;}
+  const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
+  await SB.from('media').insert({title,description:document.getElementById('mf-desc').value.trim(),url:publicUrl,path,type,created_by:currentUser.id});
+  btn.textContent='Hochladen';btn.disabled=false;
+  closeModal('m-media-form');renderMedia();T('Medien hochgeladen','ok');
+}
+
+async function deleteMedia(id,path){
+  if(!confirm('Löschen?'))return;
+  if(path)await SB.storage.from('choir-media').remove([path]);
+  await SB.from('media').delete().eq('id',id);
+  renderMedia();T('Gelöscht');
+}
+
 // ===== PROFILE =====
 function openProfile(){
   const p=currentProfile||{};
+  const parts=(p.name||'').split(' ');
+  const vname=parts[0]||'';
+  const nname=parts.slice(1).join(' ')||'';
   document.getElementById('prof-body').innerHTML=`
     <div class="fs"><div class="fst">Persönliche Daten</div>
-      <div class="fg"><label class="fl">Name</label><input class="fi" id="pm-name" value="${esc(p.name||'')}"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Vorname</label><input class="fi" id="pm-vname" value="${esc(vname)}"></div>
+        <div class="fg"><label class="fl">Nachname</label><input class="fi" id="pm-nname" value="${esc(nname)}"></div>
+      </div>
       <div class="fr"><div class="fg"><label class="fl">E-Mail</label><input class="fi" id="pm-email" value="${esc(p.email||'')}" type="email"></div><div class="fg"><label class="fl">Telefon</label><input class="fi" id="pm-phone" value="${esc(p.phone||'')}" type="tel"></div></div>
       <div class="fg"><label class="fl">Adresse</label><input class="fi" id="pm-addr" value="${esc(p.address||'')}"></div>
-      <div class="fg"><label class="fl">Stimmgruppe</label><select class="fi" id="pm-stimme">${['','Sopran','Mezzosopran','Alt','Tenor','Bariton','Bass'].map(s=>`<option value="${s}" ${p.stimme===s?'selected':''}>${s||'– wählen –'}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Stimmgruppe</label><select class="fi" id="pm-stimme">${['','Sopran','Alt','Tenor','Bass'].map(s=>`<option value="${s}" ${p.stimme===s?'selected':''}>${s||'– wählen –'}</option>`).join('')}</select></div>
     </div>
     <div class="fs"><div class="fst">Konto</div>
-      <div class="df"><div class="dl">Rolle</div><div class="dv"><span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span></div></div>
+      <div class="df"><div class="dl">Rolle</div><div class="dv">
+        <span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span>
+        ${p.role2?`<span class="badge blue" style="margin-left:4px">${esc(p.role2.split(',').join(' & '))}</span>`:''}
+      </div></div>
       <button class="btn btn-d" style="width:100%;margin-top:8px" onclick="doLogout()">Abmelden</button>
     </div>`;
   openModal('m-profile');
 }
 async function saveProfile(){
-  const u={name:document.getElementById('pm-name').value.trim(),phone:document.getElementById('pm-phone').value.trim(),address:document.getElementById('pm-addr').value.trim(),stimme:document.getElementById('pm-stimme').value};
+  const vname=document.getElementById('pm-vname').value.trim();
+  const nname=document.getElementById('pm-nname').value.trim();
+  const name=(vname+' '+nname).trim();
+  const u={name,phone:document.getElementById('pm-phone').value.trim(),address:document.getElementById('pm-addr').value.trim(),stimme:document.getElementById('pm-stimme').value};
   await SB.from('profiles').update(u).eq('id',currentUser.id);
   currentProfile={...currentProfile,...u};
-  document.getElementById('tb-name').textContent=u.name;
-  document.getElementById('tb-av').textContent=u.name.charAt(0).toUpperCase();
+  document.getElementById('tb-name').textContent=vname||name;
+  document.getElementById('tb-av').textContent=(vname||name).charAt(0).toUpperCase();
   closeModal('m-profile');T('Profil gespeichert','ok');
 }
 

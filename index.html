@@ -769,20 +769,20 @@ async function delSong(id){await SB.from('songs').delete().eq('id',id);closeModa
 // ========== CSV IMPORT/EXPORT ==========
 async function importCSV(event){
   const file=event.target.files[0];if(!file)return;
-  // Try UTF-8 first, then Latin-1 as fallback for Excel exports
+  // Try multiple encodings in order of likelihood
   let text='';
-  try{
-    const buf=await file.arrayBuffer();
-    // Try UTF-8 with BOM first
-    let dec=new TextDecoder('utf-8');
-    text=dec.decode(buf);
-    // Check if result has many replacement chars → try latin1
-    const badChars=(text.match(/\uFFFD/g)||[]).length;
-    if(badChars>5){
-      dec=new TextDecoder('windows-1252');
-      text=dec.decode(buf);
-    }
-  }catch(e){text=await file.text();}
+  const buf=await file.arrayBuffer();
+  const tryEncodings=['utf-8','windows-1252','iso-8859-1','iso-8859-15'];
+  for(const enc of tryEncodings){
+    try{
+      const dec=new TextDecoder(enc,{fatal:true});
+      const t=dec.decode(buf);
+      // Count replacement/control chars to judge quality
+      const bad=(t.match(/[\uFFFD\x00-\x08\x0E-\x1F]/g)||[]).length;
+      if(bad<5){text=t;console.log('CSV encoding detected:',enc);break;}
+    }catch(e){continue;}
+  }
+  if(!text){text=new TextDecoder('windows-1252').decode(buf);}
   // Remove BOM
   if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
   // Split lines – handle \r\n and \n

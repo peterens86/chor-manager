@@ -47,8 +47,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* TOPBAR */
 #topbar{background:var(--bg2);border-bottom:0.5px solid var(--border);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:56px;flex-shrink:0;}
 #topbar h1{font-family:var(--fd);font-size:20px;font-weight:600;color:var(--accent);}
-.ub{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;position:relative;}
-.av{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bg);flex-shrink:0;}
+.ub{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;position:relative;}
+.av{min-width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg);flex-shrink:0;letter-spacing:0.5px;}
+.ub-name{font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ndot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--danger);border:2px solid var(--bg2);}
 
 /* NAV */
@@ -156,18 +157,29 @@ textarea.fi{resize:vertical;min-height:80px;}
 .ab.no{background:rgba(224,85,85,.15);border-color:rgba(224,85,85,.4);color:var(--danger);}
 
 /* CALENDAR */
-.chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.cmonth{font-family:var(--fd);font-size:20px;font-weight:600;}
-.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:16px;}
-.cdow{font-size:10px;color:var(--text3);text-align:center;padding:4px 0;font-weight:500;}
-.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;position:relative;font-size:13px;}
+.chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.cmonth{font-family:var(--fd);font-size:16px;font-weight:600;}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:10px;}
+.cdow{font-size:9px;color:var(--text3);text-align:center;padding:3px 0;font-weight:500;}
+.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;position:relative;font-size:11px;}
 .cday:hover{background:rgba(255,255,255,.05);}
 .cday.today{background:rgba(201,168,76,.15);color:var(--accent);font-weight:600;}
-.cday.has-event::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--accent);}
+.cday.has-event::after{content:'';position:absolute;bottom:2px;width:3px;height:3px;border-radius:50%;background:var(--accent);}
 .cday.other-month{color:var(--text3);}
-.cevt{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent);}
+.cevt{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--accent);}
 .cevt.probe{border-left-color:var(--info);}
 .cevt.konzert{border-left-color:var(--success);}
+/* Multi-month grid */
+.cal-multi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.cal-mini{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:8px;}
+.cal-mini .cmonth{font-size:11px;}
+.cal-mini .cday{font-size:10px;}
+/* Year view */
+.cal-year{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+/* View toggle */
+.view-tabs{display:flex;gap:4px;margin-bottom:12px;}
+.vtab{padding:5px 10px;border-radius:20px;font-size:11px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;}
+.vtab.active{background:rgba(201,168,76,.15);border-color:var(--accent);color:var(--accent2);}
 
 /* ANNOUNCEMENTS */
 .acard{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;}
@@ -254,7 +266,7 @@ textarea.fi{resize:vertical;min-height:80px;}
     <h1>♪ Chor Manager</h1>
     <div class="ub" onclick="openProfile()">
       <div class="av" id="tb-av">?</div>
-      <span id="tb-name"></span>
+      <span class="ub-name" id="tb-name"></span>
       <div class="ndot" id="ndot" style="display:none"></div>
     </div>
   </div>
@@ -561,9 +573,10 @@ function startApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   const p=currentProfile||{};
-  const vname=(p.name||'').split(' ')[0]||p.name||'';
-  document.getElementById('tb-name').textContent=vname;
-  document.getElementById('tb-av').textContent=(vname||'?').charAt(0).toUpperCase();
+  const parts=(p.name||'').split(' ');
+  const initials=(parts[0]?.charAt(0)||'')+(parts[1]?.charAt(0)||parts[0]?.charAt(1)||'');
+  document.getElementById('tb-name').textContent=p.name||'';
+  document.getElementById('tb-av').textContent=initials.toUpperCase()||'?';
   const isAdmin=p.role==='admin';
   if(isAdmin){
     document.getElementById('ni-settings').style.display='flex';
@@ -929,31 +942,89 @@ async function saveEvent(){
 async function delEvent(id){await SB.from('events').delete().eq('id',id);closeModal('m-ev-detail');renderEvents();T('Veranstaltung gelöscht');}
 
 // ===== CALENDAR =====
-async function renderCal(){
-  const el=document.getElementById('cal-wrap');
-  const y=calDate.getFullYear(),m=calDate.getMonth();
+let calView='month'; // 'month','3month','year'
+
+function buildMiniCal(y,m,allEvts){
+  const mn=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
   const fd=(new Date(y,m,1).getDay()+6)%7;
   const dim=new Date(y,m+1,0).getDate();
-  const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-  const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-${String(m+1).padStart(2,'0')}-01`).lte('datum',`${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`);
-  const ebd={};(evts||[]).forEach(e=>{const d=parseInt(e.datum.split('-')[2]);if(!ebd[d])ebd[d]=[];ebd[d].push(e);});
   const now=new Date(); const itm=now.getFullYear()===y&&now.getMonth()===m;
+  const ebd={};(allEvts||[]).filter(e=>{const p=e.datum?.split('-');return p&&parseInt(p[0])===y&&parseInt(p[1])-1===m;}).forEach(e=>{const d=parseInt(e.datum.split('-')[2]);if(!ebd[d])ebd[d]=[];ebd[d].push(e);});
   let cells='';
   for(let i=0;i<fd;i++)cells+='<div class="cday other-month"></div>';
   for(let d=1;d<=dim;d++)cells+=`<div class="cday ${itm&&d===now.getDate()?'today':''} ${ebd[d]?'has-event':''}">${d}</div>`;
-  const isAdmin=currentProfile?.role==='admin';
-  el.innerHTML=`<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-1)">‹</button><div class="cmonth">${mn[m]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(1)">›</button></div>
-    <div class="cgrid">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<div class="cdow">${d}</div>`).join('')}${cells}</div>
-    <div class="st">Termine diesen Monat</div>
-    ${(evts||[]).length?(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>`<div class="cevt ${e.typ}" ${isAdmin?`onclick="openCalForm('${e.id}')"`:''}  style="${isAdmin?'cursor:pointer':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div><div style="font-weight:500;font-size:14px">${esc(e.title)}</div><div style="font-size:12px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div></div>
-        <span class="badge ${e.typ==='konzert'?'green':e.typ==='probe'?'blue':''}">${e.typ}</span>
-      </div>
-      ${isAdmin?`<button class="btn btn-d btn-sm" style="margin-top:8px" onclick="event.stopPropagation();delCalEvt('${e.id}')">Löschen</button>`:''}
-    </div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+  return`<div class="cal-mini">
+    <div style="font-weight:600;font-size:11px;color:var(--text2);text-align:center;margin-bottom:6px">${mn[m]} ${y}</div>
+    <div class="cgrid">${['M','D','M','D','F','S','S'].map(d=>`<div class="cdow">${d}</div>`).join('')}${cells}</div>
+  </div>`;
 }
-function calNav(d){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);renderCal();}
+
+async function renderCal(){
+  const el=document.getElementById('cal-wrap');
+  const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const isAdmin=currentProfile?.role==='admin';
+  const viewTabs=`<div class="view-tabs">
+    <div class="vtab ${calView==='month'?'active':''}" onclick="calView='month';renderCal()">Monat</div>
+    <div class="vtab ${calView==='3month'?'active':''}" onclick="calView='3month';renderCal()">3 Monate</div>
+    <div class="vtab ${calView==='year'?'active':''}" onclick="calView='year';renderCal()">Jahr</div>
+  </div>`;
+
+  if(calView==='month'){
+    const y=calDate.getFullYear(),m=calDate.getMonth();
+    const fd=(new Date(y,m,1).getDay()+6)%7;
+    const dim=new Date(y,m+1,0).getDate();
+    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-${String(m+1).padStart(2,'0')}-01`).lte('datum',`${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`);
+    const ebd={};(evts||[]).forEach(e=>{const d=parseInt(e.datum.split('-')[2]);if(!ebd[d])ebd[d]=[];ebd[d].push(e);});
+    const now=new Date(); const itm=now.getFullYear()===y&&now.getMonth()===m;
+    let cells='';
+    for(let i=0;i<fd;i++)cells+='<div class="cday other-month"></div>';
+    for(let d=1;d<=dim;d++)cells+=`<div class="cday ${itm&&d===now.getDate()?'today':''} ${ebd[d]?'has-event':''}">${d}</div>`;
+    el.innerHTML=viewTabs+
+      `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-1)">‹</button><div class="cmonth">${mn[m]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(1)">›</button></div>
+      <div class="cgrid">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<div class="cdow">${d}</div>`).join('')}${cells}</div>
+      <div class="st">Termine diesen Monat</div>
+      ${(evts||[]).length?(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>`<div class="cevt ${e.typ}" ${isAdmin?`onclick="openCalForm('${e.id}')"`:''}  style="${isAdmin?'cursor:pointer':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div style="font-weight:500;font-size:13px">${esc(e.title)}</div><div style="font-size:11px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div></div>
+          <span class="badge ${e.typ==='konzert'?'green':e.typ==='probe'?'blue':''}" style="font-size:10px">${e.typ}</span>
+        </div>
+        ${isAdmin?`<button class="btn btn-d btn-sm" style="margin-top:6px;font-size:11px" onclick="event.stopPropagation();delCalEvt('${e.id}')">Löschen</button>`:''}
+      </div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+
+  } else if(calView==='3month'){
+    const y=calDate.getFullYear(),m=calDate.getMonth();
+    const from=`${y}-${String(m+1).padStart(2,'0')}-01`;
+    const m3=new Date(y,m+3,0); const to=`${m3.getFullYear()}-${String(m3.getMonth()+1).padStart(2,'0')}-${String(m3.getDate()).padStart(2,'0')}`;
+    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',from).lte('datum',to);
+    let minis='';
+    for(let i=0;i<3;i++){const mm=(m+i)%12;const yy=y+Math.floor((m+i)/12);minis+=buildMiniCal(yy,mm,evts||[]);}
+    // Upcoming events in period
+    const upcoming=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
+    el.innerHTML=viewTabs+
+      `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-3)">‹</button><div class="cmonth">${mn[m]} – ${mn[(m+2)%12]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(3)">›</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">${minis}</div>
+      <div class="st">Termine in diesem Zeitraum</div>
+      ${upcoming.length?upcoming.map(e=>`<div class="cevt ${e.typ}"><div style="font-weight:500;font-size:13px">${esc(e.title)}</div><div style="font-size:11px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+
+  } else { // year
+    const y=calDate.getFullYear();
+    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-01-01`).lte('datum',`${y}-12-31`);
+    let minis='';
+    for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,evts||[]);
+    const upcoming=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
+    el.innerHTML=viewTabs+
+      `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-12)">‹</button><div class="cmonth">Jahr ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(12)">›</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">${minis}</div>
+      <div class="st">Alle Termine ${y} (${upcoming.length})</div>
+      ${upcoming.length?upcoming.map(e=>`<div class="cevt ${e.typ}"><div style="font-weight:500;font-size:13px">${esc(e.title)}</div><div style="font-size:11px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+  }
+}
+function calNav(d){
+  if(calView==='month')calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);
+  else if(calView==='3month')calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);
+  else calDate=new Date(calDate.getFullYear()+d,calDate.getMonth(),1);
+  renderCal();
+}
 function openCalForm(id=null){
   editCalId=id;
   document.getElementById('cf-title-h').textContent=id?'Termin bearbeiten':'Termin hinzufügen';
@@ -1101,11 +1172,14 @@ async function renderSettings(){
             ${!isActive?'<span class="badge red">Deaktiviert</span>':''}
           </div>
         </div>
-        ${!isMe?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        ${isMe?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" onclick="toggleRole2('${m.id}','${m.role2||''}')">Zusatzrolle ändern</button>
+        </div>`:
+        `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
           <button class="btn btn-g btn-sm" onclick="toggleMemberRole('${m.id}','${m.role}')">${m.role==='admin'?'Zu Mitglied':'Zu Admin'}</button>
           <button class="btn btn-g btn-sm" onclick="toggleRole2('${m.id}','${m.role2||''}')">Zusatzrolle</button>
           <button class="btn ${isActive?'btn-d':'btn-i'} btn-sm" onclick="toggleActive('${m.id}',${isActive})">${isActive?'Deaktivieren':'Aktivieren'}</button>
-        </div>`:''}
+        </div>`}
       </div>`;
     }).join('')}
     <div class="st" style="margin-top:20px">Repertoire Import</div>
@@ -1292,8 +1366,10 @@ async function saveProfile(){
   const u={name,phone:document.getElementById('pm-phone').value.trim(),address:document.getElementById('pm-addr').value.trim(),stimme:document.getElementById('pm-stimme').value};
   await SB.from('profiles').update(u).eq('id',currentUser.id);
   currentProfile={...currentProfile,...u};
-  document.getElementById('tb-name').textContent=vname||name;
-  document.getElementById('tb-av').textContent=(vname||name).charAt(0).toUpperCase();
+  const pts=name.split(' ');
+  const ini=(pts[0]?.charAt(0)||'')+(pts[1]?.charAt(0)||pts[0]?.charAt(1)||'');
+  document.getElementById('tb-name').textContent=name;
+  document.getElementById('tb-av').textContent=ini.toUpperCase()||'?';
   closeModal('m-profile');T('Profil gespeichert','ok');
 }
 

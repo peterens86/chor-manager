@@ -318,7 +318,7 @@ textarea.fi{resize:vertical;min-height:70px;}
     <div class="ni active" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Start</div>
     <div class="ni" onclick="showPage('ann')" id="ni-ann"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="nbadge" id="ann-badge" style="display:none">0</span>News</div>
     <div class="ni" onclick="showPage('songs')"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Lieder</div>
-    <div class="ni" onclick="showPage('events')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Termine</div>
+    <div class="ni" onclick="showPage('events')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Veranst.</div>
     <div class="ni" onclick="showPage('cal')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Kalender</div>
     <div class="ni" onclick="showPage('stats')"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats</div>
     <div class="ni" onclick="showPage('media')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Medien</div>
@@ -449,6 +449,9 @@ textarea.fi{resize:vertical;min-height:70px;}
 </div></div>
 
 <div class="toast" id="toast"></div>
+<datalist id="dl-dirigent"></datalist>
+<datalist id="dl-klavier"></datalist>
+<datalist id="dl-members"></datalist>
 
 <script>
 // ========== GLOBALS ==========
@@ -547,6 +550,7 @@ function startApp(){
     ['song-add-btn','ev-add-btn','ann-add-btn','cal-add-btn','media-add-btn'].forEach(id=>document.getElementById(id).style.display='');
   }
   SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
+  loadAutocompleteLists();
   showPage('dashboard');
 }
 
@@ -942,8 +946,8 @@ async function openEvDetail(id){
     <div class="dl" style="margin-bottom:7px">Programm</div>
     ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(p.songs?.title||'?')}</div><div style="font-size:11px;color:var(--text2)">${esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
     <div class="ddiv"></div>
-    <div class="dl" style="margin-bottom:7px">Allgemeine Rollen</div>
-    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Dirigent',e.dirigent],['Klavier',e.klavier],['Instrumente',e.instrumente]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
+    <div class="dl" style="margin-bottom:7px">Rollen</div>
+    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Dirigent',e.dirigent]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Anwesenheit</div>
     ${(e.attendance||[]).map(m=>`<div class="atti"><div><span style="font-size:13px">${esc(m.profiles?.name||'?')}</span> <span style="font-size:11px;color:var(--text3)">${esc(m.profiles?.stimme||'')}</span></div>
@@ -972,16 +976,17 @@ async function openEventForm(id=null){
   document.getElementById('ef-body').innerHTML=`
     <div class="fs"><div class="fst">Allgemein</div>
       <div class="fg"><label class="fl">Titel *</label><input class="fi" id="ef-title" value="${esc(e.title||'')}"></div>
-      <div class="fr2"><div class="fg"><label class="fl">Datum</label><input class="fi" type="date" id="ef-datum" value="${e.datum||''}"></div><div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="ef-uhrzeit" value="${fT(e.uhrzeit||'')}"></div></div>
-      <div class="fg"><label class="fl">Ort</label><input class="fi" id="ef-ort" value="${esc(e.ort||'')}"></div>
+      <div class="fr2"><div class="fg"><label class="fl">Datum</label><input class="fi" type="date" id="ef-datum" value="${e.datum||''}"></div><div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="ef-uhrzeit" value="${fT(e.uhrzeit||'10:00')}"></div></div>
+      <div class="fg"><label class="fl">Ort</label><input class="fi" id="ef-ort" value="${esc(e.ort||'Bielefeld')}"></div>
     </div>
     <div class="fs"><div class="fst">Programm</div>
       <div id="prog-rows">${prog.map((p,i)=>buildProgRow(i+1,p,songs||[])).join('')}</div>
       <button type="button" class="btn btn-g btn-sm" onclick="addProgRow()">+ Lied hinzufügen</button>
     </div>
     <div class="fs"><div class="fst">Allgemeine Rollen</div>
-      <div class="fr2"><div class="fg"><label class="fl">Dirigent</label><input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}"></div><div class="fg"><label class="fl">Klavier</label><input class="fi" id="ef-klav" value="${esc(e.klavier||'')}"></div></div>
-      <div class="fg"><label class="fl">Weitere Instrumente</label><input class="fi" id="ef-instr" value="${esc(e.instrumente||'')}"></div>
+      <div class="fg"><label class="fl">Dirigent</label>
+        <input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}" list="dl-dirigent" autocomplete="off">
+      </div>
     </div>
     <div class="fs"><div class="fst">Aufgaben</div>
       <div id="aufg-rows">${aufgRows}</div>
@@ -994,15 +999,15 @@ async function openEventForm(id=null){
 function buildProgRow(pos,p={},songs=[]){
   const opts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title)}</option>`).join('');
   return`<div class="ep-row prog-ep-row"><div class="ep-row-header"><div class="pnum" style="width:22px;height:22px;font-size:11px">${pos}</div><select class="fi prog-song" style="flex:1"><option value="">– Lied –</option>${opts}</select><button type="button" class="btn btn-d btn-sm" onclick="this.closest('.prog-ep-row').remove();renumberProgRows()" style="width:28px;height:28px;padding:0">✕</button></div>
-    <div class="ep-roles"><input class="fi prog-dir" placeholder="Dirigent" value="${esc(p.dirigent||'')}"><input class="fi prog-klav" placeholder="Klavier" value="${esc(p.klavier||'')}"><input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}"></div></div>`;
+    <div class="ep-roles"><input class="fi prog-dir" placeholder="Dirigent" list="dl-dirigent" autocomplete="off" value="${esc(p.dirigent||'')}"><input class="fi prog-klav" placeholder="Klavier" list="dl-klavier" autocomplete="off" value="${esc(p.klavier||'')}"><input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}"></div></div>`;
 }
 function renumberProgRows(){document.querySelectorAll('.prog-ep-row .pnum').forEach((el,i)=>el.textContent=i+1);}
 function addProgRow(){const c=document.getElementById('prog-rows');const p=c.querySelectorAll('.prog-ep-row').length+1;const d=document.createElement('div');d.innerHTML=buildProgRow(p,{},window._efSongs||[]);c.appendChild(d.firstElementChild);}
-function addAufgRow(){const d=document.createElement('div');d.className='fr2 aufg-row';d.style.marginBottom='7px';d.innerHTML=`<input class="fi aufg-person" placeholder="Person"><input class="fi aufg-task" placeholder="Aufgabe">`;document.getElementById('aufg-rows').appendChild(d);}
+function addAufgRow(){const d=document.createElement('div');d.className='fr2 aufg-row';d.style.marginBottom='7px';d.innerHTML=`<input class="fi aufg-person" placeholder="Person" list="dl-members" autocomplete="off"><input class="fi aufg-task" placeholder="Aufgabe">`;document.getElementById('aufg-rows').appendChild(d);}
 async function saveEvent(){
   const title=document.getElementById('ef-title').value.trim();
   if(!title){T('Bitte Titel eingeben','err');return;}
-  const payload={title,datum:document.getElementById('ef-datum').value||null,uhrzeit:document.getElementById('ef-uhrzeit').value||null,ort:document.getElementById('ef-ort').value.trim(),dirigent:document.getElementById('ef-dir').value.trim(),klavier:document.getElementById('ef-klav').value.trim(),instrumente:document.getElementById('ef-instr').value.trim(),notizen:document.getElementById('ef-notiz').value.trim(),updated_at:new Date().toISOString()};
+  const payload={title,datum:document.getElementById('ef-datum').value||null,uhrzeit:document.getElementById('ef-uhrzeit').value||null,ort:document.getElementById('ef-ort').value.trim(),dirigent:document.getElementById('ef-dir').value.trim(),notizen:document.getElementById('ef-notiz').value.trim(),updated_at:new Date().toISOString()};
   let evId=editEvId;
   if(editEvId){await SB.from('events').update(payload).eq('id',editEvId);}
   else{const{data,error}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();if(error){T('Fehler: '+error.message,'err');return;}evId=data?.id;}
@@ -1018,6 +1023,23 @@ async function saveEvent(){
   closeModal('m-ev-form');renderEvents();T(editEvId?'Veranstaltung aktualisiert':'Veranstaltung hinzugefügt','ok');
 }
 async function delEvent(id){await SB.from('events').delete().eq('id',id);closeModal('m-ev-detail');renderEvents();T('Veranstaltung gelöscht');}
+
+// ========== AUTOCOMPLETE ==========
+async function loadAutocompleteLists(){
+  const{data:members}=await SB.from('profiles').select('name,role2').eq('active',true).order('name');
+  if(!members)return;
+  const dirigenten=members.filter(m=>(m.role2||'').includes('dirigent')).map(m=>m.name);
+  const klavieristen=members.filter(m=>(m.role2||'').includes('klavier')).map(m=>m.name);
+  const allNames=members.map(m=>m.name);
+  const fill=(id,names)=>{
+    const dl=document.getElementById(id);
+    if(!dl)return;
+    dl.innerHTML=names.map(n=>`<option value="${esc(n)}">`).join('');
+  };
+  fill('dl-dirigent',dirigenten.length?dirigenten:allNames);
+  fill('dl-klavier',klavieristen.length?klavieristen:allNames);
+  fill('dl-members',allNames);
+}
 
 // ========== CALENDAR ==========
 async function loadCategories(){

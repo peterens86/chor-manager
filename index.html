@@ -691,7 +691,7 @@ async function openSongDetail(id){
       ${df('Übersetzer',s.uebersetzer)}${s.uebersetzer_lz?df('Lebensdaten',s.uebersetzer_lz):''}
     </div>
     <div class="ddiv"></div>
-    <div class="dgrid" style="margin-bottom:12px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
+    <div class="dgrid" style="margin-bottom:12px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${s.quelle_nr?df('Nr.',s.quelle_nr):''}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
     ${(s.links||[]).length?`<div class="ddiv"></div><div class="dl">Links</div><div style="margin-top:5px">${s.links.map(l=>`<a href="${esc(l)}" target="_blank" class="ffile">${esc(l.replace(/https?:\/\//,'').substring(0,30))}</a>`).join('')}</div>`:''}
     ${filesHtml}${uploadHtml}
     ${s.notizen?`<div class="ddiv"></div><div class="df" style="grid-column:1/-1"><div class="dl">Notizen</div><div class="dv">${esc(s.notizen)}</div></div>`:''}`;
@@ -746,6 +746,7 @@ function buildSongFormHTML(s){
   <div class="fs"><div class="fst">Rechtliches</div>
     <div class="fr2"><div class="fg"><label class="fl">Rechte</label><input class="fi" id="sf-recht" value="${esc(s.rechte||'')}"></div><div class="fg"><label class="fl">Lizenz</label><input class="fi" id="sf-liz" value="${esc(s.lizenz||'')}"></div></div>
     <div class="fr2"><div class="fg"><label class="fl">Originaltitel</label><input class="fi" id="sf-orig" value="${esc(s.originaltitel||'')}"></div><div class="fg"><label class="fl">Quelle</label><input class="fi" id="sf-quelle" value="${esc(s.quelle||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Quellen-Nr.</label><input class="fi" id="sf-quelle-nr" value="${esc(s.quelle_nr||'')}" placeholder="z.B. 42"></div><div class="fg"><label class="fl">Lizenz</label><input class="fi" id="sf-liz" value="${esc(s.lizenz||'')}"></div></div>
   </div>
   <div class="fs"><div class="fst">Links & Notizen</div>
     <div class="fg"><label class="fl">YouTube / Spotify</label><input class="fi" id="sf-link" value="${esc((s.links||[])[0]||'')}" placeholder="https://…"></div>
@@ -756,7 +757,7 @@ async function saveSong(){
   const title=document.getElementById('sf-title').value.trim();
   if(!title){T('Bitte Titel eingeben','err');return;}
   const lv=document.getElementById('sf-link').value.trim();
-  const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),schrank:document.getElementById('sf-schrank').value,komponist:document.getElementById('sf-komp').value.trim(),komponist_lz:document.getElementById('sf-komp-lz').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),textdichter_lz:document.getElementById('sf-text-lz').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),arrangeur_lz:document.getElementById('sf-arr-lz').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),uebersetzer_lz:document.getElementById('sf-ueb-lz').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
+  const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),schrank:document.getElementById('sf-schrank').value,komponist:document.getElementById('sf-komp').value.trim(),komponist_lz:document.getElementById('sf-komp-lz').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),textdichter_lz:document.getElementById('sf-text-lz').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),arrangeur_lz:document.getElementById('sf-arr-lz').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),uebersetzer_lz:document.getElementById('sf-ueb-lz').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),quelle_nr:document.getElementById('sf-quelle-nr').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
   let error;
   if(editSongId){({error}=await SB.from('songs').update(payload).eq('id',editSongId));}
   else{({error}=await SB.from('songs').insert({...payload,created_by:currentUser.id}));}
@@ -817,7 +818,7 @@ async function importCSV(event){
       arrangeur:getVal(vals,'arrangeur'),arrangeur_lz:getVal(vals,'arrangeur_lz'),
       uebersetzer:getVal(vals,'uebersetzer'),uebersetzer_lz:getVal(vals,'uebersetzer_lz'),
       rechte:getVal(vals,'rechte'),originaltitel:getVal(vals,'originaltitel'),
-      quelle:getVal(vals,'quelle'),lizenz:getVal(vals,'lizenz'),
+      quelle:getVal(vals,'quelle'),quelle_nr:getVal(vals,'quelle_nr'),lizenz:getVal(vals,'lizenz'),
       schrank:getVal(vals,'schrank'),notizen:getVal(vals,'notizen'),
       links:[],created_by:currentUser.id
     });
@@ -884,7 +885,7 @@ function parseCSVLine(line,sep=','){
 async function exportCSV(){
   const{data:songs}=await SB.from('songs').select('*').order('title');
   if(!songs?.length){T('Keine Lieder zum Exportieren','err');return;}
-  const headers=['liedanfang','title','refrain','besetzung','thema','anlass','textdichter','textdichter_lz','komponist','komponist_lz','arrangeur','arrangeur_lz','uebersetzer','uebersetzer_lz','rechte','originaltitel','quelle','lizenz','schrank','notizen'];
+  const headers=['liedanfang','title','refrain','besetzung','thema','anlass','textdichter','textdichter_lz','komponist','komponist_lz','arrangeur','arrangeur_lz','uebersetzer','uebersetzer_lz','rechte','originaltitel','quelle','quelle_nr','lizenz','schrank','notizen'];
   const rows=[headers,...songs.map(s=>headers.map(h=>s[h]||''))];
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));a.download='repertoire.csv';a.click();
@@ -1460,7 +1461,7 @@ async function renderSettings(){
           <button class="btn btn-g" style="width:100%" onclick="exportCSV()">CSV exportieren</button>
         </div>
       </div>
-      <p style="font-size:10px;color:var(--text3);margin-top:8px">Spalten: liedanfang, title, refrain, besetzung, thema, anlass, textdichter, textdichter_lz, komponist, komponist_lz, arrangeur, arrangeur_lz, uebersetzer, uebersetzer_lz, rechte, originaltitel, quelle, lizenz, schrank, notizen</p>
+      <p style="font-size:10px;color:var(--text3);margin-top:8px">Spalten: liedanfang, title, refrain, besetzung, thema, anlass, textdichter, textdichter_lz, komponist, komponist_lz, arrangeur, arrangeur_lz, uebersetzer, uebersetzer_lz, rechte, originaltitel, quelle, quelle_nr, lizenz, schrank, notizen</p>
     </div>`;
 }
 

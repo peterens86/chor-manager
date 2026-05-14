@@ -153,6 +153,7 @@ textarea.fi{resize:vertical;min-height:70px;}
 .cevt-bar{position:absolute;bottom:2px;left:0;right:0;height:4px;border-radius:2px;font-size:0;}
 /* Full calendar event blocks */
 .cal-event-block{font-size:9px;padding:1px 3px;border-radius:3px;color:#fff;margin:1px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.4;}
+.cal-event-block.kein-chor{text-decoration:line-through;opacity:.85;}
 /* Event list */
 .cevt{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--accent);}
 .cevt.highlighted{background:rgba(201,168,76,.12);border-color:var(--accent);}
@@ -956,6 +957,7 @@ async function loadCategories(){
     {id:'chorprobe',name:'Chorprobe',color:'#5b8dee'},
     {id:'gottesdienst',name:'Gottesdienst',color:'#e05555'},
     {id:'konzert',name:'Konzert',color:'#4caf82'},
+    {id:'kein_chor',name:'Kein Chor',color:'#e05555'},
     {id:'sonstiges',name:'Sonstiges',color:'#a8a4b0'}
   ];
 }
@@ -1054,7 +1056,7 @@ async function renderCal(){
           <div class="cdnum">${d}</div>
           ${isHol?`<div style="font-size:6px;color:var(--danger);line-height:1.1;text-align:center;overflow:hidden;max-height:14px">${esc(holidays[ds])}</div>`:''}
           ${!isHol&&fer?`<div style="font-size:6px;color:#8fb3f5;line-height:1.1;text-align:center">Ferien</div>`:''}
-          ${singleEvs.slice(0,isHol||fer?0:2).map(e=>`<div class="cal-event-block" style="background:${esc(e.color||catColor(e.category))}" onclick="event.stopPropagation();highlightCalEvt('${e.id}')">${esc(e.title)}</div>`).join('')}
+          ${singleEvs.slice(0,isHol||fer?0:2).map(e=>`<div class="cal-event-block${e.category==='Kein Chor'?' kein-chor':''}" style="background:${esc(e.color||catColor(e.category))}" onclick="event.stopPropagation();highlightCalEvt('${e.id}')">${esc(e.title)}</div>`).join('')}
           ${evs.length>2?`<div style="font-size:6px;color:var(--text3)">+${evs.length-2}…</div>`:''}
         </div>
       </div>`;
@@ -1124,10 +1126,11 @@ async function renderCal(){
 function evtListItem(e,isAdmin){
   const color=e.color||catColor(e.category);
   const isMultiDay=e.bis_datum&&e.bis_datum!==e.datum;
-  return`<div class="cevt" id="evtli-${e.id}" data-evtid="${e.id}" data-evtdate="${e.datum}" style="border-left-color:${esc(color)};transition:background .3s">
+  const isKeinChor=e.category==='Kein Chor';
+  return`<div class="cevt" id="evtli-${e.id}" data-evtid="${e.id}" data-evtdate="${e.datum}" style="border-left-color:${esc(color)};${isKeinChor?'opacity:.8':''}transition:background .3s">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div style="flex:1">
-        <div style="font-weight:500;font-size:13px">${esc(e.title)}</div>
+        <div style="font-weight:500;font-size:13px;${isKeinChor?'text-decoration:line-through;color:var(--text3)':''}">${esc(e.title)}</div>
         <div style="font-size:11px;color:var(--text2)">${fD(e.datum)}${isMultiDay?' – '+fD(e.bis_datum):''} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.bis_uhrzeit?'– '+fT(e.bis_uhrzeit):''}</div>
         ${e.ort?`<div style="font-size:11px;color:var(--text3)">📍 ${esc(e.ort)}</div>`:''}
         ${e.beschreibung?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${esc(e.beschreibung)}</div>`:''}

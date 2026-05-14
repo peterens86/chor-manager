@@ -189,23 +189,7 @@ textarea.fi{resize:vertical;min-height:80px;}
 .cmsg.user .bbl{background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;display:inline-block;max-width:85%;float:right;clear:both;}
 .cmsg.bot .bbl{background:var(--card);border:0.5px solid var(--border);border-radius:12px 12px 12px 4px;padding:8px 12px;font-size:13px;display:inline-block;max-width:92%;clear:both;white-space:pre-wrap;}
 
-/* CAMERA OVERLAY */
-#cam-overlay{position:fixed;inset:0;background:#000;z-index:500;display:none;flex-direction:column;}
-#cam-video{flex:1;object-fit:cover;width:100%;}
-#cam-canvas{display:none;}
-.cam-bar{background:rgba(0,0,0,.7);padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;}
-.cam-shutter{width:64px;height:64px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5);cursor:pointer;flex-shrink:0;}
-.cam-close{color:#fff;font-size:28px;cursor:pointer;width:44px;text-align:center;}
-.cam-hint{color:rgba(255,255,255,.7);font-size:12px;flex:1;text-align:center;line-height:1.4;}
-.cam-frame{position:absolute;inset:15%;border:2px solid rgba(201,168,76,.7);border-radius:12px;pointer-events:none;}
-.cam-corner{position:absolute;width:20px;height:20px;border-color:var(--accent);border-style:solid;}
-.cam-corner.tl{top:-2px;left:-2px;border-width:3px 0 0 3px;}
-.cam-corner.tr{top:-2px;right:-2px;border-width:3px 3px 0 0;}
-.cam-corner.bl{bottom:-2px;left:-2px;border-width:0 0 3px 3px;}
-.cam-corner.br{bottom:-2px;right:-2px;border-width:0 3px 3px 0;}
-
 /* SCAN RESULT */
-#scan-result-modal .scan-preview{width:100%;max-height:180px;object-fit:cover;border-radius:var(--r);margin-bottom:14px;}
 .scan-field{background:rgba(201,168,76,.06);border:0.5px solid rgba(201,168,76,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;}
 .scan-field .sl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
 .scan-field .sv{font-size:14px;color:var(--text);}
@@ -244,8 +228,6 @@ textarea.fi{resize:vertical;min-height:80px;}
     <p>Bitte trage deine Supabase-Zugangsdaten ein. Diese findest du unter <code>Settings → API</code>.</p>
     <input class="fi" id="cfg-url" type="text" placeholder="https://xxxx.supabase.co" style="margin-bottom:10px">
     <input class="fi" id="cfg-key" type="text" placeholder="Anon/Public Key (eyJ…)" style="margin-bottom:10px">
-    <p style="margin-bottom:10px">Für die Kamera-Scan-Funktion benötigst du einen <strong>Anthropic API Key</strong>:</p>
-    <input class="fi" id="cfg-anthropic" type="text" placeholder="sk-ant-… (optional)" style="margin-bottom:14px">
     <p style="font-size:11px;color:var(--text3)">Alle Daten werden nur lokal in diesem Browser gespeichert.</p>
     <button class="btn btn-p" style="width:100%;margin-top:10px" onclick="saveConfig()">Speichern & starten</button>
   </div>
@@ -315,9 +297,6 @@ textarea.fi{resize:vertical;min-height:80px;}
     <div class="page" id="page-songs">
       <div class="hrow"><h2>Repertoire</h2>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-ic" id="song-scan-nav-btn" onclick="startScan('song')" title="Foto scannen" style="display:none">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </button>
           <button class="btn btn-ic" id="song-add-btn" onclick="openSongForm()" style="display:none">+</button>
         </div>
       </div>
@@ -380,26 +359,6 @@ textarea.fi{resize:vertical;min-height:80px;}
   </div>
 </div><!-- app -->
 
-<!-- CAMERA OVERLAY -->
-<div id="cam-overlay">
-  <div style="position:relative;flex:1;overflow:hidden">
-    <video id="cam-video" autoplay playsinline muted></video>
-    <canvas id="cam-canvas"></canvas>
-    <div class="cam-frame">
-      <div class="cam-corner tl"></div><div class="cam-corner tr"></div>
-      <div class="cam-corner bl"></div><div class="cam-corner br"></div>
-    </div>
-    <div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;text-align:center" id="cam-instruction">Notenblatt / Liederbuch in den Rahmen halten</div>
-  </div>
-  <div class="cam-bar">
-    <div class="cam-close" onclick="stopCam()">✕</div>
-    <div style="flex:1;text-align:center">
-      <div class="cam-shutter" onclick="capturePhoto()"></div>
-    </div>
-    <div style="width:44px"></div>
-  </div>
-</div>
-
 <!-- MODALS -->
 <!-- Song Detail -->
 <div class="mo" id="m-song-detail"><div class="md">
@@ -418,14 +377,6 @@ textarea.fi{resize:vertical;min-height:80px;}
     <button class="btn btn-g" onclick="closeModal('m-song-form')" style="flex:1">Abbrechen</button>
     <button class="btn btn-p" onclick="saveSong()" style="flex:2">Speichern</button>
   </div>
-</div></div>
-
-<!-- Scan Result / Confirm -->
-<div class="mo" id="m-scan-result"><div class="md">
-  <div class="mhandle"></div>
-  <div class="mh"><h3 id="sr-title">Scan-Ergebnis</h3><button class="mclose" onclick="closeModal('m-scan-result')">×</button></div>
-  <div class="mb" id="sr-body"></div>
-  <div class="mf" id="sr-footer"></div>
 </div></div>
 
 <!-- Event Detail -->
@@ -509,17 +460,13 @@ let SB=null, currentUser=null, currentProfile=null;
 let cachedSongs=[], cachedEvents=[], calDate=new Date();
 let editSongId=null, editEvId=null, editCalId=null;
 let songFilter={search:'',besetzung:'',thema:'',anlass:''};
-let scanMode='song'; // 'song' or 'event'
-let scanEventId=null;
-let capturedImageB64=null;
 
 function getCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}catch{return{}}}
 function saveConfig(){
   const url=document.getElementById('cfg-url').value.trim();
   const key=document.getElementById('cfg-key').value.trim();
-  const ant=document.getElementById('cfg-anthropic').value.trim();
   if(!url||!key){alert('Supabase URL und Key erforderlich');return;}
-  localStorage.setItem(CFG_KEY,JSON.stringify({url,key,ant}));
+  localStorage.setItem(CFG_KEY,JSON.stringify({url,key}));
   location.reload();
 }
 
@@ -572,7 +519,7 @@ function startApp(){
   const isAdmin=p.role==='admin';
   if(isAdmin){
     document.getElementById('ni-settings').style.display='flex';
-    ['song-add-btn','song-scan-nav-btn','ev-add-btn','ann-add-btn','cal-add-btn'].forEach(id=>document.getElementById(id).style.display='');
+    ['song-add-btn','ev-add-btn','ann-add-btn','cal-add-btn'].forEach(id=>document.getElementById(id).style.display='');
   }
   SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
   showPage('dashboard');
@@ -747,175 +694,6 @@ async function saveSong(){
 }
 async function delSong(id){await SB.from('songs').delete().eq('id',id);closeModal('m-song-detail');renderSongs();T('Lied gelöscht');}
 
-// ===== CAMERA SCAN =====
-let camStream=null;
-
-function startScan(mode, evId=null){
-  scanMode=mode; scanEventId=evId; capturedImageB64=null;
-  const overlay=document.getElementById('cam-overlay');
-  overlay.style.display='flex';
-  const instr=document.getElementById('cam-instruction');
-  instr.textContent=mode==='event'?'Notenblatt fotografieren – Lied wird automatisch erkannt':'Notenblatt oder Liederbuch in den Rahmen halten';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}})
-    .then(stream=>{camStream=stream;document.getElementById('cam-video').srcObject=stream;})
-    .catch(()=>{overlay.style.display='none';T('Kamerazugriff verweigert','err');});
-}
-
-function stopCam(){
-  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
-  document.getElementById('cam-overlay').style.display='none';
-}
-
-function capturePhoto(){
-  const video=document.getElementById('cam-video');
-  const canvas=document.getElementById('cam-canvas');
-  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
-  canvas.getContext('2d').drawImage(video,0,0);
-  capturedImageB64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
-  stopCam();
-  if(scanMode==='song') processScanForSong(capturedImageB64);
-  else processScanForEvent(capturedImageB64, scanEventId);
-}
-
-async function processScanForSong(b64){
-  document.getElementById('sr-title').textContent='Scan wird ausgewertet…';
-  document.getElementById('sr-body').innerHTML=`<div class="processing"><div class="spin"></div>Claude analysiert das Bild…</div>`;
-  document.getElementById('sr-footer').innerHTML='';
-  openModal('m-scan-result');
-  const cfg=getCfg();
-  if(!cfg.ant){
-    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger);font-size:14px">Kein Anthropic API Key konfiguriert. Bitte in den Einstellungen ergänzen.</p>`;
-    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
-    return;
-  }
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':cfg.ant,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-opus-4-5',max_tokens:1000,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-          {type:'text',text:`Du siehst ein Foto eines Notenblatts oder Liederbuchs. Extrahiere alle verfügbaren Informationen über das Lied und gib sie als JSON zurück. Antworte NUR mit einem JSON-Objekt, kein anderer Text. Format:
-{"title":"","liedanfang":"","refrain":"","besetzung":"","thema":"","anlass":"","komponist":"","textdichter":"","arrangeur":"","uebersetzer":"","rechte":"","originaltitel":"","quelle":"","lizenz":"","notizen":""}
-Felder die nicht erkennbar sind bleiben leere Strings. Besetzung als Abkürzung wenn erkennbar (SATB, TTBB etc.).`}
-        ]}]
-      })
-    });
-    const data=await resp.json();
-    const text=data.content?.[0]?.text||'{}';
-    let parsed={};
-    try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}catch{T('Konnte Ergebnis nicht lesen','err');}
-    showScanResult(parsed, b64);
-  }catch(e){
-    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger);font-size:14px">Fehler: ${esc(e.message)}</p>`;
-    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
-  }
-}
-
-function showScanResult(parsed, b64){
-  document.getElementById('sr-title').textContent='Erkannte Informationen';
-  const img=`data:image/jpeg;base64,${b64}`;
-  const fields=[['Titel',parsed.title],['Liedanfang',parsed.liedanfang],['Komponist',parsed.komponist],['Textdichter',parsed.textdichter],['Arrangeur',parsed.arrangeur],['Besetzung',parsed.besetzung],['Thema',parsed.thema],['Anlass',parsed.anlass],['Quelle',parsed.quelle],['Rechte',parsed.rechte],['Lizenz',parsed.lizenz],['Originaltitel',parsed.originaltitel],['Übersetzer',parsed.uebersetzer]].filter(([,v])=>v);
-  document.getElementById('sr-body').innerHTML=`
-    <img src="${img}" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--r);margin-bottom:14px">
-    ${fields.length?fields.map(([l,v])=>`<div class="scan-field"><div class="sl">${l}</div><div class="sv">${esc(v)}</div></div>`).join(''):'<p style="color:var(--text2)">Keine Lied-Informationen erkannt. Du kannst das Formular manuell ausfüllen.</p>'}
-    ${parsed.notizen?`<div class="scan-field"><div class="sl">Notizen</div><div class="sv">${esc(parsed.notizen)}</div></div>`:''}`;
-  document.getElementById('sr-footer').innerHTML='';
-  const cancelBtn=document.createElement('button');cancelBtn.className='btn btn-g';cancelBtn.style.flex='1';cancelBtn.textContent='Abbrechen';cancelBtn.onclick=()=>closeModal('m-scan-result');
-  const addBtn=document.createElement('button');addBtn.className='btn btn-p';addBtn.style.flex='2';addBtn.textContent='In Datenbank aufnehmen';
-  addBtn.onclick=()=>{closeModal('m-scan-result');openSongForm(null,parsed);};
-  document.getElementById('sr-footer').appendChild(cancelBtn);
-  document.getElementById('sr-footer').appendChild(addBtn);
-}
-
-async function processScanForEvent(b64, evId){
-  document.getElementById('sr-title').textContent='Lied wird erkannt…';
-  document.getElementById('sr-body').innerHTML=`<div class="processing"><div class="spin"></div>Claude analysiert das Foto…</div>`;
-  document.getElementById('sr-footer').innerHTML='';
-  openModal('m-scan-result');
-  const cfg=getCfg();
-  if(!cfg.ant){
-    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger)">Kein Anthropic API Key konfiguriert.</p>`;
-    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
-    return;
-  }
-  // Fetch existing songs for matching
-  const{data:songs}=await SB.from('songs').select('id,title,komponist,liedanfang');
-  const songList=(songs||[]).map(s=>`ID:${s.id} | ${s.title}${s.komponist?' ('+s.komponist+')':''}${s.liedanfang?' – Anfang: '+s.liedanfang:''}`).join('\n');
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':cfg.ant,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-opus-4-5',max_tokens:800,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-          {type:'text',text:`Du siehst ein Foto eines Notenblatts oder Liederbuchs. Identifiziere das Lied.
-
-Vorhandene Lieder in der Datenbank:
-${songList||'(Noch keine Lieder)'}
-
-Antworte NUR mit JSON, kein anderer Text:
-{"matched_id":"ID des passenden Lieds oder null","confidence":"high/medium/low","recognized":{"title":"","komponist":"","liedanfang":"","besetzung":"","textdichter":"","arrangeur":"","quelle":"","rechte":"","lizenz":"","thema":"","anlass":"","originaltitel":"","uebersetzer":""},"reason":"Kurze Begründung"}
-
-Wenn ein Lied aus der Datenbank passt, setze matched_id. Wenn nicht erkannt oder nicht in DB, setze matched_id:null und fülle recognized aus.`}
-        ]}]
-      })
-    });
-    const data=await resp.json();
-    const text=data.content?.[0]?.text||'{}';
-    let parsed={};
-    try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}catch{}
-    showEventScanResult(parsed, b64, evId);
-  }catch(e){
-    document.getElementById('sr-body').innerHTML=`<p style="color:var(--danger)">Fehler: ${esc(e.message)}</p>`;
-    document.getElementById('sr-footer').innerHTML=`<button class="btn btn-g" onclick="closeModal('m-scan-result')" style="flex:1">Schließen</button>`;
-  }
-}
-
-async function showEventScanResult(parsed, b64, evId){
-  const img=`data:image/jpeg;base64,${b64}`;
-  const rec=parsed.recognized||{};
-  if(parsed.matched_id){
-    const song=cachedSongs.find(s=>s.id===parsed.matched_id)||(await SB.from('songs').select('*').eq('id',parsed.matched_id).single()).data;
-    document.getElementById('sr-title').textContent='Lied erkannt';
-    document.getElementById('sr-body').innerHTML=`
-      <img src="${img}" style="width:100%;max-height:140px;object-fit:cover;border-radius:var(--r);margin-bottom:14px">
-      <div style="background:rgba(76,175,130,.08);border:0.5px solid rgba(76,175,130,.3);border-radius:var(--r);padding:14px;margin-bottom:10px">
-        <div style="font-weight:500;font-size:16px;margin-bottom:4px">${esc(song?.title||rec.title||'?')}</div>
-        <div style="font-size:13px;color:var(--text2)">${esc(song?.komponist||rec.komponist||'')}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:4px">Konfidenz: ${esc(parsed.confidence||'')} · ${esc(parsed.reason||'')}</div>
-      </div>`;
-    document.getElementById('sr-footer').innerHTML='';
-    const cb=document.createElement('button');cb.className='btn btn-g';cb.style.flex='1';cb.textContent='Abbrechen';cb.onclick=()=>closeModal('m-scan-result');
-    const ab=document.createElement('button');ab.className='btn btn-p';ab.style.flex='2';ab.textContent='Zum Programm hinzufügen';
-    ab.onclick=async()=>{await addSongToEventProgram(evId,parsed.matched_id);closeModal('m-scan-result');openEvDetail(evId);T('Lied hinzugefügt','ok');};
-    document.getElementById('sr-footer').appendChild(cb);document.getElementById('sr-footer').appendChild(ab);
-  } else {
-    document.getElementById('sr-title').textContent='Lied nicht in Datenbank';
-    const fields=[['Titel',rec.title],['Komponist',rec.komponist],['Besetzung',rec.besetzung],['Liedanfang',rec.liedanfang]].filter(([,v])=>v);
-    document.getElementById('sr-body').innerHTML=`
-      <img src="${img}" style="width:100%;max-height:140px;object-fit:cover;border-radius:var(--r);margin-bottom:14px">
-      <p style="font-size:14px;color:var(--text2);margin-bottom:12px">Das Lied wurde nicht in der Datenbank gefunden. Erkannte Informationen:</p>
-      ${fields.map(([l,v])=>`<div class="scan-field"><div class="sl">${l}</div><div class="sv">${esc(v)}</div></div>`).join('')}
-      <p style="font-size:12px;color:var(--text3);margin-top:10px">Möchtest du das Lied zuerst in die Datenbank aufnehmen?</p>`;
-    document.getElementById('sr-footer').innerHTML='';
-    const cb=document.createElement('button');cb.className='btn btn-g';cb.style.flex='1';cb.textContent='Abbrechen';cb.onclick=()=>closeModal('m-scan-result');
-    const db=document.createElement('button');db.className='btn btn-i';db.style.flex='1.5';db.textContent='In DB aufnehmen';
-    db.onclick=()=>{closeModal('m-scan-result');openSongForm(null,{...rec,_afterSave:{action:'addToEvent',evId}});};
-    const skipBtn=document.createElement('button');skipBtn.className='btn btn-g';skipBtn.style.flex='1.5';skipBtn.textContent='Manuell wählen';
-    skipBtn.onclick=()=>{closeModal('m-scan-result');openEvForm(evId);};
-    document.getElementById('sr-footer').appendChild(cb);document.getElementById('sr-footer').appendChild(db);document.getElementById('sr-footer').appendChild(skipBtn);
-  }
-}
-
-async function addSongToEventProgram(evId, songId){
-  const{data:existing}=await SB.from('event_program').select('position').eq('event_id',evId).order('position',{ascending:false}).limit(1);
-  const nextPos=(existing?.[0]?.position||0)+1;
-  await SB.from('event_program').insert({event_id:evId,song_id:songId,position:nextPos,dirigent:'',klavier:'',instrumente:''});
-}
-
 // ===== EVENTS =====
 async function renderEvents(){
   const{data}=await SB.from('events').select('*,event_program(position,song_id,songs(title,besetzung))').order('datum');
@@ -964,7 +742,6 @@ async function openEvDetail(id){
     <div class="ddiv"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="dl">Programm</div>
-      ${isAdmin?`<button class="btn btn-i btn-sm" onclick="startScan('event','${e.id}')">📷 Scan</button>`:''}
     </div>
     ${progHTML}
     <div class="ddiv"></div>
@@ -1019,7 +796,6 @@ async function openEvForm(id=null){
       <div id="prog-rows">${progRowsHTML}</div>
       <div style="display:flex;gap:8px;margin-top:4px">
         <button type="button" class="btn btn-g btn-sm" style="flex:1" onclick="addProgRow(${JSON.stringify(songs||[]).replace(/"/g,'&quot;')})">+ Lied wählen</button>
-        ${currentProfile?.role==='admin'?`<button type="button" class="btn btn-i btn-sm" style="flex:1" onclick="startScan('event','${id||'new'}')">📷 Foto scannen</button>`:''}
       </div>
     </div>
     <div class="fs"><div class="fst">Allgemeine Rollen</div>

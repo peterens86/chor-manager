@@ -1187,9 +1187,10 @@ async function openCalForm(id=null, prefilledDate=null){
     </div>
     ${!id?`<div class="fs"><div class="fst">Serientermin</div>
       <div class="fg"><label class="fl">Wiederholung</label><select class="fi" id="cf-repeat"><option value="">Kein</option><option value="weekly">Wöchentlich</option><option value="biweekly">Zweiwöchentlich</option><option value="monthly">Monatlich</option></select></div>
-      <div class="fg"><label class="fl">Serienende</label><input class="fi" type="date" id="cf-repeat-end" placeholder="Bis wann?"></div>
+      <div class="fg"><label class="fl">Serienende (bei Serientermin)</label><input class="fi" type="date" id="cf-repeat-end"></div>
     </div>`:`<div class="fg" style="background:rgba(232,160,32,.08);border:0.5px solid rgba(232,160,32,.3);border-radius:var(--r);padding:8px 10px;font-size:12px;color:var(--text2)">${e.series_id?'🔁 Dies ist ein Serientermin. Änderungen gelten nur für diesen einzelnen Termin.':''}</div>`}
-    <div class="fg"><label class="fl">Beschreibung</label><textarea class="fi" id="cf-desc">${esc(e.beschreibung||'')}</textarea></div>`;
+    <div class="fg"><label class="fl">Beschreibung</label><textarea class="fi" id="cf-desc">${esc(e.beschreibung||'')}</textarea></div>
+    <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="saveCalEvt()">💾 Speichern</button>`;
   // Set category value after render
   setTimeout(()=>{const sel=document.getElementById('cf-cat');if(sel&&e.category)sel.value=e.category;},50);
   const footer=document.getElementById('cf-footer');footer.innerHTML='';

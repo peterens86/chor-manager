@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <title>Chor Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -26,35 +26,25 @@
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;}
 #app{display:flex;flex-direction:column;height:100%;}
 
-/* CONFIG */
-#cfg-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px;}
-.cfg-card{background:var(--card);border:0.5px solid rgba(201,168,76,.4);border-radius:var(--r2);padding:28px;max-width:400px;width:100%;}
-.cfg-card h2{font-family:var(--fd);color:var(--accent);font-size:22px;margin-bottom:12px;}
-.cfg-card p{color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:10px;}
-.cfg-card code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--accent2);}
-
 /* LOGIN */
 #login-screen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;overflow-y:auto;z-index:200;}
-.login-logo{font-family:var(--fd);font-size:36px;color:var(--accent);margin-bottom:6px;text-align:center;}
+.login-logo{font-family:var(--fd);font-size:34px;color:var(--accent);margin-bottom:6px;text-align:center;}
 .login-sub{font-size:13px;color:var(--text2);margin-bottom:28px;text-align:center;}
 .login-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:24px;width:100%;max-width:380px;}
 .login-card h2{font-family:var(--fd);font-size:20px;margin-bottom:16px;}
-.ltabs{display:flex;margin-bottom:18px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);}
-.ltab{flex:1;padding:8px;text-align:center;font-size:13px;cursor:pointer;background:transparent;color:var(--text2);}
-.ltab.active{background:rgba(201,168,76,.15);color:var(--accent2);}
 .lerr{font-size:13px;color:var(--danger);margin-top:8px;display:none;}
 
 /* TOPBAR */
-#topbar{background:var(--bg2);border-bottom:0.5px solid var(--border);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:56px;flex-shrink:0;}
-#topbar h1{font-family:var(--fd);font-size:20px;font-weight:600;color:var(--accent);}
-.ub{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;position:relative;}
-.av{min-width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg);flex-shrink:0;letter-spacing:0.5px;}
-.ub-name{font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#topbar{background:var(--bg2);border-bottom:0.5px solid var(--border);padding:0 14px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;}
+#topbar h1{font-family:var(--fd);font-size:18px;font-weight:600;color:var(--accent);}
+.ub{display:flex;align-items:center;gap:8px;cursor:pointer;position:relative;}
+.av{min-width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg);letter-spacing:.5px;}
+.ub-name{font-size:12px;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ndot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--danger);border:2px solid var(--bg2);}
 
 /* NAV */
 #nav{background:var(--bg2);border-top:0.5px solid var(--border);display:flex;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom);}
-.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px;gap:3px;cursor:pointer;font-size:9px;color:var(--text3);transition:color .2s;user-select:none;position:relative;}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 2px;gap:2px;cursor:pointer;font-size:9px;color:var(--text3);transition:color .2s;user-select:none;position:relative;}
 .ni svg{width:20px;height:20px;stroke-width:1.5;fill:none;stroke:currentColor;}
 .ni.active{color:var(--accent);}
 .ni:active{opacity:.7;}
@@ -62,50 +52,47 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 /* CONTENT */
 #content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
-.page{display:none;min-height:100%;padding:16px;}
+.page{display:none;min-height:100%;padding:14px;}
 .page.active{display:block;}
 
 /* CARDS */
-.card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s;}
+.card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:9px;cursor:pointer;}
 .card:active{border-color:var(--border2);}
 .crow{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
-.ct{font-family:var(--fd);font-size:16px;font-weight:500;color:var(--text);line-height:1.3;}
+.ct{font-family:var(--fd);font-size:15px;font-weight:500;color:var(--text);line-height:1.3;}
 .cs{font-size:12px;color:var(--text2);margin-top:3px;}
-.cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(201,168,76,.15);color:var(--accent2);border:0.5px solid rgba(201,168,76,.3);}
+.cmeta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500;background:rgba(201,168,76,.15);color:var(--accent2);border:0.5px solid rgba(201,168,76,.3);}
 .badge.blue{background:rgba(91,141,238,.15);color:#8fb3f5;border-color:rgba(91,141,238,.3);}
 .badge.green{background:rgba(76,175,130,.15);color:#6dc49a;border-color:rgba(76,175,130,.3);}
 .badge.red{background:rgba(224,85,85,.15);color:#f08080;border-color:rgba(224,85,85,.3);}
 .badge.warn{background:rgba(232,160,32,.15);color:#f5c06a;border-color:rgba(232,160,32,.3);}
+.badge.gray{background:rgba(255,255,255,.08);color:var(--text3);border-color:var(--border);}
 
 /* HEADERS */
-.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.hrow h2{font-family:var(--fd);font-size:22px;font-weight:600;}
-.ph{margin-bottom:16px;}
-.ph h2{font-family:var(--fd);font-size:22px;font-weight:600;}
+.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.hrow h2{font-family:var(--fd);font-size:21px;font-weight:600;}
+.ph{margin-bottom:14px;}
+.ph h2{font-family:var(--fd);font-size:21px;font-weight:600;}
 .ph p{font-size:13px;color:var(--text2);margin-top:4px;}
 
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r);font-family:var(--fb);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s,transform .1s;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-family:var(--fb);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s,transform .1s;}
 .btn:active{transform:scale(.97);}
 .btn-p{background:var(--accent);color:var(--bg);}
 .btn-g{background:transparent;color:var(--text2);border:0.5px solid var(--border2);}
 .btn-d{background:rgba(224,85,85,.15);color:var(--danger);border:0.5px solid rgba(224,85,85,.3);}
 .btn-i{background:rgba(91,141,238,.15);color:#8fb3f5;border:0.5px solid rgba(91,141,238,.3);}
-.btn-sm{padding:6px 12px;font-size:12px;}
-.btn-ic{width:36px;height:36px;padding:0;border-radius:var(--r);background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);color:var(--accent);}
-
-/* CAMERA SCAN BTN */
-.scan-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--r);background:rgba(91,141,238,.12);border:0.5px solid rgba(91,141,238,.3);color:#8fb3f5;font-size:14px;cursor:pointer;width:100%;margin-bottom:12px;}
-.scan-btn svg{width:20px;height:20px;stroke:#8fb3f5;fill:none;stroke-width:1.8;flex-shrink:0;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-ic{width:34px;height:34px;padding:0;border-radius:var(--r);background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);color:var(--accent);}
 
 /* SEARCH */
 .sbar{display:flex;align-items:center;gap:8px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:0 12px;margin-bottom:10px;}
-.sbar svg{width:18px;height:18px;stroke:var(--text3);fill:none;stroke-width:1.8;flex-shrink:0;}
-.sbar input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:var(--fb);padding:10px 0;}
+.sbar svg{width:17px;height:17px;stroke:var(--text3);fill:none;stroke-width:1.8;flex-shrink:0;}
+.sbar input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:var(--fb);padding:9px 0;}
 .sbar input::placeholder{color:var(--text3);}
-.frow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
-.fchip{padding:5px 12px;border-radius:20px;font-size:12px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;transition:all .15s;}
+.frow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+.fchip{padding:4px 11px;border-radius:20px;font-size:11px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;}
 .fchip.active{background:rgba(201,168,76,.15);border-color:var(--accent);color:var(--accent2);}
 
 /* MODAL */
@@ -114,136 +101,115 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .md{background:var(--bg2);border-radius:20px 20px 0 0;border-top:0.5px solid var(--border2);max-height:94vh;display:flex;flex-direction:column;transform:translateY(40px);transition:transform .25s;}
 .mo.open .md{transform:translateY(0);}
 .mhandle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 0;}
-.mh{padding:12px 16px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.mh h3{font-family:var(--fd);font-size:18px;font-weight:600;}
-.mclose{width:30px;height:30px;border-radius:50%;background:var(--card);border:none;color:var(--text2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.mb{overflow-y:auto;padding:16px;flex:1;}
-.mf{padding:12px 16px;border-top:0.5px solid var(--border);display:flex;gap:10px;}
+.mh{padding:12px 16px 12px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mh h3{font-family:var(--fd);font-size:17px;font-weight:600;}
+.mclose{width:28px;height:28px;border-radius:50%;background:var(--card);border:none;color:var(--text2);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mb{overflow-y:auto;padding:14px;flex:1;}
+.mf{padding:10px 14px;border-top:0.5px solid var(--border);display:flex;gap:8px;}
 
 /* FORM */
-.fg{margin-bottom:14px;}
-.fl{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block;letter-spacing:.04em;text-transform:uppercase;}
-.fi{width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;color:var(--text);font-size:14px;font-family:var(--fb);outline:none;transition:border-color .15s;}
+.fg{margin-bottom:12px;}
+.fl{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;display:block;letter-spacing:.04em;text-transform:uppercase;}
+.fi{width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 11px;color:var(--text);font-size:14px;font-family:var(--fb);outline:none;transition:border-color .15s;}
 .fi:focus{border-color:var(--accent);}
 .fi::placeholder{color:var(--text3);}
 select.fi{appearance:none;}
-textarea.fi{resize:vertical;min-height:80px;}
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.fs{margin-bottom:20px;}
-.fst{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--border);}
+textarea.fi{resize:vertical;min-height:70px;}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.fs{margin-bottom:18px;}
+.fst{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:0.5px solid var(--border);}
 
 /* DETAIL */
-.df{margin-bottom:14px;}
-.dl{font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;}
-.dv{font-size:15px;color:var(--text);}
+.df{margin-bottom:12px;}
+.dl{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;}
+.dv{font-size:14px;color:var(--text);}
 .dv a{color:var(--info);text-decoration:none;}
-.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;}
-.ddiv{height:0.5px;background:var(--border);margin:14px 0;}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;}
+.ddiv{height:0.5px;background:var(--border);margin:12px 0;}
 
 /* PROGRAM ITEMS */
-.pitem{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;}
-.pnum{width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,.15);color:var(--accent2);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.ptitle{font-size:14px;font-weight:500;}
-.psub{font-size:12px;color:var(--text2);margin-top:2px;}
-.proles{margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);}
-.prole-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;}
-.prole-label{color:var(--text3);}
-
-/* ATTENDANCE */
-.atti{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--border);}
-.attb{display:flex;gap:6px;}
-.ab{width:30px;height:30px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--card);color:var(--text3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.ab.yes{background:rgba(76,175,130,.15);border-color:rgba(76,175,130,.4);color:var(--success);}
-.ab.no{background:rgba(224,85,85,.15);border-color:rgba(224,85,85,.4);color:var(--danger);}
+.pitem{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-bottom:7px;}
+.pnum{width:24px;height:24px;border-radius:50%;background:rgba(201,168,76,.15);color:var(--accent2);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ep-row{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-bottom:7px;}
+.ep-row-header{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
+.ep-roles{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px;}
 
 /* CALENDAR */
-.chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.cmonth{font-family:var(--fd);font-size:16px;font-weight:600;}
-.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:10px;}
-.cdow{font-size:9px;color:var(--text3);text-align:center;padding:3px 0;font-weight:500;}
-.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;position:relative;font-size:11px;}
-.cday:hover{background:rgba(255,255,255,.05);}
-.cday.today{background:rgba(201,168,76,.15);color:var(--accent);font-weight:600;}
-.cday.has-event::after{content:'';position:absolute;bottom:2px;width:3px;height:3px;border-radius:50%;background:var(--accent);}
-.cday.other-month{color:var(--text3);}
-.cevt{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--accent);}
-.cevt.probe{border-left-color:var(--info);}
-.cevt.konzert{border-left-color:var(--success);}
-/* Multi-month grid */
-.cal-multi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-.cal-mini{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:8px;}
-.cal-mini .cmonth{font-size:11px;}
-.cal-mini .cday{font-size:10px;}
-/* Year view */
-.cal-year{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
-/* View toggle */
-.view-tabs{display:flex;gap:4px;margin-bottom:12px;}
-.vtab{padding:5px 10px;border-radius:20px;font-size:11px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;}
+.view-tabs{display:flex;gap:4px;margin-bottom:10px;}
+.vtab{padding:4px 10px;border-radius:20px;font-size:11px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;}
 .vtab.active{background:rgba(201,168,76,.15);border-color:var(--accent);color:var(--accent2);}
+.chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.cmonth{font-family:var(--fd);font-size:15px;font-weight:600;}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:6px;}
+.cdow{font-size:8px;color:var(--text3);text-align:center;padding:3px 0;font-weight:500;}
+.cday-wrap{position:relative;aspect-ratio:1;}
+.cday{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:3px;border-radius:6px;cursor:pointer;position:relative;font-size:10px;overflow:hidden;}
+.cday:hover{background:rgba(255,255,255,.06);}
+.cday.today .cdnum{background:var(--accent);color:var(--bg);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
+.cday.other-month{color:var(--text3);}
+.cday.holiday{color:var(--danger);}
+.cdnum{font-size:10px;line-height:1;margin-bottom:1px;}
+.cevt-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin:1px auto;}
+.cevt-bar{position:absolute;bottom:2px;left:0;right:0;height:4px;border-radius:2px;font-size:0;}
+/* Full calendar event blocks */
+.cal-event-block{font-size:9px;padding:1px 3px;border-radius:3px;color:#fff;margin:1px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.4;}
+/* Event list */
+.cevt{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--accent);}
+.cevt-holiday{background:rgba(224,85,85,.07);border:0.5px solid rgba(224,85,85,.2);border-radius:var(--r);padding:6px 10px;margin-bottom:5px;}
+/* Mini calendar */
+.cal-mini{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:7px;}
+.cal-mini .cdow{font-size:7px;}
+.cal-mini .cday{font-size:9px;}
 
 /* ANNOUNCEMENTS */
-.acard{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;}
+.acard{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:9px;}
 .acard.urgent{border-color:rgba(224,85,85,.5);background:rgba(224,85,85,.07);}
 .acard.high{border-color:rgba(232,160,32,.4);}
-.acard.unread::before{content:'';display:block;width:8px;height:8px;border-radius:50%;background:var(--accent);float:right;margin-top:4px;}
+.acard.unread::before{content:'';display:block;width:7px;height:7px;border-radius:50%;background:var(--accent);float:right;margin-top:4px;}
 
 /* ANALYTICS */
-.qchip{padding:8px 14px;border-radius:var(--r);font-size:13px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;margin-bottom:8px;display:block;width:100%;text-align:left;}
+.qchip{padding:7px 12px;border-radius:var(--r);font-size:13px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;margin-bottom:7px;display:block;width:100%;text-align:left;}
 .qchip:active{border-color:var(--accent);color:var(--accent2);}
-.rtable{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
-.rtable th{text-align:left;padding:8px 10px;background:rgba(255,255,255,.05);color:var(--text2);font-size:11px;letter-spacing:.04em;text-transform:uppercase;}
-.rtable td{padding:8px 10px;border-bottom:0.5px solid var(--border);}
+.rtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+.rtable th{text-align:left;padding:7px 9px;background:rgba(255,255,255,.05);color:var(--text2);font-size:10px;letter-spacing:.04em;text-transform:uppercase;}
+.rtable td{padding:7px 9px;border-bottom:0.5px solid var(--border);}
 .rtable tr:last-child td{border-bottom:none;}
 
 /* CHAT */
-.chatbox{min-height:160px;max-height:45vh;overflow-y:auto;padding:12px;background:rgba(0,0,0,.2);border-radius:var(--r);border:0.5px solid var(--border);margin-bottom:12px;}
-.cmsg{margin-bottom:10px;}
-.cmsg.user .bbl{background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;display:inline-block;max-width:85%;float:right;clear:both;}
-.cmsg.bot .bbl{background:var(--card);border:0.5px solid var(--border);border-radius:12px 12px 12px 4px;padding:8px 12px;font-size:13px;display:inline-block;max-width:92%;clear:both;white-space:pre-wrap;}
-
-/* SCAN RESULT */
-.scan-field{background:rgba(201,168,76,.06);border:0.5px solid rgba(201,168,76,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;}
-.scan-field .sl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
-.scan-field .sv{font-size:14px;color:var(--text);}
-.processing{display:flex;align-items:center;gap:10px;padding:20px;justify-content:center;color:var(--text2);font-size:14px;}
-.spin{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-/* STATS */
-.srow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
-.scard{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px;}
-.snum{font-family:var(--fd);font-size:28px;font-weight:600;color:var(--accent);}
-.slabel{font-size:12px;color:var(--text2);margin-top:2px;}
+.chatbox{min-height:140px;max-height:40vh;overflow-y:auto;padding:10px;background:rgba(0,0,0,.2);border-radius:var(--r);border:0.5px solid var(--border);margin-bottom:10px;}
+.cmsg{margin-bottom:9px;}
+.cmsg.user .bbl{background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);border-radius:12px 12px 4px 12px;padding:7px 11px;font-size:13px;display:inline-block;max-width:85%;float:right;clear:both;}
+.cmsg.bot .bbl{background:var(--card);border:0.5px solid var(--border);border-radius:12px 12px 12px 4px;padding:7px 11px;font-size:13px;display:inline-block;max-width:92%;clear:both;white-space:pre-wrap;}
 
 /* MISC */
-.st{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 8px;}
-.empty{text-align:center;padding:48px 24px;}
-.empty p{color:var(--text3);font-size:14px;}
-.loading{display:flex;align-items:center;gap:10px;padding:40px;justify-content:center;color:var(--text3);}
-.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:0.5px solid var(--border2);border-radius:24px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;transition:all .3s;z-index:300;white-space:nowrap;pointer-events:none;}
+.st{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px;}
+.empty{text-align:center;padding:40px 24px;}
+.empty p{color:var(--text3);font-size:13px;}
+.loading{display:flex;align-items:center;gap:10px;padding:36px;justify-content:center;color:var(--text3);}
+.spin{width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:0.5px solid var(--border2);border-radius:24px;padding:9px 18px;font-size:13px;color:var(--text);opacity:0;transition:all .3s;z-index:300;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 ::-webkit-scrollbar{width:0;}
-
-/* EVENT PROGRAM EDIT ROW */
-.ep-row{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;}
-.ep-row-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.ep-row-num{width:24px;height:24px;border-radius:50%;background:rgba(201,168,76,.15);color:var(--accent2);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.ep-roles{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+/* Stats */
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.scard{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r2);padding:12px;}
+.snum{font-family:var(--fd);font-size:26px;font-weight:600;color:var(--accent);}
+.slabel{font-size:11px;color:var(--text2);margin-top:2px;}
+/* Attendance */
+.atti{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.attb{display:flex;gap:5px;}
+.ab{width:28px;height:28px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--card);color:var(--text3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ab.yes{background:rgba(76,175,130,.15);border-color:rgba(76,175,130,.4);color:var(--success);}
+.ab.no{background:rgba(224,85,85,.15);border-color:rgba(224,85,85,.4);color:var(--danger);}
+/* File chips */
+.ffile{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:var(--r);background:var(--card);border:0.5px solid var(--border);font-size:11px;color:var(--text2);margin:3px;cursor:pointer;}
+.ffile:hover{border-color:var(--accent2);}
+/* Color picker */
+.color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;display:inline-block;vertical-align:middle;}
 </style>
 </head>
 <body>
-
-<!-- CONFIG SCREEN -->
-<div id="cfg-screen">
-  <div class="cfg-card">
-    <h2>⚙️ Supabase konfigurieren</h2>
-    <p>Bitte trage deine Supabase-Zugangsdaten ein. Diese findest du unter <code>Settings → API</code>.</p>
-    <input class="fi" id="cfg-url" type="text" placeholder="https://xxxx.supabase.co" style="margin-bottom:10px">
-    <input class="fi" id="cfg-key" type="text" placeholder="Anon/Public Key (eyJ…)" style="margin-bottom:10px">
-    <p style="font-size:11px;color:var(--text3)">Alle Daten werden nur lokal in diesem Browser gespeichert.</p>
-    <button class="btn btn-p" style="width:100%;margin-top:10px" onclick="saveConfig()">Speichern & starten</button>
-  </div>
-</div>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -251,12 +217,10 @@ textarea.fi{resize:vertical;min-height:80px;}
   <div class="login-sub">Lied- und Veranstaltungsverwaltung</div>
   <div class="login-card">
     <h2>Anmelden</h2>
-    <div id="lf-login">
-      <div class="fg"><label class="fl">E-Mail</label><input class="fi" id="l-email" type="email" placeholder="name@chor.de"></div>
-      <div class="fg"><label class="fl">Passwort</label><input class="fi" id="l-pass" type="password" placeholder="Passwort"></div>
-      <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="doLogin()">Anmelden</button>
-      <div class="lerr" id="l-err"></div>
-    </div>
+    <div class="fg"><label class="fl">E-Mail</label><input class="fi" id="l-email" type="email" placeholder="name@chor.de"></div>
+    <div class="fg"><label class="fl">Passwort</label><input class="fi" id="l-pass" type="password" placeholder="Passwort"></div>
+    <button class="btn btn-p" style="width:100%;margin-top:4px" onclick="doLogin()">Anmelden</button>
+    <div class="lerr" id="l-err"></div>
   </div>
 </div>
 
@@ -270,11 +234,10 @@ textarea.fi{resize:vertical;min-height:80px;}
       <div class="ndot" id="ndot" style="display:none"></div>
     </div>
   </div>
-
   <div id="content">
     <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
-      <div class="ph"><h2 id="d-greet">Guten Tag</h2><p id="d-sub"></p></div>
+      <div class="ph"><h2 id="d-greet">Guten Tag</h2></div>
       <div id="d-anns"></div>
       <div class="srow">
         <div class="scard"><div class="snum" id="ds-songs">–</div><div class="slabel">Lieder</div></div>
@@ -283,66 +246,54 @@ textarea.fi{resize:vertical;min-height:80px;}
       <div class="st">Nächste Termine</div><div id="d-cal"></div>
       <div class="st">Bevorstehende Veranstaltungen</div><div id="d-events"></div>
     </div>
-
     <!-- MITTEILUNGEN -->
     <div class="page" id="page-ann">
       <div class="hrow"><h2>Mitteilungen</h2><button class="btn btn-ic" id="ann-add-btn" onclick="openAnnForm()" style="display:none">+</button></div>
       <div id="ann-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
     </div>
-
     <!-- LIEDER -->
     <div class="page" id="page-songs">
       <div class="hrow"><h2>Repertoire</h2>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:6px">
           <button class="btn btn-ic" id="song-add-btn" onclick="openSongForm()" style="display:none">+</button>
         </div>
       </div>
-      <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Titel, Komponist…" oninput="filterSongs()" id="song-search"></div>
+      <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Titel, Komponist, Person…" oninput="filterSongs()" id="song-search"></div>
       <div class="frow" id="song-filters"></div>
       <div id="song-list"></div>
     </div>
-
     <!-- VERANSTALTUNGEN -->
     <div class="page" id="page-events">
-      <div class="hrow"><h2>Veranstaltungen</h2><button class="btn btn-ic" id="ev-add-btn" onclick="openEventForm()" style="display:none">+</button></div>
+      <div class="hrow"><h2>Veranstaltungen</h2><button class="btn btn-ic" id="ev-add-btn" onclick="openEventForm(null)" style="display:none">+</button></div>
       <div id="ev-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
     </div>
-
     <!-- KALENDER -->
     <div class="page" id="page-cal">
-      <div class="hrow"><h2>Kalender</h2><button class="btn btn-ic" id="cal-add-btn" onclick="openCalForm()" style="display:none">+</button></div>
+      <div class="hrow"><h2>Kalender</h2><button class="btn btn-ic" id="cal-add-btn" onclick="openCalForm(null,null)" style="display:none">+</button></div>
       <div id="cal-wrap"></div>
     </div>
-
     <!-- ANALYTICS -->
     <div class="page" id="page-stats">
-      <div class="ph"><h2>Auswertungen</h2><p>Statistiken &amp; Chat-Abfragen</p></div>
+      <div class="ph"><h2>Auswertungen</h2></div>
       <div class="st">Schnellabfragen</div>
       <button class="qchip" onclick="runQ('last_sung')">🎵 Wann wurde jedes Lied zuletzt gesungen?</button>
       <button class="qchip" onclick="runQ('never')">🔇 Lieder die noch nie gesungen wurden</button>
       <button class="qchip" onclick="runQ('ranking')">📊 Häufigkeitsranking</button>
       <button class="qchip" onclick="runQ('suggestions')">💡 Liedvorschläge</button>
       <div class="st">Zeitraumabfrage</div>
-      <div class="fr" style="margin-bottom:10px">
+      <div class="fr2" style="margin-bottom:8px">
         <div class="fg"><label class="fl">Von</label><input class="fi" type="date" id="q-from"></div>
         <div class="fg"><label class="fl">Bis</label><input class="fi" type="date" id="q-to"></div>
       </div>
-      <button class="btn btn-g" style="width:100%;margin-bottom:16px" onclick="runQ('period')">Zeitraum auswerten</button>
+      <button class="btn btn-g" style="width:100%;margin-bottom:14px" onclick="runQ('period')">Zeitraum auswerten</button>
       <div class="st">Chat-Abfragen</div>
       <div class="chatbox" id="chat-msgs"></div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:7px">
         <input class="fi" id="chat-in" placeholder="z.B. Wie oft haben wir Hallelujah gesungen?" onkeydown="if(event.key==='Enter')sendChat()" style="flex:1">
         <button class="btn btn-p btn-sm" onclick="sendChat()">→</button>
       </div>
-      <div id="q-result" style="margin-top:16px"></div>
+      <div id="q-result" style="margin-top:14px"></div>
     </div>
-
-    <!-- SETTINGS -->
-    <div class="page" id="page-settings">
-      <div class="ph"><h2>Admin</h2></div>
-      <div id="settings-body"></div>
-    </div>
-
     <!-- MEDIEN -->
     <div class="page" id="page-media">
       <div class="hrow"><h2>Medien</h2><button class="btn btn-ic" id="media-add-btn" onclick="openMediaUpload()" style="display:none">+</button></div>
@@ -352,6 +303,11 @@ textarea.fi{resize:vertical;min-height:80px;}
         <div class="fchip" onclick="filterMedia('audio',this)">🎵 Audio</div>
       </div>
       <div id="media-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
+    </div>
+    <!-- ADMIN -->
+    <div class="page" id="page-settings">
+      <div class="ph"><h2>Admin</h2></div>
+      <div id="settings-body"></div>
     </div>
   </div><!-- content -->
 
@@ -368,7 +324,7 @@ textarea.fi{resize:vertical;min-height:80px;}
   </div>
 </div><!-- app -->
 
-<!-- MODALS -->
+<!-- ===== MODALS ===== -->
 <!-- Song Detail -->
 <div class="mo" id="m-song-detail"><div class="md">
   <div class="mhandle"></div>
@@ -407,14 +363,22 @@ textarea.fi{resize:vertical;min-height:80px;}
   </div>
 </div></div>
 
+<!-- Calendar Event Form -->
+<div class="mo" id="m-cal-form"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3 id="cf-title-h">Termin</h3><button class="mclose" onclick="closeModal('m-cal-form')">×</button></div>
+  <div class="mb" id="cf-body"></div>
+  <div class="mf" id="cf-footer"></div>
+</div></div>
+
 <!-- Announcement Form -->
 <div class="mo" id="m-ann-form"><div class="md">
   <div class="mhandle"></div>
   <div class="mh"><h3>Mitteilung erstellen</h3><button class="mclose" onclick="closeModal('m-ann-form')">×</button></div>
   <div class="mb">
     <div class="fg"><label class="fl">Titel *</label><input class="fi" id="af-title"></div>
-    <div class="fg"><label class="fl">Nachricht *</label><textarea class="fi" id="af-body" style="min-height:120px"></textarea></div>
-    <div class="fr">
+    <div class="fg"><label class="fl">Nachricht *</label><textarea class="fi" id="af-body" style="min-height:100px"></textarea></div>
+    <div class="fr2">
       <div class="fg"><label class="fl">Priorität</label><select class="fi" id="af-prio"><option value="normal">Normal</option><option value="high">Wichtig</option><option value="urgent">Dringend</option></select></div>
       <div class="fg"><label class="fl">Ablaufdatum</label><input class="fi" type="date" id="af-exp"></div>
     </div>
@@ -425,27 +389,49 @@ textarea.fi{resize:vertical;min-height:80px;}
   </div>
 </div></div>
 
-<!-- Calendar Event Form -->
-<div class="mo" id="m-cal-form"><div class="md">
+<!-- Media Upload -->
+<div class="mo" id="m-media-form"><div class="md">
   <div class="mhandle"></div>
-  <div class="mh"><h3 id="cf-title-h">Termin</h3><button class="mclose" onclick="closeModal('m-cal-form')">×</button></div>
+  <div class="mh"><h3>Medien hochladen</h3><button class="mclose" onclick="closeModal('m-media-form')">×</button></div>
   <div class="mb">
-    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="cf-title"></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Datum *</label><input class="fi" type="date" id="cf-datum"></div>
-      <div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="cf-time"></div>
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="mf-title" placeholder="Bezeichnung"></div>
+    <div class="fg"><label class="fl">Beschreibung</label><input class="fi" id="mf-desc"></div>
+    <div class="fg"><label class="fl">Dateien auswählen (Bilder oder MP3) *</label>
+      <input type="file" id="mf-file" accept="image/*,audio/mp3,audio/mpeg" multiple class="fi" style="padding:8px" onchange="previewMedia()">
     </div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Bis Datum</label><input class="fi" type="date" id="cf-bis"></div>
-      <div class="fg"><label class="fl">Bis Uhrzeit</label><input class="fi" type="time" id="cf-bis-t"></div>
-    </div>
-    <div class="fg"><label class="fl">Ort</label><input class="fi" id="cf-ort"></div>
-    <div class="fg"><label class="fl">Typ</label><select class="fi" id="cf-typ"><option value="probe">Probe</option><option value="konzert">Konzert</option><option value="sonstiges">Sonstiges</option></select></div>
-    <div class="fg"><label class="fl">Beschreibung</label><textarea class="fi" id="cf-desc"></textarea></div>
+    <div id="mf-preview"></div>
+    <div id="mf-progress" style="margin-top:8px"></div>
   </div>
   <div class="mf">
-    <button class="btn btn-g" onclick="closeModal('m-cal-form')" style="flex:1">Abbrechen</button>
-    <button class="btn btn-p" onclick="saveCalEvt()" style="flex:2">Speichern</button>
+    <button class="btn btn-g" onclick="closeModal('m-media-form')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="uploadMedia()" style="flex:2" id="mf-btn">Hochladen</button>
+  </div>
+</div></div>
+
+<!-- Add Member -->
+<div class="mo" id="m-add-member"><div class="md">
+  <div class="mhandle"></div>
+  <div class="mh"><h3>Mitglied hinzufügen</h3><button class="mclose" onclick="closeModal('m-add-member')">×</button></div>
+  <div class="mb">
+    <div class="fr2">
+      <div class="fg"><label class="fl">Vorname *</label><input class="fi" id="am-vname"></div>
+      <div class="fg"><label class="fl">Nachname *</label><input class="fi" id="am-nname"></div>
+    </div>
+    <div class="fg"><label class="fl">E-Mail *</label><input class="fi" id="am-email" type="email"></div>
+    <div class="fg"><label class="fl">Passwort *</label><input class="fi" id="am-pass" type="password" placeholder="Min. 6 Zeichen"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Telefon</label><input class="fi" id="am-phone" type="tel"></div>
+      <div class="fg"><label class="fl">Stimme</label>
+        <select class="fi" id="am-stimme"><option value="">–</option><option>Sopran</option><option>Alt</option><option>Tenor</option><option>Bass</option></select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Zusatzrolle</label>
+      <select class="fi" id="am-role2"><option value="">Keine</option><option value="dirigent">Dirigent</option><option value="klavier">Klavier</option><option value="dirigent,klavier">Dirigent & Klavier</option></select>
+    </div>
+  </div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('m-add-member')" style="flex:1">Abbrechen</button>
+    <button class="btn btn-p" onclick="addMember()" style="flex:2">Hinzufügen</button>
   </div>
 </div></div>
 
@@ -460,71 +446,19 @@ textarea.fi{resize:vertical;min-height:80px;}
   </div>
 </div></div>
 
-<!-- Media Upload Modal -->
-<div class="mo" id="m-media-form"><div class="md">
-  <div class="mhandle"></div>
-  <div class="mh"><h3>Medien hochladen</h3><button class="mclose" onclick="closeModal('m-media-form')">×</button></div>
-  <div class="mb">
-    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="mf-title" placeholder="Bezeichnung der Datei"></div>
-    <div class="fg"><label class="fl">Beschreibung</label><input class="fi" id="mf-desc" placeholder="Optional"></div>
-    <div class="fg"><label class="fl">Datei auswählen (Bild oder MP3) *</label>
-      <input type="file" id="mf-file" accept="image/*,audio/mp3,audio/mpeg" class="fi" style="padding:8px">
-    </div>
-    <div id="mf-preview" style="margin-top:8px"></div>
-  </div>
-  <div class="mf">
-    <button class="btn btn-g" onclick="closeModal('m-media-form')" style="flex:1">Abbrechen</button>
-    <button class="btn btn-p" onclick="uploadMedia()" style="flex:2" id="mf-upload-btn">Hochladen</button>
-  </div>
-</div></div>
-
-<!-- Add Member Modal (Admin) -->
-<div class="mo" id="m-add-member"><div class="md">
-  <div class="mhandle"></div>
-  <div class="mh"><h3>Mitglied hinzufügen</h3><button class="mclose" onclick="closeModal('m-add-member')">×</button></div>
-  <div class="mb">
-    <div class="fr">
-      <div class="fg"><label class="fl">Vorname *</label><input class="fi" id="am-vname" placeholder="Vorname"></div>
-      <div class="fg"><label class="fl">Nachname *</label><input class="fi" id="am-nname" placeholder="Nachname"></div>
-    </div>
-    <div class="fg"><label class="fl">E-Mail *</label><input class="fi" id="am-email" type="email"></div>
-    <div class="fg"><label class="fl">Passwort *</label><input class="fi" id="am-pass" type="password" placeholder="Min. 6 Zeichen"></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Telefon</label><input class="fi" id="am-phone" type="tel"></div>
-      <div class="fg"><label class="fl">Stimmgruppe</label>
-        <select class="fi" id="am-stimme"><option value="">– wählen –</option><option>Sopran</option><option>Alt</option><option>Tenor</option><option>Bass</option></select>
-      </div>
-    </div>
-    <div class="fg"><label class="fl">Zusatzrolle</label>
-      <select class="fi" id="am-role2"><option value="">Keine</option><option value="dirigent">Dirigent</option><option value="klavier">Klavier</option><option value="dirigent,klavier">Dirigent & Klavier</option></select>
-    </div>
-  </div>
-  <div class="mf">
-    <button class="btn btn-g" onclick="closeModal('m-add-member')" style="flex:1">Abbrechen</button>
-    <button class="btn btn-p" onclick="addMember()" style="flex:2">Hinzufügen</button>
-  </div>
-</div></div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-// ===== CONFIG =====
-const CFG_KEY='choirCfg';
+// ========== GLOBALS ==========
+const SB_URL='https://nzgmznxwtvmjatbhbmcp.supabase.co';
+const SB_KEY='sb_publishable_rTWG_fw_Us_yA4ZayeR9sw_glQ-rrP-';
 let SB=null, currentUser=null, currentProfile=null;
-let cachedSongs=[], cachedEvents=[], calDate=new Date();
+let cachedSongs=[], cachedCategories=[], calView='3month', calDate=new Date();
 let editSongId=null, editEvId=null, editCalId=null;
-let songFilter={search:'',besetzung:'',thema:'',anlass:''};
+let songFilter={search:'',besetzung:'',thema:'',anlass:'',person:''};
+let mediaFilter='all';
 
-function getCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}catch{return{}}}
-function saveConfig(){
-  const url=document.getElementById('cfg-url').value.trim();
-  const key=document.getElementById('cfg-key').value.trim();
-  if(!url||!key){alert('Supabase URL und Key erforderlich');return;}
-  localStorage.setItem(CFG_KEY,JSON.stringify({url,key}));
-  location.reload();
-}
-
-// ===== UTILS =====
+// ========== UTILS ==========
 function T(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.style.borderColor=type==='err'?'rgba(224,85,85,.4)':type==='ok'?'rgba(76,175,130,.4)':'';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -532,8 +466,46 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
 function fD(d){if(!d)return'';const p=String(d).split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:d;}
 function fT(t){if(!t)return'';return String(t).substring(0,5);}
 function today(){return new Date().toISOString().slice(0,10);}
+function initials(name){const p=(name||'').split(' ');return((p[0]?.charAt(0)||'')+(p[1]?.charAt(0)||p[0]?.charAt(1)||'')).toUpperCase();}
+function firstName(name){return(name||'').split(' ')[0]||name||'';}
 
-// ===== AUTH =====
+// ========== NRW HOLIDAYS ==========
+function getNRWHolidays(year){
+  // Fixed holidays
+  const fixed=[['01-01','Neujahr'],['05-01','Tag der Arbeit'],['10-03','Tag der Deutschen Einheit'],['11-01','Allerheiligen'],['12-25','1. Weihnachtstag'],['12-26','2. Weihnachtstag']];
+  // Easter calculation (Gauss)
+  const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),easter=new Date(year,Math.floor((h+l-7*m+114)/31)-1,(h+l-7*m+114)%31+1);
+  function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+  function fmt(d){return`${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  const movable=[[addDays(easter,-2),'Karfreitag'],[addDays(easter,0),'Ostersonntag'],[addDays(easter,1),'Ostermontag'],[addDays(easter,39),'Christi Himmelfahrt'],[addDays(easter,49),'Pfingstsonntag'],[addDays(easter,50),'Pfingstmontag'],[addDays(easter,60),'Fronleichnam']];
+  const result={};
+  fixed.forEach(([d,n])=>result[`${year}-${d}`]=n);
+  movable.forEach(([d,n])=>result[`${year}-${fmt(d)}`]=n);
+  return result;
+}
+
+function getNRWSchoolHolidays(year){
+  // Approximate NRW school holidays - static data for 2025/2026
+  const holidays=[];
+  if(year===2025){
+    holidays.push({from:'2025-01-01',to:'2025-01-03',name:'Weihnachtsferien'});
+    holidays.push({from:'2025-03-01',to:'2025-03-14',name:'Osterferien'});
+    holidays.push({from:'2025-04-26',to:'2025-04-26',name:'Tag nach Himmelfahrt'});
+    holidays.push({from:'2025-06-07',to:'2025-06-07',name:'Pfingstsamstag'});
+    holidays.push({from:'2025-06-23',to:'2025-07-04',name:'Sommerferien'});
+    holidays.push({from:'2025-10-06',to:'2025-10-17',name:'Herbstferien'});
+    holidays.push({from:'2025-12-22',to:'2026-01-05',name:'Weihnachtsferien'});
+  } else if(year===2026){
+    holidays.push({from:'2026-01-01',to:'2026-01-05',name:'Weihnachtsferien'});
+    holidays.push({from:'2026-03-30',to:'2026-04-10',name:'Osterferien'});
+    holidays.push({from:'2026-07-06',to:'2026-08-14',name:'Sommerferien'});
+    holidays.push({from:'2026-10-05',to:'2026-10-16',name:'Herbstferien'});
+    holidays.push({from:'2026-12-23',to:'2027-01-06',name:'Weihnachtsferien'});
+  }
+  return holidays;
+}
+
+// ========== AUTH ==========
 async function doLogin(){
   const e=document.getElementById('l-email').value.trim();
   const p=document.getElementById('l-pass').value;
@@ -541,42 +513,19 @@ async function doLogin(){
   const{data,error}=await SB.auth.signInWithPassword({email:e,password:p});
   if(error){err.textContent=error.message;err.style.display='block';return;}
   await loadProfile(data.user);
-  if(currentProfile?.active===false){
-    await SB.auth.signOut();currentUser=null;currentProfile=null;
-    err.textContent='Dein Konto wurde deaktiviert. Bitte wende dich an den Admin.';err.style.display='block';return;
-  }
+  if(currentProfile?.active===false){await SB.auth.signOut();currentUser=null;currentProfile=null;err.textContent='Konto deaktiviert. Bitte Admin kontaktieren.';err.style.display='block';return;}
   startApp();
 }
-async function doRegister(){
-  const name=document.getElementById('r-name').value.trim();
-  const email=document.getElementById('r-email').value.trim();
-  const phone=document.getElementById('r-phone').value.trim();
-  const stimme=document.getElementById('r-stimme').value;
-  const pass=document.getElementById('r-pass').value;
-  const err=document.getElementById('r-err');err.style.display='none';
-  if(!name||!email||!pass){err.textContent='Pflichtfelder ausfüllen';err.style.display='block';return;}
-  const{error}=await SB.auth.signUp({email,password:pass,options:{data:{name,phone,stimme}}});
-  if(error){err.textContent=error.message;err.style.display='block';return;}
-  err.style.color='var(--success)';err.textContent='Registrierung erfolgreich! Bitte E-Mail bestätigen.';err.style.display='block';
-}
 async function doLogout(){await SB.auth.signOut();currentUser=null;currentProfile=null;document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
-function switchTab(t){
-  document.getElementById('lf-login').style.display=t==='login'?'':'none';
-  document.getElementById('lf-reg').style.display=t==='reg'?'':'none';
-  document.getElementById('lt-login').classList.toggle('active',t==='login');
-  document.getElementById('lt-reg').classList.toggle('active',t==='reg');
-}
 async function loadProfile(user){currentUser=user;const{data}=await SB.from('profiles').select('*').eq('id',user.id).single();currentProfile=data;}
 
-// ===== APP =====
+// ========== APP START ==========
 function startApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   const p=currentProfile||{};
-  const parts=(p.name||'').split(' ');
-  const initials=(parts[0]?.charAt(0)||'')+(parts[1]?.charAt(0)||parts[0]?.charAt(1)||'');
   document.getElementById('tb-name').textContent=p.name||'';
-  document.getElementById('tb-av').textContent=initials.toUpperCase()||'?';
+  document.getElementById('tb-av').textContent=initials(p.name)||'?';
   const isAdmin=p.role==='admin';
   if(isAdmin){
     document.getElementById('ni-settings').style.display='flex';
@@ -589,7 +538,7 @@ function startApp(){
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('page-'+name)?.classList.add('active');
   const pages=['dashboard','ann','songs','events','cal','stats','media','settings'];
   const navItems=document.querySelectorAll('.ni');
   const idx=pages.indexOf(name);
@@ -598,7 +547,7 @@ function showPage(name){
   if(loaders[name])loaders[name]();
 }
 
-// ===== UNREAD =====
+// ========== UNREAD ==========
 async function loadUnread(){
   const{data}=await SB.from('announcements').select('id,announcement_reads(user_id)').order('created_at',{ascending:false});
   if(!data)return;
@@ -608,24 +557,23 @@ async function loadUnread(){
   document.getElementById('ndot').style.display=n?'block':'none';
 }
 
-// ===== DASHBOARD =====
+// ========== DASHBOARD ==========
 async function renderDash(){
   const h=new Date().getHours();
-  const vname=((currentProfile||{}).name||'').split(' ')[0];
-  document.getElementById('d-greet').textContent=`${h<12?'Guten Morgen':h<18?'Guten Tag':'Guten Abend'}, ${vname||''}!`;
+  document.getElementById('d-greet').textContent=`${h<12?'Guten Morgen':h<18?'Guten Tag':'Guten Abend'}, ${firstName((currentProfile||{}).name)}!`;
   const[{count:sc},{count:ec}]=await Promise.all([SB.from('songs').select('*',{count:'exact',head:true}),SB.from('events').select('*',{count:'exact',head:true})]);
   document.getElementById('ds-songs').textContent=sc||0;document.getElementById('ds-events').textContent=ec||0;
   const{data:anns}=await SB.from('announcements').select('*,announcement_reads(user_id)').order('created_at',{ascending:false}).limit(5);
   const unread=(anns||[]).filter(a=>!(a.announcement_reads||[]).some(r=>r.user_id===currentUser.id));
-  document.getElementById('d-anns').innerHTML=unread.length?`<div class="st">Ungelesene Mitteilungen (${unread.length})</div>`+unread.slice(0,2).map(a=>`<div class="acard ${a.priority} unread" onclick="markRead('${a.id}');showPage('ann')"><b style="font-size:14px">${esc(a.title)}</b><div style="font-size:13px;color:var(--text2);margin-top:4px">${esc(a.body.substring(0,90))}${a.body.length>90?'…':''}</div></div>`).join(''):'';
+  document.getElementById('d-anns').innerHTML=unread.length?`<div class="st">Ungelesene Mitteilungen (${unread.length})</div>`+unread.slice(0,2).map(a=>`<div class="acard ${a.priority} unread" onclick="markRead('${a.id}');showPage('ann')"><b style="font-size:14px">${esc(a.title)}</b><div style="font-size:12px;color:var(--text2);margin-top:4px">${esc(a.body.substring(0,80))}${a.body.length>80?'…':''}</div></div>`).join(''):'';
   const{data:cevts}=await SB.from('calendar_events').select('*').gte('datum',today()).order('datum').limit(4);
-  document.getElementById('d-cal').innerHTML=(cevts||[]).length?cevts.map(e=>`<div class="cevt ${e.typ}"><div style="font-weight:500;font-size:14px">${esc(e.title)}</div><div style="font-size:12px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>';
+  document.getElementById('d-cal').innerHTML=(cevts||[]).length?cevts.map(e=>`<div class="cevt" style="border-left-color:${esc(e.color||'var(--accent)')}"><div style="font-weight:500;font-size:13px">${esc(e.title)}</div><div style="font-size:11px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div></div>`).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>';
   const{data:evts}=await SB.from('events').select('*').gte('datum',today()).order('datum').limit(3);
-  document.getElementById('d-events').innerHTML=(evts||[]).length?evts.map(e=>`<div class="card" onclick="openEvDetail('${e.id}')"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Veranstaltungen</p>';
+  document.getElementById('d-events').innerHTML=(evts||[]).length?evts.map(e=>`<div class="card" onclick="openEvDetail('${e.id}')"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>`).join(''):'<p style="color:var(--text3);font-size:12px">Keine Veranstaltungen</p>';
   loadUnread();
 }
 
-// ===== ANNOUNCEMENTS =====
+// ========== ANNOUNCEMENTS ==========
 async function renderAnn(){
   const{data}=await SB.from('announcements').select('*,announcement_reads(user_id),profiles(name)').order('created_at',{ascending:false});
   const el=document.getElementById('ann-list');
@@ -634,24 +582,24 @@ async function renderAnn(){
   el.innerHTML=data.filter(a=>!a.expires_at||new Date(a.expires_at)>now).map(a=>{
     const read=(a.announcement_reads||[]).some(r=>r.user_id===currentUser.id);
     return`<div class="acard ${a.priority} ${read?'':'unread'}" onclick="markRead('${a.id}')">
-      <b style="font-size:15px">${esc(a.title)}</b>
+      <b style="font-size:14px">${esc(a.title)}</b>
       <div style="font-size:13px;color:var(--text2);margin-top:5px;line-height:1.5">${esc(a.body)}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:8px">${fD(a.created_at?.slice(0,10))} · ${esc((a.profiles||{}).name||'Admin')} · <span class="badge ${a.priority==='urgent'?'red':a.priority==='high'?'warn':''}">${a.priority==='urgent'?'Dringend':a.priority==='high'?'Wichtig':'Normal'}</span></div>
-      ${currentProfile?.role==='admin'?`<button class="btn btn-d btn-sm" style="margin-top:8px" onclick="event.stopPropagation();delAnn('${a.id}')">Löschen</button>`:''}
+      <div style="font-size:10px;color:var(--text3);margin-top:7px">${fD(a.created_at?.slice(0,10))} · ${esc((a.profiles||{}).name||'Admin')} · <span class="badge ${a.priority==='urgent'?'red':a.priority==='high'?'warn':''}">${a.priority==='urgent'?'Dringend':a.priority==='high'?'Wichtig':'Normal'}</span></div>
+      ${currentProfile?.role==='admin'?`<button class="btn btn-d btn-sm" style="margin-top:7px" onclick="event.stopPropagation();delAnn('${a.id}')">Löschen</button>`:''}
     </div>`;
   }).join('');loadUnread();
 }
 async function markRead(id){await SB.from('announcement_reads').upsert({announcement_id:id,user_id:currentUser.id},{onConflict:'announcement_id,user_id'});loadUnread();}
 function openAnnForm(){document.getElementById('af-title').value='';document.getElementById('af-body').value='';document.getElementById('af-exp').value='';openModal('m-ann-form');}
 async function saveAnn(){
-  const title=document.getElementById('af-title').value.trim();const body=document.getElementById('af-body').value.trim();
+  const title=document.getElementById('af-title').value.trim(),body=document.getElementById('af-body').value.trim();
   if(!title||!body){T('Titel und Text erforderlich','err');return;}
   await SB.from('announcements').insert({title,body,priority:document.getElementById('af-prio').value,expires_at:document.getElementById('af-exp').value||null,created_by:currentUser.id});
   closeModal('m-ann-form');renderAnn();T('Mitteilung gesendet','ok');
 }
 async function delAnn(id){if(!confirm('Löschen?'))return;await SB.from('announcements').delete().eq('id',id);renderAnn();}
 
-// ===== SONGS =====
+// ========== SONGS ==========
 async function renderSongs(){
   const{data}=await SB.from('songs').select('*').order('title');
   cachedSongs=data||[];buildFilters();displaySongs(filteredSongs());
@@ -660,20 +608,20 @@ function buildFilters(){
   const bes=[...new Set(cachedSongs.map(s=>s.besetzung).filter(Boolean))];
   const the=[...new Set(cachedSongs.map(s=>s.thema).filter(Boolean))];
   const anl=[...new Set(cachedSongs.map(s=>s.anlass).filter(Boolean))];
+  // Persons: all composer/arranger/etc names
+  const persons=[...new Set(cachedSongs.flatMap(s=>[s.komponist,s.textdichter,s.arrangeur,s.uebersetzer].filter(Boolean)))];
   const el=document.getElementById('song-filters');el.innerHTML='';
-  [...bes,...the,...anl].forEach(v=>{
-    const c=document.createElement('div');c.className='fchip'+(songFilter.besetzung===v||songFilter.thema===v||songFilter.anlass===v?' active':'');c.textContent=v;
-    c.onclick=()=>{if(bes.includes(v))songFilter.besetzung=songFilter.besetzung===v?'':v;else if(the.includes(v))songFilter.thema=songFilter.thema===v?'':v;else songFilter.anlass=songFilter.anlass===v?'':v;buildFilters();displaySongs(filteredSongs());};
-    el.appendChild(c);
-  });
+  const addGroup=(items,key)=>items.forEach(v=>{const c=document.createElement('div');c.className='fchip'+(songFilter[key]===v?' active':'');c.textContent=v;c.onclick=()=>{songFilter[key]=songFilter[key]===v?'':v;buildFilters();displaySongs(filteredSongs());};el.appendChild(c);});
+  addGroup(bes,'besetzung');addGroup(the,'thema');addGroup(anl,'anlass');
 }
 function filteredSongs(){
   const q=(document.getElementById('song-search')?.value||'').toLowerCase();
   return cachedSongs.filter(s=>{
-    if(q&&!['title','komponist','textdichter','liedanfang','arrangeur'].some(k=>(s[k]||'').toLowerCase().includes(q)))return false;
+    if(q&&!['title','komponist','textdichter','liedanfang','arrangeur','uebersetzer'].some(k=>(s[k]||'').toLowerCase().includes(q)))return false;
     if(songFilter.besetzung&&s.besetzung!==songFilter.besetzung)return false;
     if(songFilter.thema&&s.thema!==songFilter.thema)return false;
     if(songFilter.anlass&&s.anlass!==songFilter.anlass)return false;
+    if(songFilter.person){const p=songFilter.person.toLowerCase();if(!['komponist','textdichter','arrangeur','uebersetzer'].some(k=>(s[k]||'').toLowerCase().includes(p)))return false;}
     return true;
   });
 }
@@ -686,34 +634,59 @@ function displaySongs(songs){
     <div>${s.besetzung?`<span class="badge">${esc(s.besetzung)}</span>`:''}</div></div>
     ${s.thema||s.anlass?`<div class="cmeta">${s.thema?`<span class="badge blue">${esc(s.thema)}</span>`:''}${s.anlass?`<span class="badge green">${esc(s.anlass)}</span>`:''}</div>`:''}</div>`).join('');
 }
+
 async function openSongDetail(id){
   const s=cachedSongs.find(x=>x.id===id)||{};
   document.getElementById('sd-title').textContent=s.title||'Lied';
-  function df(label,val,type){
+  const isAdmin=currentProfile?.role==='admin';
+  function df(label,val,opts){
     if(!val)return`<div class="df"><div class="dl">${label}</div><div class="dv" style="color:var(--text3)">–</div></div>`;
-    if(type==='badge')return`<div class="df"><div class="dl">${label}</div><div class="dv"><span class="badge">${esc(val)}</span></div></div>`;
-    if(type==='full')return`<div class="df" style="grid-column:1/-1"><div class="dl">${label}</div><div class="dv">${esc(val)}</div></div>`;
-    return`<div class="df"><div class="dl">${label}</div><div class="dv">${esc(val)}</div></div>`;
+    return`<div class="df ${opts==='full'?'style="grid-column:1/-1"':''}"><div class="dl">${label}</div><div class="dv">${opts==='badge'?`<span class="badge">${esc(val)}</span>`:esc(val)}</div></div>`;
   }
+  // Song files
+  const{data:files}=await SB.from('song_files').select('*').eq('song_id',id);
+  const fileTypes=['chorsatz','klaviersatz','chor_klavier','orchestersatz','sibelius'];
+  const fileLabels={'chorsatz':'PDF Chorsatz','klaviersatz':'PDF Klaviersatz','chor_klavier':'PDF Chor+Klavier','orchestersatz':'PDF Orchestersatz','sibelius':'Sibelius-Datei'};
+  const filesHtml=(files||[]).length?`<div class="ddiv"></div><div class="dl">Dateien</div><div style="margin-top:6px">${(files||[]).map(f=>`<a href="${esc(f.url)}" target="_blank" class="ffile">📄 ${esc(fileLabels[f.file_type]||f.file_type)}</a>`).join('')}</div>`:'';
+  // Upload files section for admin
+  const uploadHtml=isAdmin?`<div class="ddiv"></div><div class="dl">Dateien hochladen</div><div style="margin-top:6px">${fileTypes.map(ft=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="font-size:12px;color:var(--text2);width:120px">${esc(fileLabels[ft])}</span><input type="file" accept=".pdf,.sib,.sibelius" id="sf-${ft}" style="flex:1;font-size:11px;color:var(--text2)"><button class="btn btn-g btn-sm" onclick="uploadSongFile('${id}','${ft}')">↑</button></div>`).join('')}</div>`:'';
   document.getElementById('sd-body').innerHTML=`
-    <div class="dgrid" style="margin-bottom:14px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}</div>
+    <div class="dgrid" style="margin-bottom:12px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}${df('Schrank',s.schrank)}</div>
     <div class="ddiv"></div>
-    <div class="dgrid" style="margin-bottom:14px">${df('Komponist',s.komponist)}${df('Textdichter',s.textdichter)}${df('Arrangeur',s.arrangeur)}${df('Übersetzer',s.uebersetzer)}</div>
+    <div class="dgrid" style="margin-bottom:12px">
+      ${df('Komponist',s.komponist)}${s.komponist_lz?df('Lebensdaten',s.komponist_lz):''}
+      ${df('Textdichter',s.textdichter)}${s.textdichter_lz?df('Lebensdaten',s.textdichter_lz):''}
+      ${df('Arrangeur',s.arrangeur)}${s.arrangeur_lz?df('Lebensdaten',s.arrangeur_lz):''}
+      ${df('Übersetzer',s.uebersetzer)}${s.uebersetzer_lz?df('Lebensdaten',s.uebersetzer_lz):''}
+    </div>
     <div class="ddiv"></div>
-    <div class="dgrid" style="margin-bottom:14px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
-    ${(s.links||[]).length?`<div class="ddiv"></div><div class="dl">Links</div><div style="margin-top:6px">${s.links.map(l=>`<a href="${esc(l)}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;background:var(--card);border:0.5px solid var(--border);font-size:12px;color:var(--info);margin:3px;text-decoration:none">${esc(l.replace(/https?:\/\//,'').substring(0,32))}</a>`).join('')}</div>`:''}
-    ${s.notizen?`<div class="ddiv"></div>${df('Notizen',s.notizen,'full')}`:''}`;
+    <div class="dgrid" style="margin-bottom:12px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
+    ${(s.links||[]).length?`<div class="ddiv"></div><div class="dl">Links</div><div style="margin-top:5px">${s.links.map(l=>`<a href="${esc(l)}" target="_blank" class="ffile">${esc(l.replace(/https?:\/\//,'').substring(0,30))}</a>`).join('')}</div>`:''}
+    ${filesHtml}${uploadHtml}
+    ${s.notizen?`<div class="ddiv"></div><div class="df" style="grid-column:1/-1"><div class="dl">Notizen</div><div class="dv">${esc(s.notizen)}</div></div>`:''}`;
   const footer=document.getElementById('sd-footer');footer.innerHTML='';
-  if(currentProfile?.role==='admin'){
-    const eb=document.createElement('button');eb.className='btn btn-g';eb.style.flex='1';eb.textContent='Bearbeiten';
-    eb.onclick=()=>{closeModal('m-song-detail');openSongForm(id);};
-    const db=document.createElement('button');db.className='btn btn-d';db.style.flex='1';db.textContent='Löschen';
-    db.onclick=()=>{if(confirm('Löschen?'))delSong(id);};
+  if(isAdmin){
+    const eb=document.createElement('button');eb.className='btn btn-g';eb.style.flex='1';eb.textContent='Bearbeiten';eb.onclick=()=>{closeModal('m-song-detail');openSongForm(id);};
+    const db=document.createElement('button');db.className='btn btn-d';db.style.flex='1';db.textContent='Löschen';db.onclick=()=>{if(confirm('Löschen?'))delSong(id);};
     footer.appendChild(eb);footer.appendChild(db);
   }
   openModal('m-song-detail');
 }
-function openSongForm(id=null, prefill={}){
+
+async function uploadSongFile(songId, fileType){
+  const input=document.getElementById(`sf-${fileType}`);
+  if(!input?.files[0]){T('Keine Datei gewählt','err');return;}
+  const file=input.files[0];
+  const ext=file.name.split('.').pop();
+  const path=`songs/${songId}/${fileType}.${ext}`;
+  const{error:upErr}=await SB.storage.from('choir-media').upload(path,file,{upsert:true});
+  if(upErr){T('Upload-Fehler: '+upErr.message,'err');return;}
+  const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
+  await SB.from('song_files').upsert({song_id:songId,file_type:fileType,url:publicUrl,path},{onConflict:'song_id,file_type'});
+  T('Datei hochgeladen','ok');openSongDetail(songId);
+}
+
+function openSongForm(id=null,prefill={}){
   editSongId=id;
   const s=id?cachedSongs.find(x=>x.id===id)||{}:prefill;
   document.getElementById('sf-title-h').textContent=id?'Lied bearbeiten':'Lied hinzufügen';
@@ -723,20 +696,25 @@ function openSongForm(id=null, prefill={}){
 function buildSongFormHTML(s){
   return`<div class="fs"><div class="fst">Allgemein</div>
     <div class="fg"><label class="fl">Titel *</label><input class="fi" id="sf-title" value="${esc(s.title||'')}"></div>
-    <div class="fr"><div class="fg"><label class="fl">Liedanfang</label><input class="fi" id="sf-anf" value="${esc(s.liedanfang||'')}"></div><div class="fg"><label class="fl">Refrainanfang</label><input class="fi" id="sf-ref" value="${esc(s.refrain||'')}"></div></div>
-    <div class="fr">
+    <div class="fr2"><div class="fg"><label class="fl">Liedanfang</label><input class="fi" id="sf-anf" value="${esc(s.liedanfang||'')}"></div><div class="fg"><label class="fl">Refrainanfang</label><input class="fi" id="sf-ref" value="${esc(s.refrain||'')}"></div></div>
+    <div class="fr2">
       <div class="fg"><label class="fl">Besetzung</label><select class="fi" id="sf-bes">${['','SATB','TTBB','SSAA','SSA','SAB','SSATBB','Gemischter Chor','Männerchor','Frauenchor'].map(b=>`<option value="${b}" ${(s.besetzung||'')==b?'selected':''}>${b||'– wählen –'}</option>`).join('')}</select></div>
       <div class="fg"><label class="fl">Thema</label><input class="fi" id="sf-thema" value="${esc(s.thema||'')}"></div>
     </div>
-    <div class="fg"><label class="fl">Anlass</label><input class="fi" id="sf-anlass" value="${esc(s.anlass||'')}"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Anlass</label><input class="fi" id="sf-anlass" value="${esc(s.anlass||'')}"></div>
+      <div class="fg"><label class="fl">Schrank</label><select class="fi" id="sf-schrank"><option value="">–</option><option value="Haupt" ${s.schrank==='Haupt'?'selected':''}>Haupt</option><option value="Neben" ${s.schrank==='Neben'?'selected':''}>Neben</option></select></div>
+    </div>
   </div>
-  <div class="fs"><div class="fst">Personen</div>
-    <div class="fr"><div class="fg"><label class="fl">Komponist</label><input class="fi" id="sf-komp" value="${esc(s.komponist||'')}"></div><div class="fg"><label class="fl">Textdichter</label><input class="fi" id="sf-text" value="${esc(s.textdichter||'')}"></div></div>
-    <div class="fr"><div class="fg"><label class="fl">Arrangeur</label><input class="fi" id="sf-arr" value="${esc(s.arrangeur||'')}"></div><div class="fg"><label class="fl">Übersetzer</label><input class="fi" id="sf-ueb" value="${esc(s.uebersetzer||'')}"></div></div>
+  <div class="fs"><div class="fst">Personen & Lebensdaten</div>
+    <div class="fr2"><div class="fg"><label class="fl">Komponist</label><input class="fi" id="sf-komp" value="${esc(s.komponist||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-komp-lz" value="${esc(s.komponist_lz||'')}" placeholder="z.B. 1685–1750"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Textdichter</label><input class="fi" id="sf-text" value="${esc(s.textdichter||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-text-lz" value="${esc(s.textdichter_lz||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Arrangeur</label><input class="fi" id="sf-arr" value="${esc(s.arrangeur||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-arr-lz" value="${esc(s.arrangeur_lz||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Übersetzer</label><input class="fi" id="sf-ueb" value="${esc(s.uebersetzer||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-ueb-lz" value="${esc(s.uebersetzer_lz||'')}"></div></div>
   </div>
   <div class="fs"><div class="fst">Rechtliches</div>
-    <div class="fr"><div class="fg"><label class="fl">Rechte</label><input class="fi" id="sf-recht" value="${esc(s.rechte||'')}"></div><div class="fg"><label class="fl">Lizenz</label><input class="fi" id="sf-liz" value="${esc(s.lizenz||'')}"></div></div>
-    <div class="fr"><div class="fg"><label class="fl">Originaltitel</label><input class="fi" id="sf-orig" value="${esc(s.originaltitel||'')}"></div><div class="fg"><label class="fl">Quelle</label><input class="fi" id="sf-quelle" value="${esc(s.quelle||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Rechte</label><input class="fi" id="sf-recht" value="${esc(s.rechte||'')}"></div><div class="fg"><label class="fl">Lizenz</label><input class="fi" id="sf-liz" value="${esc(s.lizenz||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Originaltitel</label><input class="fi" id="sf-orig" value="${esc(s.originaltitel||'')}"></div><div class="fg"><label class="fl">Quelle</label><input class="fi" id="sf-quelle" value="${esc(s.quelle||'')}"></div></div>
   </div>
   <div class="fs"><div class="fst">Links & Notizen</div>
     <div class="fg"><label class="fl">YouTube / Spotify</label><input class="fi" id="sf-link" value="${esc((s.links||[])[0]||'')}" placeholder="https://…"></div>
@@ -747,7 +725,7 @@ async function saveSong(){
   const title=document.getElementById('sf-title').value.trim();
   if(!title){T('Bitte Titel eingeben','err');return;}
   const lv=document.getElementById('sf-link').value.trim();
-  const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),komponist:document.getElementById('sf-komp').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
+  const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),schrank:document.getElementById('sf-schrank').value,komponist:document.getElementById('sf-komp').value.trim(),komponist_lz:document.getElementById('sf-komp-lz').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),textdichter_lz:document.getElementById('sf-text-lz').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),arrangeur_lz:document.getElementById('sf-arr-lz').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),uebersetzer_lz:document.getElementById('sf-ueb-lz').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
   let error;
   if(editSongId){({error}=await SB.from('songs').update(payload).eq('id',editSongId));}
   else{({error}=await SB.from('songs').insert({...payload,created_by:currentUser.id}));}
@@ -756,15 +734,47 @@ async function saveSong(){
 }
 async function delSong(id){await SB.from('songs').delete().eq('id',id);closeModal('m-song-detail');renderSongs();T('Lied gelöscht');}
 
-// ===== EVENTS =====
+// ========== CSV IMPORT/EXPORT ==========
+async function importCSV(event){
+  const file=event.target.files[0];if(!file)return;
+  const text=await file.text();
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(lines.length<2){T('CSV leer','err');return;}
+  // Header: liedanfang,title,refrain,besetzung,thema,anlass,textdichter,textdichter_lz,komponist,komponist_lz,arrangeur,arrangeur_lz,uebersetzer,uebersetzer_lz,rechte,originaltitel,quelle,lizenz,schrank,notizen
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
+  const songs=[];
+  for(let i=1;i<lines.length;i++){
+    const vals=parseCSVLine(lines[i]);
+    const obj={};headers.forEach((h,j)=>obj[h]=vals[j]||'');
+    if(obj.title)songs.push({title:obj.title,liedanfang:obj.liedanfang||'',refrain:obj.refrain||'',besetzung:obj.besetzung||'',thema:obj.thema||'',anlass:obj.anlass||'',textdichter:obj.textdichter||'',textdichter_lz:obj.textdichter_lz||'',komponist:obj.komponist||'',komponist_lz:obj.komponist_lz||'',arrangeur:obj.arrangeur||'',arrangeur_lz:obj.arrangeur_lz||'',uebersetzer:obj.uebersetzer||'',uebersetzer_lz:obj.uebersetzer_lz||'',rechte:obj.rechte||'',originaltitel:obj.originaltitel||'',quelle:obj.quelle||'',lizenz:obj.lizenz||'',schrank:obj.schrank||'',notizen:obj.notizen||'',links:[],created_by:currentUser.id});
+  }
+  if(!songs.length){T('Keine Lieder gefunden','err');return;}
+  const{error}=await SB.from('songs').insert(songs);
+  if(error){T('Fehler: '+error.message,'err');return;}
+  event.target.value='';T(`${songs.length} Lieder importiert`,'ok');renderSongs();
+}
+function parseCSVLine(line){
+  const result=[];let cur='';let inQ=false;
+  for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){result.push(cur.trim());cur='';}else{cur+=c;}}
+  result.push(cur.trim());return result;
+}
+async function exportCSV(){
+  const{data:songs}=await SB.from('songs').select('*').order('title');
+  if(!songs?.length){T('Keine Lieder zum Exportieren','err');return;}
+  const headers=['liedanfang','title','refrain','besetzung','thema','anlass','textdichter','textdichter_lz','komponist','komponist_lz','arrangeur','arrangeur_lz','uebersetzer','uebersetzer_lz','rechte','originaltitel','quelle','lizenz','schrank','notizen'];
+  const rows=[headers,...songs.map(s=>headers.map(h=>s[h]||''))];
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));a.download='repertoire.csv';a.click();
+  T('CSV exportiert','ok');
+}
+
+// ========== EVENTS ==========
 async function renderEvents(){
   const{data}=await SB.from('events').select('*,event_program(position,song_id,songs(title,besetzung))').order('datum');
-  cachedEvents=data||[];
   const el=document.getElementById('ev-list');
-  if(!cachedEvents.length){el.innerHTML='<div class="empty"><p>Keine Veranstaltungen</p></div>';return;}
+  if(!(data?.length)){el.innerHTML='<div class="empty"><p>Keine Veranstaltungen</p></div>';return;}
   const now=today();
-  const up=cachedEvents.filter(e=>e.datum>=now);
-  const pa=cachedEvents.filter(e=>e.datum<now);
+  const up=data.filter(e=>e.datum>=now),pa=data.filter(e=>e.datum<now);
   let html='';
   if(up.length)html+='<div class="st">Bevorstehend</div>'+up.map(evCard).join('');
   if(pa.length)html+='<div class="st">Vergangen</div>'+pa.map(evCard).join('');
@@ -773,68 +783,45 @@ async function renderEvents(){
 function evCard(e){
   const n=(e.event_program||[]).length;
   return`<div class="card" onclick="openEvDetail('${e.id}')">
-    <div class="crow"><div style="flex:1"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)}${e.uhrzeit?' · '+fT(e.uhrzeit):''}</div><div class="cs">${esc(e.ort||'')}</div></div>
+    <div class="crow"><div style="flex:1"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)}${e.uhrzeit?' · '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>
     <div>${n?`<span class="badge blue">${n} Lieder</span>`:''}</div></div>
     ${e.dirigent?`<div class="cmeta"><span class="badge green">Dir: ${esc(e.dirigent)}</span></div>`:''}</div>`;
 }
-
 async function openEvDetail(id){
   const{data:e}=await SB.from('events').select('*,event_program(id,position,song_id,dirigent,klavier,instrumente,songs(title,besetzung)),event_tasks(*),attendance(member_id,status,profiles(name,stimme))').eq('id',id).single();
   if(!e)return;
   const isAdmin=currentProfile?.role==='admin';
   const prog=(e.event_program||[]).sort((a,b)=>a.position-b.position);
-  const tasks=e.event_tasks||[];
-  const members=e.attendance||[];
   document.getElementById('ed-title').textContent=e.title;
-
-  const progHTML=prog.length?prog.map(p=>`<div class="pitem">
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="pnum">${p.position}</div>
-      <div style="flex:1"><div class="ptitle">${esc(p.songs?.title||'?')}</div><div class="psub">${esc(p.songs?.besetzung||'')}</div></div>
-    </div>
-    ${(p.dirigent||p.klavier||p.instrumente)?`<div class="proles">${p.dirigent?`<div class="prole-row"><span class="prole-label">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div class="prole-row"><span class="prole-label">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div class="prole-row"><span class="prole-label">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}
-  </div>`).join(''):'<p style="color:var(--text3);font-size:13px">Kein Programm</p>';
-
   document.getElementById('ed-body').innerHTML=`
-    <div class="dgrid" style="margin-bottom:14px">
+    <div class="dgrid" style="margin-bottom:12px">
       <div class="df"><div class="dl">Datum</div><div class="dv">${fD(e.datum)}</div></div>
       <div class="df"><div class="dl">Uhrzeit</div><div class="dv">${fT(e.uhrzeit)||'–'}</div></div>
       <div class="df" style="grid-column:1/-1"><div class="dl">Ort</div><div class="dv">${esc(e.ort||'–')}</div></div>
     </div>
     <div class="ddiv"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="dl">Programm</div>
-    </div>
-    ${progHTML}
+    <div class="dl" style="margin-bottom:7px">Programm</div>
+    ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(p.songs?.title||'?')}</div><div style="font-size:11px;color:var(--text2)">${esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
     <div class="ddiv"></div>
-    <div class="dl" style="margin-bottom:8px">Allgemeine Rollen</div>
-    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);overflow:hidden">
-      ${[['Dirigent',e.dirigent],['Klavier',e.klavier],['Weitere Instrumente',e.instrumente]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:0.5px solid var(--border)"><span style="color:var(--text2);font-size:13px">${l}</span><span style="font-size:13px;font-weight:500">${esc(v)}</span></div>`).join('')}
-      ${tasks.map(t=>`<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:0.5px solid var(--border)"><span style="color:var(--text2);font-size:13px">${esc(t.aufgabe)}</span><span style="font-size:13px;font-weight:500">${esc(t.person)}</span></div>`).join('')}
-    </div>
+    <div class="dl" style="margin-bottom:7px">Allgemeine Rollen</div>
+    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Dirigent',e.dirigent],['Klavier',e.klavier],['Instrumente',e.instrumente]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
     <div class="ddiv"></div>
-    <div class="dl" style="margin-bottom:8px">Anwesenheit</div>
-    ${members.map(m=>`<div class="atti"><div><span style="font-size:14px">${esc(m.profiles?.name||'?')}</span> <span style="font-size:12px;color:var(--text3)">${esc(m.profiles?.stimme||'')}</span></div>
+    <div class="dl" style="margin-bottom:7px">Anwesenheit</div>
+    ${(e.attendance||[]).map(m=>`<div class="atti"><div><span style="font-size:13px">${esc(m.profiles?.name||'?')}</span> <span style="font-size:11px;color:var(--text3)">${esc(m.profiles?.stimme||'')}</span></div>
       <div class="attb"><button class="ab ${m.status==='yes'?'yes':''}" onclick="setAtt('${e.id}','${m.member_id}','yes')">✓</button><button class="ab ${m.status==='no'?'no':''}" onclick="setAtt('${e.id}','${m.member_id}','no')">✗</button></div></div>`).join('')}
-    ${e.notizen?`<div class="ddiv"></div><div class="dl">Notizen</div><div style="font-size:14px;margin-top:4px">${esc(e.notizen)}</div>`:''}`;
-
+    ${e.notizen?`<div class="ddiv"></div><div class="dl">Notizen</div><div style="font-size:13px;margin-top:4px">${esc(e.notizen)}</div>`:''}`;
   const footer=document.getElementById('ed-footer');footer.innerHTML='';
   if(isAdmin){
-    const eb=document.createElement('button');eb.className='btn btn-g';eb.style.flex='1';eb.textContent='Bearbeiten';
-    eb.onclick=()=>{closeModal('m-ev-detail');openEvForm(e.id);};
-    const db=document.createElement('button');db.className='btn btn-d';db.style.flex='1';db.textContent='Löschen';
-    db.onclick=()=>{if(confirm('Löschen?'))delEvent(e.id);};
+    const eb=document.createElement('button');eb.className='btn btn-g';eb.style.flex='1';eb.textContent='Bearbeiten';eb.onclick=()=>{closeModal('m-ev-detail');openEventForm(e.id);};
+    const db=document.createElement('button');db.className='btn btn-d';db.style.flex='1';db.textContent='Löschen';db.onclick=()=>{if(confirm('Löschen?'))delEvent(e.id);};
     footer.appendChild(eb);footer.appendChild(db);
   }
   openModal('m-ev-detail');
 }
-
 async function setAtt(evId,mId,val){
-  await SB.from('attendance').upsert({event_id:evId,member_id:mId,status:val},{onConflict:'event_id,member_id'});
-  openEvDetail(evId);
+  await SB.from('attendance').upsert({event_id:evId,member_id:mId,status:val},{onConflict:'event_id,member_id'});openEvDetail(evId);
 }
-
-async function openEvForm(id=null){
+async function openEventForm(id=null){
   editEvId=id;
   const{data:songs}=await SB.from('songs').select('id,title').order('title');
   const{data:members}=await SB.from('profiles').select('id,name').order('name');
@@ -842,126 +829,94 @@ async function openEvForm(id=null){
   if(id){const{data}=await SB.from('events').select('*,event_program(*),event_tasks(*)').eq('id',id).single();e=data||{};}
   document.getElementById('ef-title-h').textContent=id?'Veranstaltung bearbeiten':'Veranstaltung hinzufügen';
   const prog=(e.event_program||[]).sort((a,b)=>a.position-b.position);
-  const songOpts=(songs||[]).map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join('');
-
-  // Program rows with per-song roles
-  const progRowsHTML=prog.map((p,i)=>buildProgRowHTML(i+1,p,songs||[])).join('');
-  const aufgRowsHTML=(e.event_tasks||[]).map(t=>`<div class="fr aufg-row" style="margin-bottom:8px"><input class="fi aufg-person" value="${esc(t.person)}" placeholder="Person"><input class="fi aufg-task" value="${esc(t.aufgabe)}" placeholder="Aufgabe"></div>`).join('');
-
+  const aufgRows=(e.event_tasks||[]).map(t=>`<div class="fr2 aufg-row" style="margin-bottom:7px"><input class="fi aufg-person" value="${esc(t.person)}" placeholder="Person"><input class="fi aufg-task" value="${esc(t.aufgabe)}" placeholder="Aufgabe"></div>`).join('');
   document.getElementById('ef-body').innerHTML=`
     <div class="fs"><div class="fst">Allgemein</div>
       <div class="fg"><label class="fl">Titel *</label><input class="fi" id="ef-title" value="${esc(e.title||'')}"></div>
-      <div class="fr"><div class="fg"><label class="fl">Datum</label><input class="fi" type="date" id="ef-datum" value="${e.datum||''}"></div><div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="ef-uhrzeit" value="${fT(e.uhrzeit||'')}"></div></div>
+      <div class="fr2"><div class="fg"><label class="fl">Datum</label><input class="fi" type="date" id="ef-datum" value="${e.datum||''}"></div><div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="ef-uhrzeit" value="${fT(e.uhrzeit||'')}"></div></div>
       <div class="fg"><label class="fl">Ort</label><input class="fi" id="ef-ort" value="${esc(e.ort||'')}"></div>
     </div>
-    <div class="fs"><div class="fst">Programm <span style="font-weight:400;font-size:10px">(inkl. Rollen pro Lied)</span></div>
-      <div id="prog-rows">${progRowsHTML}</div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button type="button" class="btn btn-g btn-sm" style="flex:1" onclick="addProgRow(${JSON.stringify(songs||[]).replace(/"/g,'&quot;')})">+ Lied wählen</button>
-      </div>
+    <div class="fs"><div class="fst">Programm</div>
+      <div id="prog-rows">${prog.map((p,i)=>buildProgRow(i+1,p,songs||[])).join('')}</div>
+      <button type="button" class="btn btn-g btn-sm" onclick="addProgRow()">+ Lied hinzufügen</button>
     </div>
     <div class="fs"><div class="fst">Allgemeine Rollen</div>
-      <div class="fr"><div class="fg"><label class="fl">Dirigent</label><input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}"></div><div class="fg"><label class="fl">Klavier</label><input class="fi" id="ef-klav" value="${esc(e.klavier||'')}"></div></div>
+      <div class="fr2"><div class="fg"><label class="fl">Dirigent</label><input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}"></div><div class="fg"><label class="fl">Klavier</label><input class="fi" id="ef-klav" value="${esc(e.klavier||'')}"></div></div>
       <div class="fg"><label class="fl">Weitere Instrumente</label><input class="fi" id="ef-instr" value="${esc(e.instrumente||'')}"></div>
     </div>
     <div class="fs"><div class="fst">Aufgaben</div>
-      <div id="aufg-rows">${aufgRowsHTML}</div>
+      <div id="aufg-rows">${aufgRows}</div>
       <button type="button" class="btn btn-g btn-sm" onclick="addAufgRow()">+ Aufgabe</button>
     </div>
     <div class="fs"><div class="fst">Notizen</div><textarea class="fi" id="ef-notiz">${esc(e.notizen||'')}</textarea></div>`;
-  window._efSongs=songs||[]; window._efMembers=members||[];
+  window._efSongs=songs||[];window._efMembers=members||[];
   openModal('m-ev-form');
 }
-
-function buildProgRowHTML(pos, p={}, songs=[]){
-  const songOpts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title)}</option>`).join('');
-  return`<div class="ep-row prog-ep-row">
-    <div class="ep-row-header">
-      <div class="ep-row-num">${pos}</div>
-      <select class="fi prog-song" style="flex:1">${songs.length?`<option value="">– Lied –</option>${songOpts}`:''}</select>
-      <button type="button" class="btn btn-d btn-sm" onclick="this.closest('.prog-ep-row').remove();renumberProgRows()" style="width:30px;height:30px;padding:0">✕</button>
-    </div>
-    <div class="ep-roles">
-      <input class="fi prog-dir" placeholder="Dirigent" value="${esc(p.dirigent||'')}">
-      <input class="fi prog-klav" placeholder="Klavier" value="${esc(p.klavier||'')}">
-      <input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}">
-    </div>
-  </div>`;
+function buildProgRow(pos,p={},songs=[]){
+  const opts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title)}</option>`).join('');
+  return`<div class="ep-row prog-ep-row"><div class="ep-row-header"><div class="pnum" style="width:22px;height:22px;font-size:11px">${pos}</div><select class="fi prog-song" style="flex:1"><option value="">– Lied –</option>${opts}</select><button type="button" class="btn btn-d btn-sm" onclick="this.closest('.prog-ep-row').remove();renumberProgRows()" style="width:28px;height:28px;padding:0">✕</button></div>
+    <div class="ep-roles"><input class="fi prog-dir" placeholder="Dirigent" value="${esc(p.dirigent||'')}"><input class="fi prog-klav" placeholder="Klavier" value="${esc(p.klavier||'')}"><input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}"></div></div>`;
 }
-
-function renumberProgRows(){
-  document.querySelectorAll('.prog-ep-row .ep-row-num').forEach((el,i)=>el.textContent=i+1);
-}
-
-function addProgRow(songs){
-  const container=document.getElementById('prog-rows');
-  const pos=container.querySelectorAll('.prog-ep-row').length+1;
-  const div=document.createElement('div');
-  div.innerHTML=buildProgRowHTML(pos,{},Array.isArray(songs)?songs:window._efSongs||[]);
-  container.appendChild(div.firstElementChild);
-}
-
-function addAufgRow(){
-  const div=document.createElement('div');div.className='fr aufg-row';div.style.marginBottom='8px';
-  div.innerHTML=`<input class="fi aufg-person" placeholder="Person"><input class="fi aufg-task" placeholder="Aufgabe">`;
-  document.getElementById('aufg-rows').appendChild(div);
-}
-
+function renumberProgRows(){document.querySelectorAll('.prog-ep-row .pnum').forEach((el,i)=>el.textContent=i+1);}
+function addProgRow(){const c=document.getElementById('prog-rows');const p=c.querySelectorAll('.prog-ep-row').length+1;const d=document.createElement('div');d.innerHTML=buildProgRow(p,{},window._efSongs||[]);c.appendChild(d.firstElementChild);}
+function addAufgRow(){const d=document.createElement('div');d.className='fr2 aufg-row';d.style.marginBottom='7px';d.innerHTML=`<input class="fi aufg-person" placeholder="Person"><input class="fi aufg-task" placeholder="Aufgabe">`;document.getElementById('aufg-rows').appendChild(d);}
 async function saveEvent(){
   const title=document.getElementById('ef-title').value.trim();
   if(!title){T('Bitte Titel eingeben','err');return;}
   const payload={title,datum:document.getElementById('ef-datum').value||null,uhrzeit:document.getElementById('ef-uhrzeit').value||null,ort:document.getElementById('ef-ort').value.trim(),dirigent:document.getElementById('ef-dir').value.trim(),klavier:document.getElementById('ef-klav').value.trim(),instrumente:document.getElementById('ef-instr').value.trim(),notizen:document.getElementById('ef-notiz').value.trim(),updated_at:new Date().toISOString()};
   let evId=editEvId;
   if(editEvId){await SB.from('events').update(payload).eq('id',editEvId);}
-  else{const{data}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();evId=data?.id;}
-  if(!evId){T('Fehler','err');return;}
-  // Program with per-song roles
+  else{const{data,error}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();if(error){T('Fehler: '+error.message,'err');return;}evId=data?.id;}
+  if(!evId){T('Fehler beim Speichern','err');return;}
   await SB.from('event_program').delete().eq('event_id',evId);
-  const progRows=[...document.querySelectorAll('.prog-ep-row')];
-  const progInsert=progRows.map((row,i)=>({
-    event_id:evId,
-    song_id:row.querySelector('.prog-song')?.value||null,
-    position:i+1,
-    dirigent:row.querySelector('.prog-dir')?.value.trim()||'',
-    klavier:row.querySelector('.prog-klav')?.value.trim()||'',
-    instrumente:row.querySelector('.prog-instr')?.value.trim()||'',
-  })).filter(p=>p.song_id);
+  const progInsert=[...document.querySelectorAll('.prog-ep-row')].map((row,i)=>({event_id:evId,song_id:row.querySelector('.prog-song')?.value||null,position:i+1,dirigent:row.querySelector('.prog-dir')?.value.trim()||'',klavier:row.querySelector('.prog-klav')?.value.trim()||'',instrumente:row.querySelector('.prog-instr')?.value.trim()||''})).filter(p=>p.song_id);
   if(progInsert.length)await SB.from('event_program').insert(progInsert);
-  // Tasks
   await SB.from('event_tasks').delete().eq('event_id',evId);
-  const pEls=[...document.querySelectorAll('.aufg-person')];
-  const tEls=[...document.querySelectorAll('.aufg-task')];
+  const pEls=[...document.querySelectorAll('.aufg-person')],tEls=[...document.querySelectorAll('.aufg-task')];
   const taskInsert=pEls.map((el,i)=>({event_id:evId,person:el.value.trim(),aufgabe:tEls[i]?.value.trim()||''})).filter(t=>t.person&&t.aufgabe);
   if(taskInsert.length)await SB.from('event_tasks').insert(taskInsert);
-  // Attendance placeholders
-  if((window._efMembers||[]).length&&!editEvId){
-    await SB.from('attendance').upsert((window._efMembers).map(m=>({event_id:evId,member_id:m.id,status:''})),{onConflict:'event_id,member_id',ignoreDuplicates:true});
-  }
+  if((window._efMembers||[]).length&&!editEvId)await SB.from('attendance').upsert((window._efMembers).map(m=>({event_id:evId,member_id:m.id,status:''})),{onConflict:'event_id,member_id',ignoreDuplicates:true});
   closeModal('m-ev-form');renderEvents();T(editEvId?'Veranstaltung aktualisiert':'Veranstaltung hinzugefügt','ok');
 }
 async function delEvent(id){await SB.from('events').delete().eq('id',id);closeModal('m-ev-detail');renderEvents();T('Veranstaltung gelöscht');}
 
-// ===== CALENDAR =====
-let calView='month'; // 'month','3month','year'
+// ========== CALENDAR ==========
+async function loadCategories(){
+  const{data}=await SB.from('cal_categories').select('*').order('name');
+  cachedCategories=data||[
+    {id:'chorprobe',name:'Chorprobe',color:'#5b8dee'},
+    {id:'gottesdienst',name:'Gottesdienst',color:'#c9a84c'},
+    {id:'konzert',name:'Konzert',color:'#4caf82'},
+    {id:'sonstiges',name:'Sonstiges',color:'#a8a4b0'}
+  ];
+}
 
-function buildMiniCal(y,m,allEvts){
-  const mn=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+function catColor(cat){
+  const c=cachedCategories.find(x=>x.name===cat||x.id===cat);
+  return c?.color||'#5b8dee';
+}
+
+function buildMiniCal(y,m,allEvts,holidays){
   const fd=(new Date(y,m,1).getDay()+6)%7;
   const dim=new Date(y,m+1,0).getDate();
-  const now=new Date(); const itm=now.getFullYear()===y&&now.getMonth()===m;
-  const ebd={};(allEvts||[]).filter(e=>{const p=e.datum?.split('-');return p&&parseInt(p[0])===y&&parseInt(p[1])-1===m;}).forEach(e=>{const d=parseInt(e.datum.split('-')[2]);if(!ebd[d])ebd[d]=[];ebd[d].push(e);});
+  const now=new Date();const itm=now.getFullYear()===y&&now.getMonth()===m;
+  const ebd={};
+  (allEvts||[]).filter(e=>{const p=e.datum?.split('-');return p&&parseInt(p[0])===y&&parseInt(p[1])-1===m;}).forEach(e=>{const d=parseInt(e.datum.split('-')[2]);if(!ebd[d])ebd[d]=[];ebd[d].push(e);});
+  const mn=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
   let cells='';
-  for(let i=0;i<fd;i++)cells+='<div class="cday other-month"></div>';
-  for(let d=1;d<=dim;d++)cells+=`<div class="cday ${itm&&d===now.getDate()?'today':''} ${ebd[d]?'has-event':''}">${d}</div>`;
-  return`<div class="cal-mini">
-    <div style="font-weight:600;font-size:11px;color:var(--text2);text-align:center;margin-bottom:6px">${mn[m]} ${y}</div>
-    <div class="cgrid">${['M','D','M','D','F','S','S'].map(d=>`<div class="cdow">${d}</div>`).join('')}${cells}</div>
-  </div>`;
+  for(let i=0;i<fd;i++)cells+='<div class="cday-wrap"><div class="cday other-month"></div></div>';
+  for(let d=1;d<=dim;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isHol=!!holidays?.[ds];
+    const evs=ebd[d]||[];
+    cells+=`<div class="cday-wrap"><div class="cday ${itm&&d===now.getDate()?'today':''} ${isHol?'holiday':''}" onclick="openCalForm(null,'${ds}')"><div class="cdnum">${d}</div>${evs.slice(0,2).map(e=>`<div class="cal-event-block" style="background:${esc(e.color||catColor(e.category))}">${esc(e.title)}</div>`).join('')}</div></div>`;
+  }
+  return`<div class="cal-mini"><div style="font-weight:600;font-size:10px;color:var(--text2);text-align:center;margin-bottom:5px">${mn[m]} ${y}</div><div class="cgrid">${['M','D','M','D','F','S','S'].map(d=>`<div class="cdow">${d}</div>`).join('')}${cells}</div></div>`;
 }
 
 async function renderCal(){
   const el=document.getElementById('cal-wrap');
-  const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  await loadCategories();
   const isAdmin=currentProfile?.role==='admin';
   const viewTabs=`<div class="view-tabs">
     <div class="vtab ${calView==='month'?'active':''}" onclick="calView='month';renderCal()">Monat</div>
@@ -969,90 +924,175 @@ async function renderCal(){
     <div class="vtab ${calView==='year'?'active':''}" onclick="calView='year';renderCal()">Jahr</div>
   </div>`;
 
+  const y=calDate.getFullYear(),m=calDate.getMonth();
+  const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
   if(calView==='month'){
-    const y=calDate.getFullYear(),m=calDate.getMonth();
-    const fd=(new Date(y,m,1).getDay()+6)%7;
-    const dim=new Date(y,m+1,0).getDate();
-    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-${String(m+1).padStart(2,'0')}-01`).lte('datum',`${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`);
+    const fd=(new Date(y,m,1).getDay()+6)%7,dim=new Date(y,m+1,0).getDate();
+    const from=`${y}-${String(m+1).padStart(2,'0')}-01`;
+    const to=`${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`;
+    const{data:evts}=await SB.from('calendar_events').select('*').or(`datum.gte.${from},bis_datum.gte.${from}`).lte('datum',to).order('datum');
+    const holidays={...getNRWHolidays(y)};
     const ebd={};(evts||[]).forEach(e=>{const d=parseInt(e.datum.split('-')[2]);if(!ebd[d])ebd[d]=[];ebd[d].push(e);});
-    const now=new Date(); const itm=now.getFullYear()===y&&now.getMonth()===m;
+    const now=new Date();const itm=now.getFullYear()===y&&now.getMonth()===m;
     let cells='';
-    for(let i=0;i<fd;i++)cells+='<div class="cday other-month"></div>';
-    for(let d=1;d<=dim;d++)cells+=`<div class="cday ${itm&&d===now.getDate()?'today':''} ${ebd[d]?'has-event':''}">${d}</div>`;
+    for(let i=0;i<fd;i++)cells+='<div class="cday-wrap"><div class="cday other-month"></div></div>';
+    for(let d=1;d<=dim;d++){
+      const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isHol=!!holidays[ds];const evs=ebd[d]||[];
+      cells+=`<div class="cday-wrap"><div class="cday ${itm&&d===now.getDate()?'today':''} ${isHol?'holiday':''}" onclick="openCalForm(null,'${ds}')"><div class="cdnum">${d}</div>${isHol?`<div style="font-size:7px;color:var(--danger);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(holidays[ds])}</div>`:''}${evs.slice(0,2).map(e=>`<div class="cal-event-block" style="background:${esc(e.color||catColor(e.category))}">${esc(e.title)}</div>`).join('')}</div></div>`;
+    }
+    const upcomingEvts=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
+    const holidayList=Object.entries(holidays).filter(([d])=>d.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort(([a],[b])=>a.localeCompare(b));
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-1)">‹</button><div class="cmonth">${mn[m]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(1)">›</button></div>
       <div class="cgrid">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<div class="cdow">${d}</div>`).join('')}${cells}</div>
-      <div class="st">Termine diesen Monat</div>
-      ${(evts||[]).length?(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>`<div class="cevt ${e.typ}" ${isAdmin?`onclick="openCalForm('${e.id}')"`:''}  style="${isAdmin?'cursor:pointer':''}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div><div style="font-weight:500;font-size:13px">${esc(e.title)}</div><div style="font-size:11px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div></div>
-          <span class="badge ${e.typ==='konzert'?'green':e.typ==='probe'?'blue':''}" style="font-size:10px">${e.typ}</span>
-        </div>
-        ${isAdmin?`<button class="btn btn-d btn-sm" style="margin-top:6px;font-size:11px" onclick="event.stopPropagation();delCalEvt('${e.id}')">Löschen</button>`:''}
-      </div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+      ${holidayList.length?`<div class="st">Feiertage</div>${holidayList.map(([d,n])=>`<div class="cevt-holiday"><span style="font-size:12px">🔴 ${esc(n)}</span><span style="font-size:11px;color:var(--text3);float:right">${fD(d)}</span></div>`).join('')}`:''}
+      <div class="st">Termine</div>
+      ${upcomingEvts.length?upcomingEvts.map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}`;
 
   } else if(calView==='3month'){
-    const y=calDate.getFullYear(),m=calDate.getMonth();
     const from=`${y}-${String(m+1).padStart(2,'0')}-01`;
-    const m3=new Date(y,m+3,0); const to=`${m3.getFullYear()}-${String(m3.getMonth()+1).padStart(2,'0')}-${String(m3.getDate()).padStart(2,'0')}`;
-    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',from).lte('datum',to);
+    const m3end=new Date(y,m+3,0);
+    const to=`${m3end.getFullYear()}-${String(m3end.getMonth()+1).padStart(2,'0')}-${String(m3end.getDate()).padStart(2,'0')}`;
+    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',from).lte('datum',to).order('datum');
+    const holidays={...getNRWHolidays(y),...getNRWHolidays(y+1)};
     let minis='';
-    for(let i=0;i<3;i++){const mm=(m+i)%12;const yy=y+Math.floor((m+i)/12);minis+=buildMiniCal(yy,mm,evts||[]);}
-    // Upcoming events in period
-    const upcoming=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
+    for(let i=0;i<3;i++){const mm=(m+i)%12;const yy=y+Math.floor((m+i)/12);minis+=buildMiniCal(yy,mm,evts||[],holidays);}
+    const upEvts=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-3)">‹</button><div class="cmonth">${mn[m]} – ${mn[(m+2)%12]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(3)">›</button></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">${minis}</div>
-      <div class="st">Termine in diesem Zeitraum</div>
-      ${upcoming.length?upcoming.map(e=>`<div class="cevt ${e.typ}"><div style="font-weight:500;font-size:13px">${esc(e.title)}</div><div style="font-size:11px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">${minis}</div>
+      <div class="st">Termine</div>
+      ${upEvts.length?upEvts.map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}`;
 
   } else { // year
-    const y=calDate.getFullYear();
-    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-01-01`).lte('datum',`${y}-12-31`);
+    const{data:evts}=await SB.from('calendar_events').select('*').gte('datum',`${y}-01-01`).lte('datum',`${y}-12-31`).order('datum');
+    const holidays=getNRWHolidays(y);
     let minis='';
-    for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,evts||[]);
-    const upcoming=(evts||[]).sort((a,b)=>a.datum.localeCompare(b.datum));
+    for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,evts||[],holidays);
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-12)">‹</button><div class="cmonth">Jahr ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(12)">›</button></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">${minis}</div>
-      <div class="st">Alle Termine ${y} (${upcoming.length})</div>
-      ${upcoming.length?upcoming.map(e=>`<div class="cevt ${e.typ}"><div style="font-weight:500;font-size:13px">${esc(e.title)}</div><div style="font-size:11px;color:var(--text2)">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''}</div></div>`).join(''):'<p style="color:var(--text3);font-size:13px">Keine Termine</p>'}`;
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">${minis}</div>
+      <div class="st">Alle Termine ${y}</div>
+      ${(evts||[]).length?(evts||[]).map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}`;
   }
 }
+
+function evtListItem(e,isAdmin){
+  const color=e.color||catColor(e.category);
+  return`<div class="cevt" style="border-left-color:${esc(color)}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-weight:500;font-size:13px">${esc(e.title)}</div>
+        <div style="font-size:11px;color:var(--text2)">${fD(e.datum)}${e.bis_datum&&e.bis_datum!==e.datum?' – '+fD(e.bis_datum):''} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} ${e.bis_uhrzeit?'– '+fT(e.bis_uhrzeit):''} ${e.ort?'· '+esc(e.ort):''}</div>
+      </div>
+      <span class="badge" style="background:${esc(color)}22;color:${esc(color)};border-color:${esc(color)}55;font-size:9px">${esc(e.category||'Termin')}</span>
+    </div>
+    ${e.series_id?'<div style="font-size:10px;color:var(--text3);margin-top:3px">🔁 Serientermin</div>':''}
+    ${isAdmin?`<div style="display:flex;gap:5px;margin-top:6px"><button class="btn btn-g btn-sm" style="font-size:11px" onclick="openCalForm('${e.id}',null)">Bearbeiten</button><button class="btn btn-d btn-sm" style="font-size:11px" onclick="delCalEvt('${e.id}',${!!e.series_id})">Löschen</button></div>`:''}
+  </div>`;
+}
+
 function calNav(d){
-  if(calView==='month')calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);
-  else if(calView==='3month')calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);
-  else calDate=new Date(calDate.getFullYear()+d,calDate.getMonth(),1);
+  if(calView==='year')calDate=new Date(calDate.getFullYear()+d,calDate.getMonth(),1);
+  else calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);
   renderCal();
 }
-function openCalForm(id=null){
+
+async function openCalForm(id=null, prefilledDate=null){
   editCalId=id;
   document.getElementById('cf-title-h').textContent=id?'Termin bearbeiten':'Termin hinzufügen';
-  if(!id){['cf-title','cf-datum','cf-time','cf-bis','cf-bis-t','cf-ort','cf-desc'].forEach(i=>document.getElementById(i).value='');document.getElementById('cf-typ').value='probe';}
-  else SB.from('calendar_events').select('*').eq('id',id).single().then(({data:e})=>{if(e){document.getElementById('cf-title').value=e.title||'';document.getElementById('cf-datum').value=e.datum||'';document.getElementById('cf-time').value=fT(e.uhrzeit||'');document.getElementById('cf-bis').value=e.bis_datum||'';document.getElementById('cf-bis-t').value=fT(e.bis_uhrzeit||'');document.getElementById('cf-ort').value=e.ort||'';document.getElementById('cf-typ').value=e.typ||'probe';document.getElementById('cf-desc').value=e.beschreibung||'';}});
+  await loadCategories();
+  const catOpts=cachedCategories.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+  let e={datum:prefilledDate||'',uhrzeit:'19:00',bis_uhrzeit:'21:00',ort:'Bielefeld',category:'Chorprobe'};
+  if(id){const{data}=await SB.from('calendar_events').select('*').eq('id',id).single();if(data)e=data;}
+  document.getElementById('cf-body').innerHTML=`
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="cf-title" value="${esc(e.title||'')}"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Datum *</label><input class="fi" type="date" id="cf-datum" value="${e.datum||''}"></div>
+      <div class="fg"><label class="fl">Kategorie</label><select class="fi" id="cf-cat">${catOpts}</select></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Von</label><input class="fi" type="time" id="cf-time" value="${fT(e.uhrzeit||'19:00')}"></div>
+      <div class="fg"><label class="fl">Bis</label><input class="fi" type="time" id="cf-bis-t" value="${fT(e.bis_uhrzeit||'21:00')}"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Bis Datum</label><input class="fi" type="date" id="cf-bis-d" value="${e.bis_datum||''}"></div>
+      <div class="fg"><label class="fl">Ort</label><input class="fi" id="cf-ort" value="${esc(e.ort||'Bielefeld')}"></div>
+    </div>
+    ${!id?`<div class="fs"><div class="fst">Serientermin</div>
+      <div class="fg"><label class="fl">Wiederholung</label><select class="fi" id="cf-repeat"><option value="">Kein</option><option value="weekly">Wöchentlich</option><option value="biweekly">Zweiwöchentlich</option><option value="monthly">Monatlich</option></select></div>
+      <div class="fg"><label class="fl">Serienende</label><input class="fi" type="date" id="cf-repeat-end" placeholder="Bis wann?"></div>
+    </div>`:`<div class="fg" style="background:rgba(232,160,32,.08);border:0.5px solid rgba(232,160,32,.3);border-radius:var(--r);padding:8px 10px;font-size:12px;color:var(--text2)">${e.series_id?'🔁 Dies ist ein Serientermin. Änderungen gelten nur für diesen einzelnen Termin.':''}</div>`}
+    <div class="fg"><label class="fl">Beschreibung</label><textarea class="fi" id="cf-desc">${esc(e.beschreibung||'')}</textarea></div>`;
+  // Set category value after render
+  setTimeout(()=>{const sel=document.getElementById('cf-cat');if(sel&&e.category)sel.value=e.category;},50);
+  const footer=document.getElementById('cf-footer');footer.innerHTML='';
+  const cb=document.createElement('button');cb.className='btn btn-g';cb.style.flex='1';cb.textContent='Abbrechen';cb.onclick=()=>closeModal('m-cal-form');
+  const sb=document.createElement('button');sb.className='btn btn-p';sb.style.flex='2';sb.textContent='Speichern';sb.onclick=saveCalEvt;
+  footer.appendChild(cb);footer.appendChild(sb);
   openModal('m-cal-form');
 }
-async function saveCalEvt(){
-  const title=document.getElementById('cf-title').value.trim(),datum=document.getElementById('cf-datum').value;
-  if(!title||!datum){T('Titel und Datum erforderlich','err');return;}
-  const p={title,datum,uhrzeit:document.getElementById('cf-time').value||null,bis_datum:document.getElementById('cf-bis').value||null,bis_uhrzeit:document.getElementById('cf-bis-t').value||null,ort:document.getElementById('cf-ort').value.trim(),typ:document.getElementById('cf-typ').value,beschreibung:document.getElementById('cf-desc').value.trim()};
-  if(editCalId)await SB.from('calendar_events').update(p).eq('id',editCalId);
-  else await SB.from('calendar_events').insert({...p,created_by:currentUser.id});
-  closeModal('m-cal-form');renderCal();T(editCalId?'Termin aktualisiert':'Termin hinzugefügt','ok');
-}
-async function delCalEvt(id){if(!confirm('Termin löschen?'))return;await SB.from('calendar_events').delete().eq('id',id);renderCal();}
 
-// ===== ANALYTICS =====
+async function saveCalEvt(){
+  const title=document.getElementById('cf-title').value.trim();
+  const datum=document.getElementById('cf-datum').value;
+  if(!title||!datum){T('Titel und Datum erforderlich','err');return;}
+  const category=document.getElementById('cf-cat')?.value||'Chorprobe';
+  const color=catColor(category);
+  const payload={title,datum,uhrzeit:document.getElementById('cf-time').value||null,bis_datum:document.getElementById('cf-bis-d').value||datum,bis_uhrzeit:document.getElementById('cf-bis-t').value||null,ort:document.getElementById('cf-ort').value.trim(),category,color,beschreibung:document.getElementById('cf-desc').value.trim()};
+  if(editCalId){
+    await SB.from('calendar_events').update(payload).eq('id',editCalId);
+    closeModal('m-cal-form');renderCal();T('Termin aktualisiert','ok');return;
+  }
+  // Check series
+  const repeat=document.getElementById('cf-repeat')?.value;
+  const repeatEnd=document.getElementById('cf-repeat-end')?.value;
+  if(repeat&&repeatEnd){
+    // Create series
+    const seriesId=crypto.randomUUID();
+    const dates=[];let d=new Date(datum);const end=new Date(repeatEnd);
+    const step=repeat==='weekly'?7:repeat==='biweekly'?14:30;
+    while(d<=end){
+      dates.push(new Date(d).toISOString().slice(0,10));
+      if(repeat==='monthly'){d.setMonth(d.getMonth()+1);}else{d.setDate(d.getDate()+step);}
+    }
+    const inserts=dates.map(dt=>({...payload,datum:dt,bis_datum:dt,series_id:seriesId,created_by:currentUser.id}));
+    await SB.from('calendar_events').insert(inserts);
+    T(`${dates.length} Termine erstellt`,'ok');
+  } else {
+    await SB.from('calendar_events').insert({...payload,created_by:currentUser.id});
+    T('Termin hinzugefügt','ok');
+  }
+  closeModal('m-cal-form');renderCal();
+}
+
+async function delCalEvt(id,hasSeries){
+  if(hasSeries){
+    const choice=confirm('Nur diesen Termin löschen?\n(OK = nur dieser, Abbrechen = alle aus der Serie)');
+    if(choice){
+      await SB.from('calendar_events').delete().eq('id',id);
+    } else {
+      if(!confirm('Alle Termine dieser Serie löschen?'))return;
+      const{data}=await SB.from('calendar_events').select('series_id').eq('id',id).single();
+      if(data?.series_id)await SB.from('calendar_events').delete().eq('series_id',data.series_id);
+    }
+  } else {
+    if(!confirm('Termin löschen?'))return;
+    await SB.from('calendar_events').delete().eq('id',id);
+  }
+  renderCal();T('Termin gelöscht');
+}
+
+// ========== ANALYTICS ==========
 function initStats(){
   const msgs=document.getElementById('chat-msgs');
-  if(!msgs.children.length)addBot('Hallo! Ich helfe mit Auswertungen.\n\nBeispiele:\n• Wann haben wir [Titel] zuletzt gesungen?\n• Wie oft haben wir [Titel] gesungen?\n• Lieder die noch nie gesungen wurden\n• Liedvorschläge\n• Welche Lieder haben wir 2024 gesungen?');
+  if(!msgs.children.length)addBot('Hallo! Ich helfe mit Auswertungen.\n\nBeispiele:\n• Wann haben wir [Titel] zuletzt gesungen?\n• Wie oft haben wir [Titel] gesungen?\n• Lieder die noch nie gesungen wurden\n• Liedvorschläge\n• Lieder 2024');
 }
 function addBot(txt){const el=document.getElementById('chat-msgs');const d=document.createElement('div');d.className='cmsg bot';d.innerHTML=`<div class="bbl">${txt.replace(/\n/g,'<br>')}</div>`;el.appendChild(d);el.scrollTop=el.scrollHeight;}
 function addUser(txt){const el=document.getElementById('chat-msgs');const d=document.createElement('div');d.className='cmsg user';d.innerHTML=`<div class="bbl">${esc(txt)}</div>`;el.appendChild(d);el.scrollTop=el.scrollHeight;}
-async function sendChat(){
-  const inp=document.getElementById('chat-in');const q=inp.value.trim();if(!q)return;
-  inp.value='';addUser(q);const r=await queryEngine(q);addBot(r);
-}
+async function sendChat(){const inp=document.getElementById('chat-in');const q=inp.value.trim();if(!q)return;inp.value='';addUser(q);addBot(await queryEngine(q));}
 async function queryEngine(q){
   const ql=q.toLowerCase();
   const{data:songs}=await SB.from('songs').select('id,title,thema,anlass,besetzung');
@@ -1060,330 +1100,195 @@ async function queryEngine(q){
   const matched=(songs||[]).find(s=>ql.includes(s.title.toLowerCase()));
   const isLast=ql.includes('zuletzt')||ql.includes('wann');
   const isOften=ql.includes('wie oft')||ql.includes('häufig');
-  const isNever=ql.includes('noch nie')||ql.includes('nie gesungen');
-  const isSug=ql.includes('vorschlag')||ql.includes('lange nicht')||ql.includes('empfehlung');
+  const isNever=ql.includes('noch nie');
+  const isSug=ql.includes('vorschlag')||ql.includes('lange nicht');
   const isRank=ql.includes('ranking')||ql.includes('häufigsten');
   const year=/\b(20\d\d)\b/.exec(ql)?.[1];
-  if(matched){
-    const st=(stats||[]).find(s=>s.song_id===matched.id);
-    if(!st||!st.total_performances)return`"${matched.title}" wurde noch nie bei einer erfassten Veranstaltung gesungen.`;
-    if(isOften)return`"${matched.title}" wurde ${st.total_performances}× gesungen.\nZuletzt: ${fD(st.last_performed)}\nErstmals: ${fD(st.first_performed)}`;
-    if(isLast)return`"${matched.title}" zuletzt gesungen am ${fD(st.last_performed)} (${st.total_performances}×).`;
-    return`"${matched.title}": ${st.total_performances}×\nZuletzt: ${fD(st.last_performed)}\nErstmals: ${fD(st.first_performed)}`;
-  }
-  if(year){
-    const{data:evts}=await SB.from('events').select('id,title,datum,event_program(song_id,songs(title))').gte('datum',`${year}-01-01`).lte('datum',`${year}-12-31`);
-    if(!evts?.length)return`Im Jahr ${year} wurden keine Veranstaltungen erfasst.`;
-    const cnt={};evts.forEach(e=>(e.event_program||[]).forEach(p=>{const t=p.songs?.title||'?';cnt[t]=(cnt[t]||0)+1;}));
-    const rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
-    return rows.length?`Lieder in ${year}:\n`+rows.map(([t,c])=>`• ${t}: ${c}×`).join('\n'):`In ${year} keine Lieder erfasst.`;
-  }
-  if(isNever){
-    const sungIds=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
-    const ns=(songs||[]).filter(s=>!sungIds.has(s.id));
-    return ns.length?`Noch nie gesungen (${ns.length}):\n`+ns.map(s=>`• ${s.title}`).join('\n'):'Alle Lieder wurden schon gesungen!';
-  }
-  if(isSug){
-    const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>a.last_performed.localeCompare(b.last_performed)).slice(0,5);
-    const sungIds=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
-    const ns=(songs||[]).filter(s=>!sungIds.has(s.id)).slice(0,3);
-    let r='Liedvorschläge:\n\n📅 Lange nicht gesungen:\n'+sorted.map(s=>`• ${s.title} (${fD(s.last_performed)})`).join('\n');
-    if(ns.length)r+='\n\n🆕 Noch nie gesungen:\n'+ns.map(s=>`• ${s.title}`).join('\n');
-    return r;
-  }
-  if(isRank){
-    const sorted=(stats||[]).sort((a,b)=>b.total_performances-a.total_performances).slice(0,10);
-    return sorted.length?'Ranking:\n'+sorted.map((s,i)=>`${i+1}. ${s.title}: ${s.total_performances}×`).join('\n'):'Noch keine Daten.';
-  }
-  if(isLast){
-    const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>b.last_performed.localeCompare(a.last_performed)).slice(0,8);
-    return sorted.length?'Zuletzt gesungen:\n'+sorted.map(s=>`• ${s.title}: ${fD(s.last_performed)}`).join('\n'):'Noch keine Daten.';
-  }
-  return'Nicht verstanden. Versuche z.B.:\n• "Wann haben wir [Liedtitel] zuletzt gesungen?"\n• "Wie oft haben wir [Titel] gesungen?"\n• "Lieder die noch nie gesungen wurden"\n• "Liedvorschläge"\n• "Ranking"\n• "Lieder 2024"';
+  if(matched){const st=(stats||[]).find(s=>s.song_id===matched.id);if(!st||!st.total_performances)return`"${matched.title}" wurde noch nie gesungen.`;if(isOften)return`"${matched.title}" wurde ${st.total_performances}× gesungen.\nZuletzt: ${fD(st.last_performed)}`;if(isLast)return`"${matched.title}" zuletzt am ${fD(st.last_performed)} (${st.total_performances}×).`;return`"${matched.title}": ${st.total_performances}×\nZuletzt: ${fD(st.last_performed)}`;}
+  if(year){const{data:evts}=await SB.from('events').select('id,event_program(song_id,songs(title))').gte('datum',`${year}-01-01`).lte('datum',`${year}-12-31`);const cnt={};(evts||[]).forEach(e=>(e.event_program||[]).forEach(p=>{const t=p.songs?.title||'?';cnt[t]=(cnt[t]||0)+1;}));const rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);return rows.length?`Lieder ${year}:\n`+rows.map(([t,c])=>`• ${t}: ${c}×`).join('\n'):`${year} keine Daten.`;}
+  if(isNever){const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));const ns=(songs||[]).filter(s=>!si.has(s.id));return ns.length?`Noch nie gesungen:\n`+ns.map(s=>`• ${s.title}`).join('\n'):'Alle gesungen!';}
+  if(isSug){const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>a.last_performed.localeCompare(b.last_performed)).slice(0,5);const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));const ns=(songs||[]).filter(s=>!si.has(s.id)).slice(0,3);let r='📅 Lange nicht:\n'+sorted.map(s=>`• ${s.title} (${fD(s.last_performed)})`).join('\n');if(ns.length)r+='\n\n🆕 Noch nie:\n'+ns.map(s=>`• ${s.title}`).join('\n');return r;}
+  if(isRank){const sorted=(stats||[]).sort((a,b)=>b.total_performances-a.total_performances).slice(0,10);return sorted.length?'Ranking:\n'+sorted.map((s,i)=>`${i+1}. ${s.title}: ${s.total_performances}×`).join('\n'):'Keine Daten.';}
+  if(isLast){const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>b.last_performed.localeCompare(a.last_performed)).slice(0,8);return sorted.length?'Zuletzt gesungen:\n'+sorted.map(s=>`• ${s.title}: ${fD(s.last_performed)}`).join('\n'):'Keine Daten.';}
+  return'Nicht verstanden. Versuche z.B.:\n• "Wann haben wir [Titel] zuletzt gesungen?"\n• "Liedvorschläge"\n• "Ranking"';
 }
-
 async function runQ(type){
-  const el=document.getElementById('q-result');
-  el.innerHTML='<div class="loading"><div class="spin"></div>Wird ausgewertet…</div>';
+  const el=document.getElementById('q-result');el.innerHTML='<div class="loading"><div class="spin"></div>Wird ausgewertet…</div>';
   const{data:stats}=await SB.from('song_performance_stats').select('*');
   const{data:songs}=await SB.from('songs').select('id,title,thema,anlass,besetzung,komponist');
   let html='',csvRows=[];
-  if(type==='last_sung'){
-    const d=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>b.last_performed.localeCompare(a.last_performed));
-    csvRows=[['Titel','Komponist','Zuletzt gesungen','Anzahl'],...d.map(s=>[s.title,s.komponist||'',fD(s.last_performed),s.total_performances])];
-    html=tbl(['Titel','Zuletzt','Anzahl'],d.map(s=>[esc(s.title),fD(s.last_performed),s.total_performances]));
-  }else if(type==='never'){
-    const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
-    const d=(songs||[]).filter(s=>!si.has(s.id));
-    csvRows=[['Titel','Komponist','Besetzung'],...d.map(s=>[s.title,s.komponist||'',s.besetzung||''])];
-    html=tbl(['Titel','Komponist','Besetzung'],d.map(s=>[esc(s.title),esc(s.komponist||'–'),esc(s.besetzung||'–')]));
-  }else if(type==='ranking'){
-    const d=(stats||[]).sort((a,b)=>b.total_performances-a.total_performances);
-    csvRows=[['#','Titel','Anzahl','Zuletzt'],...d.map((s,i)=>[i+1,s.title,s.total_performances,fD(s.last_performed)||'–'])];
-    html=tbl(['#','Titel','Anzahl','Zuletzt'],d.map((s,i)=>[i+1,esc(s.title),s.total_performances,fD(s.last_performed)||'–']));
-  }else if(type==='suggestions'){
-    const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>a.last_performed.localeCompare(b.last_performed)).slice(0,10);
-    const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));
-    const ns=(songs||[]).filter(s=>!si.has(s.id)).slice(0,5);
-    csvRows=[['Titel','Zuletzt','Anzahl'],...sorted.map(s=>[s.title,fD(s.last_performed),s.total_performances]),...ns.map(s=>[s.title,'Noch nie',0])];
-    html='<div class="st">Lange nicht gesungen</div>'+tbl(['Titel','Zuletzt','Anzahl'],sorted.map(s=>[esc(s.title),fD(s.last_performed),s.total_performances]))+'<div class="st">Noch nie gesungen</div>'+tbl(['Titel','Besetzung'],ns.map(s=>[esc(s.title),esc(s.besetzung||'–')]));
-  }else if(type==='period'){
-    const from=document.getElementById('q-from').value,to=document.getElementById('q-to').value;
-    if(!from||!to){el.innerHTML='<p style="color:var(--danger);font-size:13px">Bitte Von- und Bis-Datum wählen</p>';return;}
-    const{data:evts}=await SB.from('events').select('id,title,datum,event_program(song_id,songs(title,besetzung,komponist))').gte('datum',from).lte('datum',to);
-    const cnt={};(evts||[]).forEach(e=>(e.event_program||[]).forEach(p=>{const k=p.song_id;if(!cnt[k])cnt[k]={title:p.songs?.title||'?',besetzung:p.songs?.besetzung||'',komponist:p.songs?.komponist||'',n:0};cnt[k].n++;}));
-    const d=Object.values(cnt).sort((a,b)=>b.n-a.n);
-    csvRows=[['Titel','Komponist','Besetzung','Anzahl'],...d.map(s=>[s.title,s.komponist,s.besetzung,s.n])];
-    html=`<p style="font-size:13px;color:var(--text2);margin-bottom:8px">${fD(from)} – ${fD(to)} · ${(evts||[]).length} Veranstaltungen</p>`+tbl(['Titel','Besetzung','Anzahl'],d.map(s=>[esc(s.title),esc(s.besetzung||'–'),s.n]));
+  if(type==='last_sung'){const d=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>b.last_performed.localeCompare(a.last_performed));csvRows=[['Titel','Komponist','Zuletzt','Anzahl'],...d.map(s=>[s.title,s.komponist||'',fD(s.last_performed),s.total_performances])];html=tbl(['Titel','Zuletzt','Anzahl'],d.map(s=>[esc(s.title),fD(s.last_performed),s.total_performances]));}
+  else if(type==='never'){const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));const d=(songs||[]).filter(s=>!si.has(s.id));csvRows=[['Titel','Komponist','Besetzung'],...d.map(s=>[s.title,s.komponist||'',s.besetzung||''])];html=tbl(['Titel','Komponist','Besetzung'],d.map(s=>[esc(s.title),esc(s.komponist||'–'),esc(s.besetzung||'–')]));}
+  else if(type==='ranking'){const d=(stats||[]).sort((a,b)=>b.total_performances-a.total_performances);csvRows=[['#','Titel','Anzahl','Zuletzt'],...d.map((s,i)=>[i+1,s.title,s.total_performances,fD(s.last_performed)||'–'])];html=tbl(['#','Titel','Anzahl','Zuletzt'],d.map((s,i)=>[i+1,esc(s.title),s.total_performances,fD(s.last_performed)||'–']));}
+  else if(type==='suggestions'){const sorted=(stats||[]).filter(s=>s.last_performed).sort((a,b)=>a.last_performed.localeCompare(b.last_performed)).slice(0,10);const si=new Set((stats||[]).filter(s=>s.total_performances>0).map(s=>s.song_id));const ns=(songs||[]).filter(s=>!si.has(s.id)).slice(0,5);csvRows=[['Titel','Zuletzt','Anzahl'],...sorted.map(s=>[s.title,fD(s.last_performed),s.total_performances]),...ns.map(s=>[s.title,'Noch nie',0])];html='<div class="st">Lange nicht gesungen</div>'+tbl(['Titel','Zuletzt','Anzahl'],sorted.map(s=>[esc(s.title),fD(s.last_performed),s.total_performances]))+'<div class="st">Noch nie gesungen</div>'+tbl(['Titel','Besetzung'],ns.map(s=>[esc(s.title),esc(s.besetzung||'–')]));}
+  else if(type==='period'){const from=document.getElementById('q-from').value,to=document.getElementById('q-to').value;if(!from||!to){el.innerHTML='<p style="color:var(--danger);font-size:12px">Bitte Von- und Bis-Datum wählen</p>';return;}const{data:evts}=await SB.from('events').select('id,event_program(song_id,songs(title,besetzung,komponist))').gte('datum',from).lte('datum',to);const cnt={};(evts||[]).forEach(e=>(e.event_program||[]).forEach(p=>{const k=p.song_id;if(!cnt[k])cnt[k]={title:p.songs?.title||'?',besetzung:p.songs?.besetzung||'',komponist:p.songs?.komponist||'',n:0};cnt[k].n++;}));const d=Object.values(cnt).sort((a,b)=>b.n-a.n);csvRows=[['Titel','Komponist','Besetzung','Anzahl'],...d.map(s=>[s.title,s.komponist,s.besetzung,s.n])];html=`<p style="font-size:12px;color:var(--text2);margin-bottom:7px">${fD(from)} – ${fD(to)}</p>`+tbl(['Titel','Besetzung','Anzahl'],d.map(s=>[esc(s.title),esc(s.besetzung||'–'),s.n]));}
+  el.innerHTML=html+`<button class="btn btn-g" style="width:100%;margin-top:9px" onclick='doExportCSV(${JSON.stringify(csvRows)})'>CSV exportieren</button>`;
+}
+function tbl(hdr,rows){if(!rows.length)return'<p style="color:var(--text3);font-size:12px">Keine Daten</p>';return`<div style="overflow-x:auto"><table class="rtable"><thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
+function doExportCSV(rows){const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));a.download='chor-auswertung.csv';a.click();T('CSV exportiert','ok');}
+
+// ========== MEDIA ==========
+async function renderMedia(){
+  const el=document.getElementById('media-list');el.innerHTML='<div class="loading"><div class="spin"></div>Lade…</div>';
+  const{data,error}=await SB.from('media').select('*,profiles(name)').order('created_at',{ascending:false});
+  if(error){el.innerHTML='<p style="color:var(--danger);font-size:12px">Fehler: media-Tabelle nicht gefunden. Bitte SQL-Schema ausführen.</p>';return;}
+  const items=(data||[]).filter(m=>mediaFilter==='all'||m.type===mediaFilter);
+  if(!items.length){el.innerHTML='<div class="empty"><p>Keine Medien vorhanden</p></div>';return;}
+  el.innerHTML=items.map(m=>`<div class="card" style="cursor:default">
+    <div class="crow"><div style="flex:1"><div style="font-weight:500;font-size:14px">${esc(m.title)}</div><div class="cs">${m.type==='image'?'🖼 Bild':'🎵 Audio'} · ${esc((m.profiles||{}).name||'')} · ${fD(m.created_at?.slice(0,10))}</div>${m.description?`<div class="cs">${esc(m.description)}</div>`:''}</div></div>
+    <div style="margin-top:8px">${m.type==='image'?`<img src="${esc(m.url)}" style="width:100%;max-height:180px;object-fit:cover;border-radius:var(--r)">`:
+    `<audio controls style="width:100%"><source src="${esc(m.url)}"></audio>`}</div>
+    ${currentProfile?.role==='admin'?`<button class="btn btn-d btn-sm" style="margin-top:7px" onclick="deleteMedia('${m.id}','${esc(m.path||'')}')">Löschen</button>`:''}
+  </div>`).join('');
+}
+function filterMedia(type,el){mediaFilter=type;document.querySelectorAll('#media-filters .fchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderMedia();}
+function openMediaUpload(){document.getElementById('mf-title').value='';document.getElementById('mf-desc').value='';document.getElementById('mf-file').value='';document.getElementById('mf-preview').innerHTML='';document.getElementById('mf-progress').innerHTML='';openModal('m-media-form');}
+function previewMedia(){
+  const files=[...document.getElementById('mf-file').files];
+  const prev=document.getElementById('mf-preview');
+  if(!files.length){prev.innerHTML='';return;}
+  prev.innerHTML=files.map(f=>{const url=URL.createObjectURL(f);return f.type.startsWith('image/')?`<img src="${url}" style="width:100%;max-height:100px;object-fit:cover;border-radius:var(--r);margin-bottom:4px">`:`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">🎵 ${esc(f.name)}</div>`;}).join('');
+}
+async function uploadMedia(){
+  const title=document.getElementById('mf-title').value.trim();
+  const files=[...document.getElementById('mf-file').files];
+  if(!title||!files.length){T('Titel und Datei erforderlich','err');return;}
+  const btn=document.getElementById('mf-btn');const prog=document.getElementById('mf-progress');
+  btn.textContent='Wird hochgeladen…';btn.disabled=true;
+  let ok=0;
+  for(const file of files){
+    prog.innerHTML=`<div style="font-size:12px;color:var(--text2)">Lade ${esc(file.name)}…</div>`;
+    const ext=file.name.split('.').pop();const path=`${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;const type=file.type.startsWith('image/')?'image':'audio';
+    const{error:upErr}=await SB.storage.from('choir-media').upload(path,file);
+    if(upErr){T('Fehler bei '+file.name+': '+upErr.message,'err');continue;}
+    const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
+    await SB.from('media').insert({title:files.length>1?title+' – '+file.name:title,description:document.getElementById('mf-desc').value.trim(),url:publicUrl,path,type,created_by:currentUser.id});ok++;
   }
-  el.innerHTML=html+`<button class="btn btn-g" style="width:100%;margin-top:10px" onclick='exportCSV(${JSON.stringify(csvRows)})'>CSV exportieren</button>`;
+  btn.textContent='Hochladen';btn.disabled=false;
+  if(ok)closeModal('m-media-form');renderMedia();T(`${ok} Datei${ok>1?'en':''} hochgeladen`,'ok');
 }
-function tbl(hdr,rows){
-  if(!rows.length)return'<p style="color:var(--text3);font-size:13px">Keine Daten</p>';
-  return`<div style="overflow-x:auto"><table class="rtable"><thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-}
-function exportCSV(rows){
-  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));a.download='chor-auswertung.csv';a.click();T('CSV exportiert','ok');
+async function deleteMedia(id,path){
+  if(!confirm('Löschen?'))return;
+  if(path)await SB.storage.from('choir-media').remove([path]);
+  await SB.from('media').delete().eq('id',id);renderMedia();T('Gelöscht');
 }
 
-// ===== SETTINGS =====
+// ========== SETTINGS ==========
 async function renderSettings(){
-  if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins sichtbar.</p>';return;}
+  if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins.</p>';return;}
   const{data:members}=await SB.from('profiles').select('*').order('name');
+  await loadCategories();
   document.getElementById('settings-body').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="st" style="margin:0">Mitglieder (${(members||[]).length})</div>
       <button class="btn btn-p btn-sm" onclick="openAddMember()">+ Mitglied</button>
     </div>
-    ${(members||[]).map(m=>{
-      const vname=m.name.split(' ')[0];
-      const isMe=m.id===currentUser.id;
-      const isActive=m.active!==false;
+    ${(members||[]).map(m=>{const isMe=m.id===currentUser.id;const isActive=m.active!==false;
       return`<div class="card" style="cursor:default;${!isActive?'opacity:.5':''}">
         <div class="crow">
-          <div>
-            <div style="font-weight:500">${esc(m.name)}</div>
-            <div style="font-size:12px;color:var(--text2)">${esc(m.stimme||'')} ${m.email?'· '+esc(m.email):''} ${m.phone?'· '+esc(m.phone):''}</div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+          <div><div style="font-weight:500">${esc(m.name)}</div><div class="cs">${esc(m.stimme||'')} ${m.email?'· '+esc(m.email):''}</div></div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <span class="badge ${m.role==='admin'?'warn':''}">${m.role==='admin'?'Admin':'Mitglied'}</span>
             ${m.role2?`<span class="badge blue">${esc(m.role2.split(',').map(r=>r==='dirigent'?'Dirigent':'Klavier').join(' & '))}</span>`:''}
             ${!isActive?'<span class="badge red">Deaktiviert</span>':''}
           </div>
         </div>
-        ${isMe?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-          <button class="btn btn-g btn-sm" onclick="toggleRole2('${m.id}','${m.role2||''}')">Zusatzrolle ändern</button>
-        </div>`:
-        `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-          <button class="btn btn-g btn-sm" onclick="toggleMemberRole('${m.id}','${m.role}')">${m.role==='admin'?'Zu Mitglied':'Zu Admin'}</button>
+        <div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">
+          ${!isMe?`<button class="btn btn-g btn-sm" onclick="toggleMemberRole('${m.id}','${m.role}')">${m.role==='admin'?'Zu Mitglied':'Zu Admin'}</button>`:''}
           <button class="btn btn-g btn-sm" onclick="toggleRole2('${m.id}','${m.role2||''}')">Zusatzrolle</button>
-          <button class="btn ${isActive?'btn-d':'btn-i'} btn-sm" onclick="toggleActive('${m.id}',${isActive})">${isActive?'Deaktivieren':'Aktivieren'}</button>
-        </div>`}
-      </div>`;
-    }).join('')}
-    <div class="st" style="margin-top:20px">Repertoire Import</div>
+          ${!isMe?`<button class="btn ${isActive?'btn-d':'btn-i'} btn-sm" onclick="toggleActive('${m.id}',${isActive})">${isActive?'Deaktivieren':'Aktivieren'}</button>`:''}
+        </div>
+      </div>`;}).join('')}
+    <div class="st" style="margin-top:16px">Kalender-Kategorien</div>
+    ${cachedCategories.map(c=>`<div class="card" style="cursor:default;display:flex;align-items:center;gap:10px">
+      <div class="color-swatch" style="background:${esc(c.color)}"></div>
+      <div style="flex:1;font-weight:500">${esc(c.name)}</div>
+      ${c.id&&c.id.length>10?`<button class="btn btn-d btn-sm" onclick="deleteCat('${c.id}')">✕</button>`:''}
+    </div>`).join('')}
+    <div style="display:flex;gap:7px;margin-top:8px">
+      <input class="fi" id="new-cat-name" placeholder="Neue Kategorie" style="flex:2">
+      <input type="color" id="new-cat-color" value="#5b8dee" style="width:40px;height:38px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--card);cursor:pointer">
+      <button class="btn btn-p btn-sm" onclick="addCat()">+</button>
+    </div>
+    <div class="st" style="margin-top:16px">Repertoire</div>
     <div class="card" style="cursor:default">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:10px">CSV-Datei importieren. Spalten: title, komponist, textdichter, arrangeur, besetzung, thema, anlass, liedanfang, refrain, quelle, rechte, lizenz, originaltitel, uebersetzer, notizen</p>
-      <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="importCSV(event)">
-      <button class="btn btn-g" style="width:100%" onclick="document.getElementById('csv-import').click()">CSV importieren</button>
+      <div class="fr2">
+        <div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:7px">CSV importieren</div>
+          <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="importCSV(event)">
+          <button class="btn btn-g" style="width:100%" onclick="document.getElementById('csv-import').click()">CSV importieren</button>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:7px">CSV exportieren</div>
+          <button class="btn btn-g" style="width:100%" onclick="exportCSV()">CSV exportieren</button>
+        </div>
+      </div>
+      <p style="font-size:10px;color:var(--text3);margin-top:8px">Spalten: liedanfang, title, refrain, besetzung, thema, anlass, textdichter, textdichter_lz, komponist, komponist_lz, arrangeur, arrangeur_lz, uebersetzer, uebersetzer_lz, rechte, originaltitel, quelle, lizenz, schrank, notizen</p>
     </div>`;
 }
 
-async function openAddMember(){
-  ['am-vname','am-nname','am-email','am-pass','am-phone'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('am-stimme').value='';
-  document.getElementById('am-role2').value='';
-  openModal('m-add-member');
+async function addCat(){
+  const name=document.getElementById('new-cat-name').value.trim();
+  const color=document.getElementById('new-cat-color').value;
+  if(!name)return;
+  await SB.from('cal_categories').insert({name,color});
+  document.getElementById('new-cat-name').value='';
+  renderSettings();T('Kategorie hinzugefügt','ok');
 }
+async function deleteCat(id){if(!confirm('Kategorie löschen?'))return;await SB.from('cal_categories').delete().eq('id',id);renderSettings();}
+async function toggleMemberRole(id,role){const nr=role==='admin'?'member':'admin';if(!confirm(`Rolle zu "${nr==='admin'?'Admin':'Mitglied'}" wechseln?`))return;await SB.from('profiles').update({role:nr}).eq('id',id);renderSettings();T('Rolle geändert','ok');}
+async function toggleRole2(id,current){const opts=['','dirigent','klavier','dirigent,klavier'];const labels=['Keine','Dirigent','Klavier','Dirigent & Klavier'];const cur=opts.indexOf(current);const next=(cur+1)%opts.length;await SB.from('profiles').update({role2:opts[next]||null}).eq('id',id);renderSettings();T(`Zusatzrolle: ${labels[next]}`,'ok');}
+async function toggleActive(id,isActive){if(!confirm(isActive?'Mitglied deaktivieren?':'Mitglied aktivieren?'))return;await SB.from('profiles').update({active:!isActive}).eq('id',id);renderSettings();T(isActive?'Deaktiviert':'Aktiviert','ok');}
 
+async function openAddMember(){['am-vname','am-nname','am-email','am-pass','am-phone'].forEach(id=>document.getElementById(id).value='');document.getElementById('am-stimme').value='';document.getElementById('am-role2').value='';openModal('m-add-member');}
 async function addMember(){
-  const vname=document.getElementById('am-vname').value.trim();
-  const nname=document.getElementById('am-nname').value.trim();
-  const email=document.getElementById('am-email').value.trim();
-  const pass=document.getElementById('am-pass').value;
+  const vname=document.getElementById('am-vname').value.trim(),nname=document.getElementById('am-nname').value.trim(),email=document.getElementById('am-email').value.trim(),pass=document.getElementById('am-pass').value;
   if(!vname||!email||!pass){T('Vorname, E-Mail und Passwort erforderlich','err');return;}
   const name=(vname+' '+nname).trim();
-  const stimme=document.getElementById('am-stimme').value;
-  const role2=document.getElementById('am-role2').value;
-  const phone=document.getElementById('am-phone').value.trim();
-  // Create user via Supabase Admin (uses service role if available, else signUp)
+  const stimme=document.getElementById('am-stimme').value,role2=document.getElementById('am-role2').value,phone=document.getElementById('am-phone').value.trim();
   const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{name,stimme,phone,role2}}});
   if(error){T('Fehler: '+error.message,'err');return;}
-  // Update profile with extra fields
-  if(data?.user){
-    await SB.from('profiles').upsert({id:data.user.id,name,email,phone,stimme,role2,role:'member',active:true});
-  }
+  if(data?.user)await SB.from('profiles').upsert({id:data.user.id,name,email,phone,stimme,role2,role:'member',active:true});
   closeModal('m-add-member');renderSettings();T('Mitglied hinzugefügt','ok');
 }
 
-async function toggleMemberRole(id,role){
-  const nr=role==='admin'?'member':'admin';
-  if(!confirm(`Rolle wechseln zu "${nr==='admin'?'Admin':'Mitglied'}"?`))return;
-  await SB.from('profiles').update({role:nr}).eq('id',id);renderSettings();T('Rolle geändert','ok');
-}
-
-async function toggleRole2(id,current){
-  const opts=['','dirigent','klavier','dirigent,klavier'];
-  const labels=['Keine','Dirigent','Klavier','Dirigent & Klavier'];
-  const cur=opts.indexOf(current);
-  const next=(cur+1)%opts.length;
-  await SB.from('profiles').update({role2:opts[next]||null}).eq('id',id);
-  renderSettings();T(`Zusatzrolle: ${labels[next]}`,'ok');
-}
-
-async function toggleActive(id,isActive){
-  const msg=isActive?'Mitglied wirklich deaktivieren? Es kann sich dann nicht mehr anmelden.':'Mitglied wieder aktivieren?';
-  if(!confirm(msg))return;
-  await SB.from('profiles').update({active:!isActive}).eq('id',id);
-  renderSettings();T(isActive?'Mitglied deaktiviert':'Mitglied aktiviert','ok');
-}
-
-// ===== CSV IMPORT =====
-async function importCSV(event){
-  const file=event.target.files[0];if(!file)return;
-  const text=await file.text();
-  const lines=text.split('\n').filter(l=>l.trim());
-  if(lines.length<2){T('CSV leer oder ungültig','err');return;}
-  const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,'').toLowerCase());
-  const songs=[];
-  for(let i=1;i<lines.length;i++){
-    const vals=lines[i].split(',').map(v=>v.trim().replace(/^"|"$/g,''));
-    const obj={};headers.forEach((h,j)=>obj[h]=vals[j]||'');
-    if(obj.title)songs.push({title:obj.title,komponist:obj.komponist||'',textdichter:obj.textdichter||'',arrangeur:obj.arrangeur||'',besetzung:obj.besetzung||'',thema:obj.thema||'',anlass:obj.anlass||'',liedanfang:obj.liedanfang||'',refrain:obj.refrain||'',quelle:obj.quelle||'',rechte:obj.rechte||'',lizenz:obj.lizenz||'',originaltitel:obj.originaltitel||'',uebersetzer:obj.uebersetzer||'',notizen:obj.notizen||'',links:[],created_by:currentUser.id});
-  }
-  if(!songs.length){T('Keine Lieder in CSV gefunden','err');return;}
-  const{error}=await SB.from('songs').insert(songs);
-  if(error){T('Fehler: '+error.message,'err');return;}
-  event.target.value='';
-  T(`${songs.length} Lieder importiert`,'ok');
-  renderSongs();
-}
-
-// ===== MEDIA =====
-let mediaFilter='all';
-async function renderMedia(){
-  const el=document.getElementById('media-list');
-  el.innerHTML='<div class="loading"><div class="spin"></div>Lade…</div>';
-  const{data,error}=await SB.from('media').select('*,profiles(name)').order('created_at',{ascending:false});
-  if(error){el.innerHTML='<p style="color:var(--danger);font-size:13px">Fehler beim Laden. Bitte SQL-Schema aktualisieren.</p>';return;}
-  const items=(data||[]).filter(m=>mediaFilter==='all'||m.type===mediaFilter);
-  if(!items.length){el.innerHTML='<div class="empty"><p>Keine Medien vorhanden</p></div>';return;}
-  el.innerHTML=items.map(m=>`<div class="card" style="cursor:default">
-    <div class="crow">
-      <div style="flex:1">
-        <div style="font-weight:500;font-size:15px">${esc(m.title)}</div>
-        <div style="font-size:12px;color:var(--text2)">${m.type==='image'?'🖼 Bild':'🎵 Audio'} · ${esc((m.profiles||{}).name||'')} · ${fD(m.created_at?.slice(0,10))}</div>
-        ${m.description?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${esc(m.description)}</div>`:''}
-      </div>
-    </div>
-    <div style="margin-top:10px">
-      ${m.type==='image'?`<img src="${esc(m.url)}" style="width:100%;max-height:200px;object-fit:cover;border-radius:var(--r)" onerror="this.style.display='none'">`
-      :`<audio controls style="width:100%;margin-top:4px"><source src="${esc(m.url)}"></audio>`}
-    </div>
-    ${currentProfile?.role==='admin'?`<button class="btn btn-d btn-sm" style="margin-top:8px" onclick="deleteMedia('${m.id}','${esc(m.path||'')}')">Löschen</button>`:''}
-  </div>`).join('');
-}
-
-function filterMedia(type,el){
-  mediaFilter=type;
-  document.querySelectorAll('#media-filters .fchip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  renderMedia();
-}
-
-function openMediaUpload(){
-  document.getElementById('mf-title').value='';
-  document.getElementById('mf-desc').value='';
-  document.getElementById('mf-file').value='';
-  document.getElementById('mf-preview').innerHTML='';
-  document.getElementById('mf-file').onchange=previewMedia;
-  openModal('m-media-form');
-}
-
-function previewMedia(){
-  const file=document.getElementById('mf-file').files[0];
-  const prev=document.getElementById('mf-preview');
-  if(!file){prev.innerHTML='';return;}
-  const url=URL.createObjectURL(file);
-  if(file.type.startsWith('image/')){prev.innerHTML=`<img src="${url}" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--r)">`;}
-  else{prev.innerHTML=`<audio controls style="width:100%"><source src="${url}"></audio>`;}
-}
-
-async function uploadMedia(){
-  const title=document.getElementById('mf-title').value.trim();
-  const file=document.getElementById('mf-file').files[0];
-  if(!title||!file){T('Titel und Datei erforderlich','err');return;}
-  const btn=document.getElementById('mf-upload-btn');
-  btn.textContent='Wird hochgeladen…';btn.disabled=true;
-  const ext=file.name.split('.').pop();
-  const path=`${currentUser.id}/${Date.now()}.${ext}`;
-  const type=file.type.startsWith('image/')?'image':'audio';
-  const{error:upErr}=await SB.storage.from('choir-media').upload(path,file);
-  if(upErr){T('Upload-Fehler: '+upErr.message,'err');btn.textContent='Hochladen';btn.disabled=false;return;}
-  const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
-  await SB.from('media').insert({title,description:document.getElementById('mf-desc').value.trim(),url:publicUrl,path,type,created_by:currentUser.id});
-  btn.textContent='Hochladen';btn.disabled=false;
-  closeModal('m-media-form');renderMedia();T('Medien hochgeladen','ok');
-}
-
-async function deleteMedia(id,path){
-  if(!confirm('Löschen?'))return;
-  if(path)await SB.storage.from('choir-media').remove([path]);
-  await SB.from('media').delete().eq('id',id);
-  renderMedia();T('Gelöscht');
-}
-
-// ===== PROFILE =====
+// ========== PROFILE ==========
 function openProfile(){
-  const p=currentProfile||{};
-  const parts=(p.name||'').split(' ');
-  const vname=parts[0]||'';
-  const nname=parts.slice(1).join(' ')||'';
+  const p=currentProfile||{};const parts=(p.name||'').split(' ');const vname=parts[0]||'';const nname=parts.slice(1).join(' ')||'';
   document.getElementById('prof-body').innerHTML=`
     <div class="fs"><div class="fst">Persönliche Daten</div>
-      <div class="fr">
-        <div class="fg"><label class="fl">Vorname</label><input class="fi" id="pm-vname" value="${esc(vname)}"></div>
-        <div class="fg"><label class="fl">Nachname</label><input class="fi" id="pm-nname" value="${esc(nname)}"></div>
-      </div>
-      <div class="fr"><div class="fg"><label class="fl">E-Mail</label><input class="fi" id="pm-email" value="${esc(p.email||'')}" type="email"></div><div class="fg"><label class="fl">Telefon</label><input class="fi" id="pm-phone" value="${esc(p.phone||'')}" type="tel"></div></div>
+      <div class="fr2"><div class="fg"><label class="fl">Vorname</label><input class="fi" id="pm-vname" value="${esc(vname)}"></div><div class="fg"><label class="fl">Nachname</label><input class="fi" id="pm-nname" value="${esc(nname)}"></div></div>
+      <div class="fr2"><div class="fg"><label class="fl">E-Mail</label><input class="fi" id="pm-email" value="${esc(p.email||'')}" type="email"></div><div class="fg"><label class="fl">Telefon</label><input class="fi" id="pm-phone" value="${esc(p.phone||'')}" type="tel"></div></div>
       <div class="fg"><label class="fl">Adresse</label><input class="fi" id="pm-addr" value="${esc(p.address||'')}"></div>
       <div class="fg"><label class="fl">Stimmgruppe</label><select class="fi" id="pm-stimme">${['','Sopran','Alt','Tenor','Bass'].map(s=>`<option value="${s}" ${p.stimme===s?'selected':''}>${s||'– wählen –'}</option>`).join('')}</select></div>
     </div>
     <div class="fs"><div class="fst">Konto</div>
-      <div class="df"><div class="dl">Rolle</div><div class="dv">
-        <span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span>
-        ${p.role2?`<span class="badge blue" style="margin-left:4px">${esc(p.role2.split(',').join(' & '))}</span>`:''}
-      </div></div>
+      <div class="df"><div class="dl">Rolle</div><div class="dv"><span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span>${p.role2?` <span class="badge blue">${esc(p.role2.split(',').map(r=>r==='dirigent'?'Dirigent':'Klavier').join(' & '))}</span>`:''}</div></div>
       <button class="btn btn-d" style="width:100%;margin-top:8px" onclick="doLogout()">Abmelden</button>
     </div>`;
   openModal('m-profile');
 }
 async function saveProfile(){
-  const vname=document.getElementById('pm-vname').value.trim();
-  const nname=document.getElementById('pm-nname').value.trim();
+  const vname=document.getElementById('pm-vname').value.trim(),nname=document.getElementById('pm-nname').value.trim();
   const name=(vname+' '+nname).trim();
   const u={name,phone:document.getElementById('pm-phone').value.trim(),address:document.getElementById('pm-addr').value.trim(),stimme:document.getElementById('pm-stimme').value};
   await SB.from('profiles').update(u).eq('id',currentUser.id);
   currentProfile={...currentProfile,...u};
-  const pts=name.split(' ');
-  const ini=(pts[0]?.charAt(0)||'')+(pts[1]?.charAt(0)||pts[0]?.charAt(1)||'');
   document.getElementById('tb-name').textContent=name;
-  document.getElementById('tb-av').textContent=ini.toUpperCase()||'?';
+  document.getElementById('tb-av').textContent=initials(name)||'?';
   closeModal('m-profile');T('Profil gespeichert','ok');
 }
 
-// ===== MODAL CLOSE =====
+// ========== MODAL CLOSE ==========
 document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 
-// ===== INIT =====
+// ========== INIT ==========
 (async function init(){
-  const cfg=getCfg();
-  SB=window.supabase.createClient('https://nzgmznxwtvmjatbhbmcp.supabase.co','sb_publishable_rTWG_fw_Us_yA4ZayeR9sw_glQ-rrP-');
+  SB=window.supabase.createClient(SB_URL,SB_KEY);
   const{data:{session}}=await SB.auth.getSession();
-  if(session?.user){await loadProfile(session.user);startApp();}
-  else{document.getElementById('login-screen').style.display='flex';}
+  if(session?.user){await loadProfile(session.user);if(currentProfile?.active===false){document.getElementById('login-screen').style.display='flex';return;}startApp();}
+  else document.getElementById('login-screen').style.display='flex';
 })();
 </script>
 </body>

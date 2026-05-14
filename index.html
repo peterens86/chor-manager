@@ -764,7 +764,7 @@ async function importCSV(event){
   const sep=firstLine.includes(';')&&firstLine.split(';').length>firstLine.split(',').length?';':',';
   const headers=lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase().trim());
   // Show detected headers for debugging
-  console.log('CSV Headers:', headers, 'Delimiter:', sep===';"?'semicolon':'comma');
+  console.log('CSV delimiter:', sep);
   if(!headers.includes('title')&&!headers.includes('titel')){
     T(`Spalte "title" nicht gefunden. Gefunden: ${headers.slice(0,4).join(', ')}…`,'err');
     event.target.value='';return;

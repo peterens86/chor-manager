@@ -957,7 +957,7 @@ async function loadCategories(){
     {id:'chorprobe',name:'Chorprobe',color:'#5b8dee'},
     {id:'gottesdienst',name:'Gottesdienst',color:'#e05555'},
     {id:'konzert',name:'Konzert',color:'#4caf82'},
-    {id:'kein_chor',name:'Kein Chor',color:'#e05555'},
+    {id:'kein_chor',name:'Kein Chor',color:'#5b8dee'},
     {id:'sonstiges',name:'Sonstiges',color:'#a8a4b0'}
   ];
 }
@@ -1000,7 +1000,7 @@ function buildMiniCal(y,m,allEvts,holidays,schoolDays){
     cells+=`<div class="cday-wrap"><div class="cday ${itm&&d===now.getDate()?'today':''} ${isHol?'holiday':''}" style="${bgStyle}" onclick="openCalForm(null,'${ds}')">
       <div class="cdnum">${d}</div>
       ${isHol?`<div style="font-size:6px;color:var(--danger);line-height:1.1;text-align:center;overflow:hidden;max-height:14px;word-break:break-word">${esc(holidays[ds])}</div>`:isFer?`<div style="font-size:6px;color:#8fb3f5;line-height:1.1;text-align:center">Ferien</div>`:''}
-      ${evs.slice(0,2).map(e=>`<div class="cal-event-block" style="background:${esc(e.color||catColor(e.category))}">${esc(e.title)}</div>`).join('')}
+      ${evs.slice(0,2).map(e=>`<div class="cal-event-block${(e.category||'').toLowerCase().replace(/\s+/g,'')==='keinchor'?' kein-chor':''}" style="background:${esc(e.color||catColor(e.category))};${(e.category||'').toLowerCase().replace(/\s+/g,'')==='keinchor'?'text-decoration:line-through':''}">${esc(e.title)}</div>`).join('')}
       ${evs.length>2?`<div style="font-size:6px;color:var(--text3);text-align:center">+${evs.length-2}</div>`:""}
     </div></div>`;
   }
@@ -1056,7 +1056,7 @@ async function renderCal(){
           <div class="cdnum">${d}</div>
           ${isHol?`<div style="font-size:6px;color:var(--danger);line-height:1.1;text-align:center;overflow:hidden;max-height:14px">${esc(holidays[ds])}</div>`:''}
           ${!isHol&&fer?`<div style="font-size:6px;color:#8fb3f5;line-height:1.1;text-align:center">Ferien</div>`:''}
-          ${singleEvs.slice(0,isHol||fer?0:2).map(e=>`<div class="cal-event-block${e.category==='Kein Chor'?' kein-chor':''}" style="background:${esc(e.color||catColor(e.category))}" onclick="event.stopPropagation();highlightCalEvt('${e.id}')">${esc(e.title)}</div>`).join('')}
+          ${singleEvs.slice(0,isHol||fer?0:2).map(e=>`<div class="cal-event-block${(e.category||'').toLowerCase().replace(/\s+/g,'')==='keinchor'?' kein-chor':''}" style="background:${esc(e.color||catColor(e.category))};${(e.category||'').toLowerCase().replace(/\s+/g,'')==='keinchor'?'text-decoration:line-through':''}" onclick="event.stopPropagation();highlightCalEvt('${e.id}')">${esc(e.title)}</div>`).join('')}
           ${evs.length>2?`<div style="font-size:6px;color:var(--text3)">+${evs.length-2}…</div>`:''}
         </div>
       </div>`;
@@ -1126,7 +1126,7 @@ async function renderCal(){
 function evtListItem(e,isAdmin){
   const color=e.color||catColor(e.category);
   const isMultiDay=e.bis_datum&&e.bis_datum!==e.datum;
-  const isKeinChor=e.category==='Kein Chor';
+  const isKeinChor=(e.category||'').toLowerCase().replace(/\s+/g,'')===('Kein Chor').toLowerCase().replace(/\s+/g,'');
   return`<div class="cevt" id="evtli-${e.id}" data-evtid="${e.id}" data-evtdate="${e.datum}" style="border-left-color:${esc(color)};${isKeinChor?'opacity:.8':''}transition:background .3s">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div style="flex:1">

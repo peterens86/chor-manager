@@ -134,6 +134,27 @@ textarea.fi{resize:vertical;min-height:70px;}
 .ep-row-header{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .ep-roles{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px;}
 
+/* FILTER TOGGLE */
+.filter-toggle{display:none;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r);background:var(--card);border:0.5px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;margin-bottom:8px;width:100%;}
+.filter-toggle svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;transition:transform .2s;}
+.filter-toggle.open svg{transform:rotate(180deg);}
+.filter-toggle .active-count{background:var(--accent);color:var(--bg);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600;}
+.frow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;transition:all .2s;}
+@media(max-width:600px){
+  .filter-toggle{display:flex;}
+  .frow{display:none;}
+  .frow.visible{display:flex;}
+  /* Calendar mobile fixes */
+  .cal-mini{padding:4px;}
+  .cal-mini .cdow{font-size:6px;padding:2px 0;}
+  .cal-mini .cday{font-size:8px;}
+  .cdnum{font-size:8px;}
+  .cal-event-block{font-size:7px;padding:1px 2px;}
+  .cmonth{font-size:13px;}
+  .view-tabs{gap:3px;}
+  .vtab{padding:3px 8px;font-size:10px;}
+}
+
 /* CALENDAR */
 .view-tabs{display:flex;gap:4px;margin-bottom:10px;}
 .vtab{padding:4px 10px;border-radius:20px;font-size:11px;background:var(--card);border:0.5px solid var(--border);color:var(--text2);cursor:pointer;}
@@ -262,6 +283,12 @@ textarea.fi{resize:vertical;min-height:70px;}
         </div>
       </div>
       <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Titel, Komponist, Person…" oninput="filterSongs()" id="song-search"></div>
+      <div class="filter-toggle" id="filter-toggle-btn" onclick="toggleFilters()">
+        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        <span>Filter</span>
+        <span class="active-count" id="filter-active-count" style="display:none">0</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text3)" id="filter-toggle-label">anzeigen</span>
+      </div>
       <div class="frow" id="song-filters"></div>
       <div id="song-list"></div>
     </div>
@@ -639,7 +666,7 @@ function buildFilters(){
   // Persons: all composer/arranger/etc names
   const persons=[...new Set(cachedSongs.flatMap(s=>[s.komponist,s.textdichter,s.arrangeur,s.uebersetzer].filter(Boolean)))];
   const el=document.getElementById('song-filters');el.innerHTML='';
-  const addGroup=(items,key)=>items.forEach(v=>{const c=document.createElement('div');c.className='fchip'+(songFilter[key]===v?' active':'');c.textContent=v;c.onclick=()=>{songFilter[key]=songFilter[key]===v?'':v;buildFilters();displaySongs(filteredSongs());};el.appendChild(c);});
+  const addGroup=(items,key)=>items.forEach(v=>{const c=document.createElement('div');c.className='fchip'+(songFilter[key]===v?' active':'');c.textContent=v;c.onclick=()=>{songFilter[key]=songFilter[key]===v?'':v;buildFilters();displaySongs(filteredSongs());updateFilterCount();};el.appendChild(c);});
   addGroup(bes,'besetzung');addGroup(the,'thema');addGroup(anl,'anlass');
 }
 function filteredSongs(){
@@ -658,7 +685,21 @@ function filteredSongs(){
     return ka.localeCompare(kb,'de');
   });
 }
-function filterSongs(){displaySongs(filteredSongs());}
+function toggleFilters(){
+  const row=document.getElementById('song-filters');
+  const btn=document.getElementById('filter-toggle-btn');
+  const label=document.getElementById('filter-toggle-label');
+  const isOpen=row.classList.toggle('visible');
+  btn.classList.toggle('open',isOpen);
+  label.textContent=isOpen?'ausblenden':'anzeigen';
+}
+
+function updateFilterCount(){
+  const active=[songFilter.besetzung,songFilter.thema,songFilter.anlass,songFilter.person].filter(Boolean).length;
+  const countEl=document.getElementById('filter-active-count');
+  if(countEl){countEl.textContent=active;countEl.style.display=active?'':'none';}
+}
+function filterSongs(){displaySongs(filteredSongs());updateFilterCount();}
 function displaySongs(songs){
   const el=document.getElementById('song-list');
   const countEl=document.getElementById('song-count');
@@ -683,13 +724,10 @@ async function openSongDetail(id){
     if(!val)return`<div class="df"><div class="dl">${label}</div><div class="dv" style="color:var(--text3)">–</div></div>`;
     return`<div class="df ${opts==='full'?'style="grid-column:1/-1"':''}"><div class="dl">${label}</div><div class="dv">${opts==='badge'?`<span class="badge">${esc(val)}</span>`:esc(val)}</div></div>`;
   }
-  // Song files
+  // Song files - display only
   const{data:files}=await SB.from('song_files').select('*').eq('song_id',id);
-  const fileTypes=['chorsatz','klaviersatz','chor_klavier','orchestersatz','sibelius'];
   const fileLabels={'chorsatz':'PDF Chorsatz','klaviersatz':'PDF Klaviersatz','chor_klavier':'PDF Chor+Klavier','orchestersatz':'PDF Orchestersatz','sibelius':'Sibelius-Datei'};
   const filesHtml=(files||[]).length?`<div class="ddiv"></div><div class="dl">Dateien</div><div style="margin-top:6px">${(files||[]).map(f=>`<a href="${esc(f.url)}" target="_blank" class="ffile">📄 ${esc(fileLabels[f.file_type]||f.file_type)}</a>`).join('')}</div>`:'';
-  // Upload files section for admin
-  const uploadHtml=isAdmin?`<div class="ddiv"></div><div class="dl">Dateien hochladen</div><div style="margin-top:6px">${fileTypes.map(ft=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="font-size:12px;color:var(--text2);width:120px">${esc(fileLabels[ft])}</span><input type="file" accept=".pdf,.sib,.sibelius" id="sf-${ft}" style="flex:1;font-size:11px;color:var(--text2)"><button class="btn btn-g btn-sm" onclick="uploadSongFile('${id}','${ft}')">↑</button></div>`).join('')}</div>`:'';
   document.getElementById('sd-body').innerHTML=`
     <div class="dgrid" style="margin-bottom:12px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}${df('Bibelstelle',s.bibelstelle)}${df('Schrank',s.schrank)}</div>
     <div class="ddiv"></div>
@@ -703,7 +741,7 @@ async function openSongDetail(id){
     <div class="dgrid" style="margin-bottom:12px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${df('Nr.',s.quelle_nr)}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
     ${s.created_at?`<div style="font-size:10px;color:var(--text3);margin-bottom:10px">Eingetragen: ${fD(s.created_at?.slice(0,10))}</div>`:''}
     ${(s.links||[]).length?`<div class="ddiv"></div><div class="dl">Links</div><div style="margin-top:5px">${s.links.map(l=>`<a href="${esc(l)}" target="_blank" class="ffile">${esc(l.replace(/https?:\/\//,'').substring(0,30))}</a>`).join('')}</div>`:''}
-    ${filesHtml}${uploadHtml}
+    ${filesHtml}
     ${s.notizen?`<div class="ddiv"></div><div class="df" style="grid-column:1/-1"><div class="dl">Notizen</div><div class="dv">${esc(s.notizen)}</div></div>`:''}`;
   const footer=document.getElementById('sd-footer');footer.innerHTML='';
   if(isAdmin){
@@ -714,30 +752,23 @@ async function openSongDetail(id){
   openModal('m-song-detail');
 }
 
-async function uploadSongFile(songId, fileType){
-  const input=document.getElementById(`sf-${fileType}`);
+async function uploadSongFile(songId, fileType, inputEl){
+  const input=inputEl||document.getElementById(`sf-${fileType}`);
   if(!input?.files[0]){T('Keine Datei ausgewählt','err');return;}
   const file=input.files[0];
   const ext=file.name.split('.').pop().toLowerCase();
-  const path=`${songId}/${fileType}.${ext}`;  // No subfolders - just flat path
+  const path=`${songId}/${fileType}.${ext}`;
   T('Wird hochgeladen…');
-  // Try upload
-  const{data:upData,error:upErr}=await SB.storage.from('choir-media').upload(path,file,{upsert:true,cacheControl:'3600'});
+  const{error:upErr}=await SB.storage.from('choir-media').upload(path,file,{upsert:true,cacheControl:'3600'});
   if(upErr){
-    console.error('Storage upload error:',upErr);
-    // Try without upsert
-    const{data:upData2,error:upErr2}=await SB.storage.from('choir-media').upload(path,file);
-    if(upErr2){
-      T('Storage-Fehler: '+upErr2.message,'err');
-      console.error('Storage error details:',upErr2);
-      return;
-    }
+    const{error:upErr2}=await SB.storage.from('choir-media').upload(path,file);
+    if(upErr2){T('Storage-Fehler: '+upErr2.message,'err');return;}
   }
   const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
   const{error:dbErr}=await SB.from('song_files').upsert({song_id:songId,file_type:fileType,url:publicUrl,path},{onConflict:'song_id,file_type'});
   if(dbErr){T('DB-Fehler: '+dbErr.message,'err');return;}
+  input.value='';
   T('✓ Datei hochgeladen','ok');
-  openSongDetail(songId);
 }
 
 function openSongForm(id=null,prefill={}){
@@ -775,7 +806,17 @@ function buildSongFormHTML(s){
   <div class="fs"><div class="fst">Links & Notizen</div>
     <div class="fg"><label class="fl">YouTube / Spotify</label><input class="fi" id="sf-link" value="${esc((s.links||[])[0]||'')}" placeholder="https://…"></div>
     <div class="fg"><label class="fl">Notizen</label><textarea class="fi" id="sf-notiz">${esc(s.notizen||'')}</textarea></div>
-  </div>`;
+  </div>
+  ${id?`<div class="fs"><div class="fst">Dateien hochladen</div>
+    ${['chorsatz','klaviersatz','chor_klavier','orchestersatz','sibelius'].map(ft=>{
+      const labels={'chorsatz':'PDF Chorsatz','klaviersatz':'PDF Klaviersatz','chor_klavier':'PDF Chor+Klavier','orchestersatz':'PDF Orchestersatz','sibelius':'Sibelius-Datei'};
+      return`<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--text2);min-width:110px">${labels[ft]}</span>
+        <input type="file" accept=".pdf,.sib,.sibelius" id="sff-${ft}" style="flex:1;font-size:11px;color:var(--text2)">
+        <button class="btn btn-g btn-sm" onclick="uploadSongFile('${id}','${ft}',document.getElementById('sff-${ft}'))">↑</button>
+      </div>`;
+    }).join('')}
+  </div>`:'<p style="font-size:11px;color:var(--text3);margin-top:4px">Dateien können nach dem ersten Speichern hochgeladen werden.</p>'}`;
 }
 async function saveSong(){
   const title=document.getElementById('sf-title').value.trim();
@@ -1222,8 +1263,7 @@ async function renderCal(){
     const upEvts=allEvts3.sort((a,b)=>a.datum.localeCompare(b.datum));
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-3)">‹</button><div class="cmonth">${mn[m]} – ${mn[(m+2)%12]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(3)">›</button></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">${minis}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--text2)"><span>🔴 Feiertag</span><span>📚 Schulferien</span><span style="display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;border-radius:2px;background:#e05555;flex-shrink:0"></span>Veranstaltung</span>${cachedCategories.map(c=>`<span style="display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;border-radius:2px;background:${esc(c.color)};flex-shrink:0"></span>${esc(c.name)}</span>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:10px">${minis}</div>
       <div class="st">Termine</div>
       <div id="cal-evt-list">${upEvts.length?upEvts.map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
 
@@ -1239,7 +1279,7 @@ async function renderCal(){
     for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,allEvtsY,holidays,schoolDays);
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-12)">‹</button><div class="cmonth">Jahr ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(12)">›</button></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">${minis}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:10px">${minis}</div>
       <div class="st">Alle Termine ${y}</div>
       <div id="cal-evt-list">${allEvtsY.length?allEvtsY.sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
   }

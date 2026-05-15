@@ -770,10 +770,16 @@ function displaySongs(songs){
     const haupttext=s.liedanfang?`${esc(s.liedanfang)}${s.title&&s.title!==s.liedanfang?` <span style="color:var(--text3)">|</span> ${esc(s.title)}`:''}`:esc(s.title);
     const themen=(s.thema||'').split(',').map(t=>t.trim()).filter(Boolean);
     const anlaesse=(s.anlass||'').split(',').map(a=>a.trim()).filter(Boolean);
+    const allTags=[...themen.map(t=>`<span class="badge blue" style="font-size:9px">${esc(t)}</span>`), ...anlaesse.map(a=>`<span class="badge green" style="font-size:9px">${esc(a)}</span>`)].join('');
     return`<div class="card" onclick="openSongDetail('${s.id}')">
-      <div class="crow"><div style="flex:1"><div class="ct">${haupttext}</div><div class="cs">${esc(s.komponist)||'Unbekannt'}${s.arrangeur?' · Arr. '+esc(s.arrangeur):''}</div></div>
-      <div>${s.besetzung?`<span class="badge">${esc(s.besetzung)}</span>`:''}</div></div>
-      ${themen.length||anlaesse.length?`<div class="cmeta">${themen.map(t=>`<span class="badge blue">${esc(t)}</span>`).join('')}${anlaesse.map(a=>`<span class="badge green">${esc(a)}</span>`).join('')}</div>`:''}</div>`;
+      <div class="crow">
+        <div style="flex:1"><div class="ct">${haupttext}</div><div class="cs">${esc(s.komponist)||'Unbekannt'}${s.arrangeur?' · Arr. '+esc(s.arrangeur):''}</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+          ${s.besetzung?`<span class="badge">${esc(s.besetzung)}</span>`:''}
+          ${allTags?`<div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;max-width:120px">${allTags}</div>`:''}
+        </div>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -1068,7 +1074,7 @@ async function openEvDetail(id){
     </div>
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Programm</div>
-    ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(p.songs?.title||'?')}</div><div style="font-size:11px;color:var(--text2)">${esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
+    ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${p.placeholder?`<span style="color:var(--text3)">📌 ${esc(p.placeholder)}</span>`:esc(p.songs?.title||'?')}</div><div style="font-size:11px;color:var(--text2)">${p.placeholder?'Platzhalter':esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Rollen</div>
     <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Dirigent',e.dirigent]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
@@ -1136,12 +1142,16 @@ async function openEventForm(id=null){
 }
 function buildProgRow(pos,p={},songs=[]){
   const opts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title||s.liedanfang||'?')}</option>`).join('');
+  const isPlaceholder=p.song_id===null&&(p.dirigent||p.klavier||p.instrumente||p.placeholder);
   return`<div class="ep-row prog-ep-row" draggable="true" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dragDrop(event)" ondragend="dragEnd(event)">
     <div class="ep-row-header">
       <span class="drag-handle" title="Ziehen zum Sortieren">⠿</span>
       <div class="pnum" style="width:22px;height:22px;font-size:11px">${pos}</div>
-      <select class="fi prog-song" style="flex:1"><option value="">– Lied –</option>${opts}</select>
+      <select class="fi prog-song" style="flex:1" onchange="togglePlaceholder(this)"><option value="">– Lied –</option><option value="__placeholder__" ${isPlaceholder?'selected':''}>📌 Platzhalter</option>${opts}</select>
       <button type="button" class="btn btn-d btn-sm" onclick="this.closest('.prog-ep-row').remove();renumberProgRows()" style="width:28px;height:28px;padding:0">✕</button>
+    </div>
+    <div class="prog-placeholder-name" style="${isPlaceholder?'':'display:none'}margin-bottom:5px">
+      <input class="fi" placeholder="Beschreibung (z.B. Eingangslied)" value="${esc(p.placeholder||'')}" style="font-size:12px">
     </div>
     <div class="ep-roles">
       <input class="fi prog-dir" placeholder="Dirigent" list="dl-dirigent" autocomplete="off" value="${esc(p.dirigent||'')}">
@@ -1149,6 +1159,11 @@ function buildProgRow(pos,p={},songs=[]){
       <input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}">
     </div>
   </div>`;
+}
+function togglePlaceholder(sel){
+  const row=sel.closest('.prog-ep-row');
+  const ph=row.querySelector('.prog-placeholder-name');
+  if(sel.value==='__placeholder__'){ph.style.display='';} else {ph.style.display='none';}
 }
 function renumberProgRows(){document.querySelectorAll('.prog-ep-row .pnum').forEach((el,i)=>el.textContent=i+1);}
 function addProgRow(){const c=document.getElementById('prog-rows');const p=c.querySelectorAll('.prog-ep-row').length+1;const d=document.createElement('div');d.innerHTML=buildProgRow(p,{},window._efSongs||[]);c.appendChild(d.firstElementChild);}
@@ -1200,7 +1215,12 @@ async function saveEvent(){
   else{const{data,error}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();if(error){T('Fehler: '+error.message,'err');return;}evId=data?.id;}
   if(!evId){T('Fehler beim Speichern','err');return;}
   await SB.from('event_program').delete().eq('event_id',evId);
-  const progInsert=[...document.querySelectorAll('.prog-ep-row')].map((row,i)=>({event_id:evId,song_id:row.querySelector('.prog-song')?.value||null,position:i+1,dirigent:row.querySelector('.prog-dir')?.value.trim()||'',klavier:row.querySelector('.prog-klav')?.value.trim()||'',instrumente:row.querySelector('.prog-instr')?.value.trim()||''})).filter(p=>p.song_id);
+  const progInsert=[...document.querySelectorAll('.prog-ep-row')].map((row,i)=>{
+    const songVal=row.querySelector('.prog-song')?.value||'';
+    const isPlaceholder=songVal==='__placeholder__';
+    const phName=row.querySelector('.prog-placeholder-name input')?.value.trim()||'';
+    return{event_id:evId,song_id:isPlaceholder?null:songVal||null,position:i+1,dirigent:row.querySelector('.prog-dir')?.value.trim()||'',klavier:row.querySelector('.prog-klav')?.value.trim()||'',instrumente:row.querySelector('.prog-instr')?.value.trim()||'',placeholder:isPlaceholder?phName||'Platzhalter':null};
+  }).filter(p=>p.song_id||p.placeholder);
   if(progInsert.length)await SB.from('event_program').insert(progInsert);
   await SB.from('event_tasks').delete().eq('event_id',evId);
   const pEls=[...document.querySelectorAll('.aufg-person')],tEls=[...document.querySelectorAll('.aufg-task')];
@@ -1291,10 +1311,11 @@ async function renderCal(){
   const isAdmin=currentProfile?.role==='admin';
   const isMobile=window.innerWidth<=600;
   if(isMobile&&calView!=="month")calView="month";
+  if(!isMobile&&calView==="month")calView="3month";
   const viewTabs=`<div class="view-tabs">
-    <div class="vtab ${calView==="month"?"active":""}" onclick="calView='month';renderCal()">Monat</div>
-    ${!isMobile?`<div class="vtab ${calView==="3month"?"active":""}" onclick="calView='3month';renderCal()">3 Monate</div>`:""}
-    ${!isMobile?`<div class="vtab ${calView==="year"?"active":""}" onclick="calView='year';renderCal()">Jahr</div>`:""}
+    ${isMobile?`<div class="vtab active">Monat</div>`:`
+    <div class="vtab ${calView==="3month"?"active":""}" onclick="calView='3month';renderCal()">3 Monate</div>
+    <div class="vtab ${calView==="year"?"active":""}" onclick="calView='year';renderCal()">Jahr</div>`}
   </div>`;
   const y=calDate.getFullYear(),m=calDate.getMonth();
   const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];

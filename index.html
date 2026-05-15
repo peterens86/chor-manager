@@ -1127,21 +1127,17 @@ async function openEventForm(id=null){
       <div class="fg"><label class="fl">Titel *</label><input class="fi" id="ef-title" value="${esc(e.title||'')}"></div>
       <div class="fr2"><div class="fg"><label class="fl">Datum</label><input class="fi" type="date" id="ef-datum" value="${e.datum||''}"></div><div class="fg"><label class="fl">Uhrzeit</label><input class="fi" type="time" id="ef-uhrzeit" value="${fT(e.uhrzeit||'10:00')}"></div></div>
       <div class="fg"><label class="fl">Ort</label><input class="fi" id="ef-ort" value="${esc(e.ort||'Bielefeld')}"></div>
+      <div class="fg"><label class="fl">Verantwortlich</label>
+        <input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}" list="dl-dirigent" autocomplete="off">
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Chor</label><input class="fi" id="ef-chor" value="${esc(e.chor||'')}" placeholder="z.B. Erwachsenenchor"></div>
+        <div class="fg"><label class="fl">Thema</label><input class="fi" id="ef-thema" value="${esc(e.thema||'')}" placeholder="z.B. Advent"></div>
+      </div>
     </div>
     <div class="fs"><div class="fst">Programm</div>
       <div id="prog-rows">${prog.map((p,i)=>buildProgRow(i+1,p,songs||[])).join('')}</div>
       <button type="button" class="btn btn-g btn-sm" onclick="addProgRow()">+ Lied hinzufügen</button>
-    </div>
-    <div class="fs"><div class="fst">Allgemeine Rollen</div>
-      <div class="fg"><label class="fl">Verantwortlich</label>
-        <input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}" list="dl-dirigent" autocomplete="off">
-      </div>
-      <div class="fg"><label class="fl">Chor</label>
-        <input class="fi" id="ef-chor" value="${esc(e.chor||'')}" placeholder="z.B. Erwachsenenchor, Jugendchor">
-      </div>
-      <div class="fg"><label class="fl">Thema</label>
-        <input class="fi" id="ef-thema" value="${esc(e.thema||'')}" placeholder="z.B. Advent, Erntedank">
-      </div>
     </div>
     <div class="fs"><div class="fst">Aufgaben</div>
       <div id="aufg-rows">${aufgRows}</div>

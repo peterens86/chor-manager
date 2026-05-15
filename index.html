@@ -1058,7 +1058,9 @@ function evCard(e){
   return`<div class="card" onclick="openEvDetail('${e.id}')">
     <div class="crow"><div style="flex:1"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)}${e.uhrzeit?' · '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>
     <div>${n?`<span class="badge blue">${n} Lieder</span>`:''}</div></div>
-    ${e.dirigent?`<div class="cmeta"><span class="badge green">Dir: ${esc(e.dirigent)}</span></div>`:''}</div>`;
+    ${e.dirigent?`<div class="cmeta"><span class="badge green">Verantw.: ${esc(e.dirigent)}</span></div>`:''}
+    ${e.notizen?`<div style="font-size:11px;color:var(--text2);margin-top:5px;line-height:1.4">${esc(e.notizen)}</div>`:''}
+  </div>`;
 }
 async function openEvDetail(id){
   const{data:e}=await SB.from('events').select('*,event_program(id,position,song_id,dirigent,klavier,instrumente,placeholder,songs(title,liedanfang,besetzung)),event_tasks(*),attendance(member_id,status,profiles(name,stimme))').eq('id',id).single();
@@ -1077,7 +1079,7 @@ async function openEvDetail(id){
     ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${p.placeholder?`<span style="color:var(--text3)">? ${esc(p.placeholder)}</span>`:(()=>{const la=p.songs?.liedanfang,ti=p.songs?.title;return la?(ti&&ti!==la?`${esc(la)} <span style="color:var(--text3)">|</span> ${esc(ti)}`:esc(la)):esc(ti||'?');})()}</div><div style="font-size:11px;color:var(--text2)">${p.placeholder?'Platzhalter':esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Rollen</div>
-    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Dirigent',e.dirigent]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
+    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Verantwortlich',e.dirigent]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Anwesenheit</div>
     ${(()=>{
@@ -1128,7 +1130,7 @@ async function openEventForm(id=null){
       <button type="button" class="btn btn-g btn-sm" onclick="addProgRow()">+ Lied hinzufügen</button>
     </div>
     <div class="fs"><div class="fst">Allgemeine Rollen</div>
-      <div class="fg"><label class="fl">Dirigent</label>
+      <div class="fg"><label class="fl">Verantwortlich</label>
         <input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}" list="dl-dirigent" autocomplete="off">
       </div>
     </div>
@@ -1753,7 +1755,142 @@ async function deleteMedia(id,path){
   await SB.from('media').delete().eq('id',id);renderMedia();T('Gelöscht');
 }
 
-// ========== SETTINGS ==========
+// ========== VERANSTALTUNGEN IMPORT ==========
+async function importEventsFile(event){
+  const file=event.target.files[0];if(!file)return;
+  const status=document.getElementById('ev-import-status');
+  status.innerHTML='<div class="loading" style="padding:8px 0"><div class="spin"></div>Wird gelesen…</div>';
+  let text='';
+  if(file.name.endsWith('.docx')){
+    // Extract text from docx using mammoth-like approach via ArrayBuffer
+    try{
+      const buf=await file.arrayBuffer();
+      // docx is a zip - extract word/document.xml
+      // Use simple XML text extraction
+      const bytes=new Uint8Array(buf);
+      const str=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
+      // Try to extract readable text from XML
+      text=str.replace(/<w:br[^>]*\/>/g,'\n').replace(/<w:p[ >][^]*?<\/w:p>/g,m=>{
+        const inner=m.replace(/<[^>]+>/g,'');
+        return inner.trim()?inner.trim()+'\n':'';
+      }).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#[0-9]+;/g,'');
+      if(!text.trim()){
+        // Fallback: try to find text nodes
+        const matches=str.matchAll(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+        const parts=[];for(const m of matches)parts.push(m[1]);
+        text=parts.join(' ');
+      }
+    }catch(e){status.innerHTML='<p style="color:var(--danger)">Fehler beim Lesen der .docx Datei</p>';return;}
+  } else {
+    const buf=await file.arrayBuffer();
+    const tryEncodings=['utf-8','windows-1252'];
+    for(const enc of tryEncodings){
+      try{const t=new TextDecoder(enc,{fatal:true}).decode(buf);text=t;break;}catch(e){}
+    }
+    if(!text)text=new TextDecoder('windows-1252').decode(await file.arrayBuffer());
+    if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  }
+  // Parse events from text
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  const events=[];
+  let currentEvent=null;
+  // Date pattern: DD.MM.YYYY or DD.MM.YY
+  const dateRe=/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})\s+(.+)/;
+  // Bullet/list item patterns
+  const bulletRe=/^[\u2022\u2023\u25e6\u2043\u2219\-\*\u00b7\d+\.]\s+(.+)|^\s+(.+)/;
+  for(const line of lines){
+    const dm=line.match(dateRe);
+    if(dm){
+      // Save previous
+      if(currentEvent)events.push(currentEvent);
+      let y=parseInt(dm[3]);
+      if(y<100)y+=2000;
+      const datum=`${y}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
+      const titleRaw=dm[4].trim();
+      // Extract subtitle in parentheses: "Chor (Taufe)" -> title="Chor", note="Taufe"
+      const parenMatch=titleRaw.match(/^(.+?)\s*\((.+)\)\s*$/);
+      const title=parenMatch?parenMatch[1].trim():titleRaw;
+      const note=parenMatch?parenMatch[2].trim():'';
+      currentEvent={datum,title:title+(note?' – '+note:''),ort:'Bielefeld',uhrzeit:'10:00',songs:[]};
+    } else if(currentEvent){
+      // Try to detect song title – strip bullet chars and whitespace
+      const clean=line.replace(/^[\u2022\u2023\u25e6\u2043\u2219\-\*\u00b7•\d+\.\)]+\s*/,'').replace(/^\s+/,'').trim();
+      if(clean&&clean.length>1&&clean.length<200){
+        currentEvent.songs.push(clean);
+      }
+    }
+  }
+  if(currentEvent)events.push(currentEvent);
+  if(!events.length){status.innerHTML='<p style="color:var(--danger)">Keine Veranstaltungen erkannt. Bitte Format prüfen.</p>';event.target.value='';return;}
+  // Preview and confirm
+  status.innerHTML=`<div style="background:rgba(76,175,130,.08);border:0.5px solid rgba(76,175,130,.3);border-radius:var(--r);padding:10px;margin-top:6px">
+    <b style="font-size:13px">✓ ${events.length} Veranstaltungen erkannt</b>
+    <div style="font-size:11px;color:var(--text2);margin-top:4px">${events.slice(0,3).map(e=>`${fD(e.datum)}: ${esc(e.title)} (${e.songs.length} Lieder)`).join('<br>')}${events.length>3?`<br>… und ${events.length-3} weitere`:''}</div>
+    <button class="btn btn-p" style="margin-top:10px;width:100%" onclick="doImportEvents()">▶ Jetzt importieren</button>
+  </div>`;
+  window._pendingEvents=events;
+  event.target.value='';
+}
+
+async function doImportEvents(){
+  const events=window._pendingEvents;
+  if(!events?.length)return;
+  const status=document.getElementById('ev-import-status');
+  status.innerHTML='<div class="loading" style="padding:8px 0"><div class="spin"></div>Importiere…</div>';
+  // Load all songs for matching
+  const{data:allSongs}=await SB.from('songs').select('id,title,liedanfang');
+  // Build lookup by title and liedanfang (normalized)
+  function norm(s){return(s||'').toLowerCase().trim().replace(/[^\w\säöüß]/g,'').replace(/\s+/g,' ');}
+  const songMap={};
+  (allSongs||[]).forEach(s=>{
+    if(s.title)songMap[norm(s.title)]=s.id;
+    if(s.liedanfang)songMap[norm(s.liedanfang)]=s.id;
+    // Also try first part before comma
+    if(s.liedanfang){const p=s.liedanfang.split(',')[0].trim();songMap[norm(p)]=s.id;}
+  });
+  let evCreated=0,evSkipped=0,songMatched=0,songMissed=0;
+  for(const ev of events){
+    // Check if event already exists on this date
+    const{data:existing}=await SB.from('events').select('id').eq('datum',ev.datum).eq('titel',ev.title);
+    let evId=existing?.[0]?.id;
+    if(!evId){
+      const{data:newEv,error}=await SB.from('events').insert({title:ev.title,datum:ev.datum,uhrzeit:ev.uhrzeit,ort:ev.ort,created_by:currentUser.id}).select().single();
+      if(error){console.warn('Event insert error:',error.message);evSkipped++;continue;}
+      evId=newEv.id;evCreated++;
+    } else {evSkipped++;}
+    // Match and insert program
+    const progItems=[];
+    ev.songs.forEach((songTitle,i)=>{
+      const nTitle=norm(songTitle);
+      // Try exact match first, then partial
+      let songId=songMap[nTitle];
+      if(!songId){
+        // Try partial: find song where title contains or is contained in search
+        const keys=Object.keys(songMap);
+        const partial=keys.find(k=>k.includes(nTitle)||nTitle.includes(k));
+        if(partial)songId=songMap[partial];
+      }
+      if(songId){
+        progItems.push({event_id:evId,song_id:songId,position:i+1});
+        songMatched++;
+      } else {
+        // Insert as placeholder
+        progItems.push({event_id:evId,song_id:null,position:i+1,placeholder:songTitle});
+        songMissed++;
+      }
+    });
+    if(progItems.length)await SB.from('event_program').insert(progItems);
+  }
+  status.innerHTML=`<div style="background:rgba(76,175,130,.08);border:0.5px solid rgba(76,175,130,.3);border-radius:var(--r);padding:10px">
+    <b>✅ Import abgeschlossen</b><br>
+    <span style="font-size:12px;color:var(--text2)">
+      ${evCreated} Veranstaltungen angelegt · ${evSkipped} bereits vorhanden<br>
+      ${songMatched} Lieder zugeordnet · ${songMissed} als Platzhalter (nicht im Repertoire)
+    </span>
+  </div>`;
+  window._pendingEvents=null;
+  T(`${evCreated} Veranstaltungen importiert`,'ok');
+}
 async function renderSettings(tab='members'){
   if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins.</p>';return;}
   const tabs=`<div class="view-tabs" style="margin-bottom:16px">
@@ -1775,6 +1912,14 @@ async function renderSettings(tab='members'){
         <input class="fi" id="new-cat-name" placeholder="Neue Kategorie" style="flex:2">
         <input type="color" id="new-cat-color" value="#5b8dee" style="width:40px;height:38px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--card);cursor:pointer;padding:3px">
         <button class="btn btn-p btn-sm" onclick="addCat()">+</button>
+      </div>
+      <div class="st" style="margin-top:16px">Veranstaltungen importieren</div>
+      <div class="card" style="cursor:default">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Word-Dokument (.docx) oder Textdatei (.txt) mit Veranstaltungen importieren.</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Format: <code style="background:rgba(255,255,255,.06);padding:2px 5px;border-radius:4px">21.05.2023 Chor (Taufe)</code> gefolgt von Liedtiteln als Aufzählung.</div>
+        <input type="file" id="ev-import-file" accept=".txt,.docx" style="display:none" onchange="importEventsFile(event)">
+        <button class="btn btn-g" style="width:100%" onclick="document.getElementById('ev-import-file').click()">📄 Datei auswählen & importieren</button>
+        <div id="ev-import-status" style="margin-top:8px;font-size:12px"></div>
       </div>
       <div class="st" style="margin-top:16px">Repertoire CSV</div>
       <div class="card" style="cursor:default">

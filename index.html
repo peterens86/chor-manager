@@ -1761,80 +1761,100 @@ async function deleteMedia(id,path){
 }
 
 // ========== VERANSTALTUNGEN IMPORT ==========
-async function importEventsFile(event){
-  const file=event.target.files[0];if(!file)return;
+async function importEventsFile(evt){
+  const file=evt.target.files[0];if(!file)return;
   const status=document.getElementById('ev-import-status');
-  status.innerHTML='<div class="loading" style="padding:8px 0"><div class="spin"></div>Wird gelesen…</div>';
+  status.innerHTML='<div class="loading" style="padding:8px 0"><div class="spin"></div>Wird gelesen...</div>';
   let text='';
-  if(file.name.endsWith('.docx')){
-    // Extract text from docx using mammoth-like approach via ArrayBuffer
-    try{
+  try{
+    if(file.name.toLowerCase().endsWith('.docx')){
+      // docx is a ZIP - find document.xml inside
       const buf=await file.arrayBuffer();
-      // docx is a zip - extract word/document.xml
-      // Use simple XML text extraction
       const bytes=new Uint8Array(buf);
-      const str=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
-      // Try to extract readable text from XML
-      text=str.replace(/<w:br[^>]*\/>/g,'\n').replace(/<w:p[ >][^]*?<\/w:p>/g,m=>{
-        const inner=m.replace(/<[^>]+>/g,'');
-        return inner.trim()?inner.trim()+'\n':'';
-      }).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#[0-9]+;/g,'');
-      if(!text.trim()){
-        // Fallback: try to find text nodes
-        const matches=str.matchAll(/<w:t[^>]*>([^<]+)<\/w:t>/g);
-        const parts=[];for(const m of matches)parts.push(m[1]);
-        text=parts.join(' ');
+      // Scan for PK local file header signatures to find document.xml
+      // Simple approach: search for "word/document.xml" in the zip directory
+      // and extract its deflate stream
+      // Fallback: decode entire file and grep for w:t nodes
+      const raw=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
+      // Extract all w:t text content
+      const tMatches=[...raw.matchAll(/<w:t[^>]*?>([\s\S]*?)<\/w:t>/g)];
+      // Group by paragraph: find w:p boundaries
+      const paraPattern=/<w:p[ >][\s\S]*?<\/w:p>/g;
+      const paras=[...raw.matchAll(paraPattern)];
+      const paraLines=[];
+      for(const p of paras){
+        const ts=[...p[0].matchAll(/<w:t[^>]*?>([\s\S]*?)<\/w:t>/g)];
+        const txt=ts.map(t=>t[1]).join('').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+        if(txt)paraLines.push(txt);
       }
-    }catch(e){status.innerHTML='<p style="color:var(--danger)">Fehler beim Lesen der .docx Datei</p>';return;}
-  } else {
-    const buf=await file.arrayBuffer();
-    const tryEncodings=['utf-8','windows-1252'];
-    for(const enc of tryEncodings){
-      try{const t=new TextDecoder(enc,{fatal:true}).decode(buf);text=t;break;}catch(e){}
+      text=paraLines.join('\n');
+      if(!text.trim()&&tMatches.length){
+        text=tMatches.map(m=>m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')).join(' ');
+      }
+      if(!text.trim()){
+        status.innerHTML='<div style="background:rgba(224,85,85,.1);border:0.5px solid rgba(224,85,85,.3);border-radius:var(--r);padding:10px"><b style="color:var(--danger)">DOCX konnte nicht gelesen werden</b><br><span style="font-size:11px;color:var(--text2)">Bitte das Dokument als .txt speichern: Word \u2192 Speichern unter \u2192 Nur Text (.txt)</span></div>';
+        evt.target.value='';return;
+      }
+    } else {
+      const buf=await file.arrayBuffer();
+      for(const enc of['utf-8','windows-1252','iso-8859-1']){
+        try{const t=new TextDecoder(enc,{fatal:true}).decode(buf);text=t;break;}catch(e){}
+      }
+      if(!text)text=new TextDecoder('windows-1252').decode(await file.arrayBuffer());
+      if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
     }
-    if(!text)text=new TextDecoder('windows-1252').decode(await file.arrayBuffer());
-    if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  }catch(e){
+    status.innerHTML=`<p style="color:var(--danger)">Lesefehler: ${e.message}</p>`;
+    evt.target.value='';return;
   }
-  // Parse events from text
-  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+
+  const rawLines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  console.log('Import lines[0..5]:',rawLines.slice(0,5));
+
+  const events=parseEventText(rawLines);
+
+  if(!events.length){
+    status.innerHTML=`<div style="background:rgba(224,85,85,.1);border:0.5px solid rgba(224,85,85,.3);border-radius:var(--r);padding:10px">
+      <b style="color:var(--danger)">Keine Veranstaltungen erkannt</b>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px">Erste erkannte Zeilen:<br>${rawLines.slice(0,5).map(l=>`\u2022 ${esc(l.substring(0,70))}`).join('<br>')}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">Erwartet: <code>21.05.2023 Chor</code> gefolgt von Liedtiteln</div>
+    </div>`;
+    evt.target.value='';return;
+  }
+
+  status.innerHTML=`<div style="background:rgba(76,175,130,.08);border:0.5px solid rgba(76,175,130,.3);border-radius:var(--r);padding:10px">
+    <b style="font-size:13px">\u2713 ${events.length} Veranstaltungen erkannt</b>
+    <div style="font-size:11px;color:var(--text2);margin-top:6px">${events.slice(0,4).map(e=>`${fD(e.datum)}: ${esc(e.title)} (${e.songs.length} Lieder)`).join('<br>')}${events.length>4?`<br>... und ${events.length-4} weitere`:''}</div>
+    <button class="btn btn-p" style="margin-top:10px;width:100%" onclick="doImportEvents()">\u25b6 Jetzt importieren</button>
+  </div>`;
+  window._pendingEvents=events;
+  evt.target.value='';
+}
+
+function parseEventText(lines){
   const events=[];
-  let currentEvent=null;
-  // Date pattern: DD.MM.YYYY or DD.MM.YY
-  const dateRe=/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})\s+(.+)/;
-  // Bullet/list item patterns
-  const bulletRe=/^[\u2022\u2023\u25e6\u2043\u2219\-\*\u00b7\d+\.]\s+(.+)|^\s+(.+)/;
+  let cur=null;
+  const dateRe=/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})\s*(.*)/;
   for(const line of lines){
     const dm=line.match(dateRe);
     if(dm){
-      // Save previous
-      if(currentEvent)events.push(currentEvent);
-      let y=parseInt(dm[3]);
-      if(y<100)y+=2000;
+      if(cur)events.push(cur);
+      let y=parseInt(dm[3]);if(y<100)y+=2000;
       const datum=`${y}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
-      const titleRaw=dm[4].trim();
-      // Extract subtitle in parentheses: "Chor (Taufe)" -> title="Chor", note="Taufe"
-      const parenMatch=titleRaw.match(/^(.+?)\s*\((.+)\)\s*$/);
-      const title=parenMatch?parenMatch[1].trim():titleRaw;
-      const note=parenMatch?parenMatch[2].trim():'';
-      currentEvent={datum,title:title+(note?' – '+note:''),ort:'Bielefeld',uhrzeit:'10:00',songs:[]};
-    } else if(currentEvent){
-      // Try to detect song title – strip bullet chars and whitespace
-      const clean=line.replace(/^[\u2022\u2023\u25e6\u2043\u2219\-\*\u00b7•\d+\.\)]+\s*/,'').replace(/^\s+/,'').trim();
-      if(clean&&clean.length>1&&clean.length<200){
-        currentEvent.songs.push(clean);
+      const raw=(dm[4]||'').trim();
+      const pm=raw.match(/^(.*?)\s*\((.+)\)\s*$/);
+      const title=pm?(pm[1].trim()||'Chor'):raw||'Chor';
+      const note=pm?pm[2].trim():'';
+      cur={datum,title:title+(note?' ('+note+')':''),ort:'Bielefeld',uhrzeit:'10:00',songs:[]};
+    } else if(cur){
+      const clean=line.replace(/^[\s\u2022\u2023\u25e6\u2043\u2219\u00b7\-\*\>\u25cf]+\s*/,'').replace(/^\d+[\.)\]:]\s+/,'').trim();
+      if(clean&&clean.length>1&&clean.length<150&&!/^\d{1,2}\.\d{1,2}\.\d{2,4}/.test(clean)){
+        cur.songs.push(clean);
       }
     }
   }
-  if(currentEvent)events.push(currentEvent);
-  if(!events.length){status.innerHTML='<p style="color:var(--danger)">Keine Veranstaltungen erkannt. Bitte Format prüfen.</p>';event.target.value='';return;}
-  // Preview and confirm
-  status.innerHTML=`<div style="background:rgba(76,175,130,.08);border:0.5px solid rgba(76,175,130,.3);border-radius:var(--r);padding:10px;margin-top:6px">
-    <b style="font-size:13px">✓ ${events.length} Veranstaltungen erkannt</b>
-    <div style="font-size:11px;color:var(--text2);margin-top:4px">${events.slice(0,3).map(e=>`${fD(e.datum)}: ${esc(e.title)} (${e.songs.length} Lieder)`).join('<br>')}${events.length>3?`<br>… und ${events.length-3} weitere`:''}</div>
-    <button class="btn btn-p" style="margin-top:10px;width:100%" onclick="doImportEvents()">▶ Jetzt importieren</button>
-  </div>`;
-  window._pendingEvents=events;
-  event.target.value='';
+  if(cur)events.push(cur);
+  return events;
 }
 
 async function doImportEvents(){

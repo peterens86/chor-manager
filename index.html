@@ -618,6 +618,8 @@ function startApp(){
     ['song-add-btn','ev-add-btn','ann-add-btn','cal-add-btn','media-add-btn','media-album-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
   }
   SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
+  // Track last seen
+  SB.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id).then(()=>{});
   loadAutocompleteLists();
   showPage('dashboard');
 }
@@ -630,9 +632,27 @@ function showPage(name){
   const navItems=document.querySelectorAll('.ni');
   const idx=pages.indexOf(name);
   if(idx>=0&&navItems[idx])navItems[idx].classList.add('active');
+  // Push to browser history
+  if(history.state?.page!==name){
+    history.pushState({page:name},'',window.location.pathname+'#'+name);
+  }
   const loaders={dashboard:renderDash,ann:renderAnn,songs:renderSongs,events:renderEvents,cal:()=>{if(window.innerWidth<=600&&calView==='3month')calView='month';renderCal();},stats:initStats,media:renderMedia,settings:renderSettings};
   if(loaders[name])loaders[name]();
 }
+// Handle browser back/forward
+window.addEventListener('popstate',e=>{
+  const page=e.state?.page||location.hash.replace('#','')||'dashboard';
+  // Show page without pushing to history again
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  const pages=['dashboard','ann','songs','events','cal','stats','media','settings'];
+  const navItems=document.querySelectorAll('.ni');
+  const idx=pages.indexOf(page);
+  if(idx>=0&&navItems[idx])navItems[idx].classList.add('active');
+  const loaders={dashboard:renderDash,ann:renderAnn,songs:renderSongs,events:renderEvents,cal:()=>{if(window.innerWidth<=600)calView='month';renderCal();},stats:initStats,media:renderMedia,settings:renderSettings};
+  if(loaders[page])loaders[page]();
+});
 
 // ========== UNREAD ==========
 async function loadUnread(){
@@ -1268,10 +1288,12 @@ async function renderCal(){
   const el=document.getElementById('cal-wrap');
   await loadCategories();
   const isAdmin=currentProfile?.role==='admin';
+  const isMobile=window.innerWidth<=600;
+  if(isMobile&&calView!=="month")calView="month";
   const viewTabs=`<div class="view-tabs">
-    <div class="vtab ${calView==='month'?'active':''}" onclick="calView='month';renderCal()">Monat</div>
-    <div class="vtab ${calView==='3month'?'active':''}" onclick="calView='3month';renderCal()">3 Monate</div>
-    <div class="vtab ${calView==='year'?'active':''}" onclick="calView='year';renderCal()">Jahr</div>
+    <div class="vtab ${calView==="month"?"active":""}" onclick="calView='month';renderCal()">Monat</div>
+    ${!isMobile?`<div class="vtab ${calView==="3month"?"active":""}" onclick="calView='3month';renderCal()">3 Monate</div>`:""}
+    ${!isMobile?`<div class="vtab ${calView==="year"?"active":""}" onclick="calView='year';renderCal()">Jahr</div>`:""}
   </div>`;
   const y=calDate.getFullYear(),m=calDate.getMonth();
   const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
@@ -1367,8 +1389,7 @@ async function renderCal(){
     const upEvts=allEvts3.sort((a,b)=>a.datum.localeCompare(b.datum));
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-3)">‹</button><div class="cmonth">${mn[m]} – ${mn[(m+2)%12]} ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(3)">›</button></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:10px">${minis}</div>
-      <div class="st">Termine</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">${minis}</div>
       <div id="cal-evt-list">${upEvts.length?upEvts.map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
 
   } else {
@@ -1383,8 +1404,7 @@ async function renderCal(){
     for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,allEvtsY,holidays,schoolDays);
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-12)">‹</button><div class="cmonth">Jahr ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(12)">›</button></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:10px">${minis}</div>
-      <div class="st">Alle Termine ${y}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">${minis}</div>
       <div id="cal-evt-list">${allEvtsY.length?allEvtsY.sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
   }
   // Init touch swipe after render
@@ -1709,11 +1729,58 @@ async function deleteMedia(id,path){
 }
 
 // ========== SETTINGS ==========
-async function renderSettings(){
+async function renderSettings(tab='members'){
   if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins.</p>';return;}
+  const tabs=`<div class="view-tabs" style="margin-bottom:16px">
+    <div class="vtab ${tab==='members'?'active':''}" onclick="renderSettings('members')">Mitglieder</div>
+    <div class="vtab ${tab==='settings'?'active':''}" onclick="renderSettings('settings')">Einstellungen</div>
+  </div>`;
+  if(tab==='settings'){
+    await loadCategories();
+    document.getElementById('settings-body').innerHTML=tabs+`
+      <div class="st">Kalender-Kategorien</div>
+      ${cachedCategories.map(c=>`<div class="card" style="cursor:default">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" value="${esc(c.color)}" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:2px" oninput="updateCatColor('${c.id}',this.value)" onchange="updateCatColor('${c.id}',this.value)">
+          <input class="fi" value="${esc(c.name)}" style="flex:1;padding:6px 10px" onchange="updateCatName('${c.id}',this.value)" placeholder="Kategoriename">
+          <button class="btn btn-d btn-sm" onclick="deleteCat('${c.id}')">✕</button>
+        </div>
+      </div>`).join('')}
+      <div style="display:flex;gap:7px;margin-top:8px;align-items:center">
+        <input class="fi" id="new-cat-name" placeholder="Neue Kategorie" style="flex:2">
+        <input type="color" id="new-cat-color" value="#5b8dee" style="width:40px;height:38px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--card);cursor:pointer;padding:3px">
+        <button class="btn btn-p btn-sm" onclick="addCat()">+</button>
+      </div>
+      <div class="st" style="margin-top:16px">Repertoire CSV</div>
+      <div class="card" style="cursor:default">
+        <div class="fr2">
+          <div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:7px">CSV importieren</div>
+            <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="importCSV(event)">
+            <button class="btn btn-g" style="width:100%" onclick="document.getElementById('csv-import').click()">CSV importieren</button>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:7px">CSV exportieren</div>
+            <button class="btn btn-g" style="width:100%" onclick="exportCSV()">CSV exportieren</button>
+          </div>
+        </div>
+        <p style="font-size:10px;color:var(--text3);margin-top:8px">Spalten: liedanfang, title, refrain, besetzung, thema, anlass, textdichter, textdichter_lz, komponist, komponist_lz, arrangeur, arrangeur_lz, uebersetzer, uebersetzer_lz, rechte, originaltitel, quelle, quelle_nr, lizenz, schrank, notizen</p>
+      </div>`;
+    return;
+  }
+  // Members tab
   const{data:members}=await SB.from('profiles').select('*').order('name');
-  await loadCategories();
-  document.getElementById('settings-body').innerHTML=`
+  function fLastSeen(ts){
+    if(!ts)return'Nie';
+    const d=new Date(ts),now=new Date();
+    const diff=Math.floor((now-d)/1000);
+    if(diff<60)return'Gerade eben';
+    if(diff<3600)return`vor ${Math.floor(diff/60)} Min.`;
+    if(diff<86400)return`vor ${Math.floor(diff/3600)} Std.`;
+    if(diff<604800)return`vor ${Math.floor(diff/86400)} Tagen`;
+    return fD(ts.slice(0,10));
+  }
+  document.getElementById('settings-body').innerHTML=tabs+`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="st" style="margin:0">Mitglieder (${(members||[]).length})</div>
       <button class="btn btn-p btn-sm" onclick="openAddMember()">+ Mitglied</button>
@@ -1721,7 +1788,10 @@ async function renderSettings(){
     ${(members||[]).map(m=>{const isMe=m.id===currentUser.id;const isActive=m.active!==false;
       return`<div class="card" style="cursor:default;${!isActive?'opacity:.5':''}">
         <div class="crow">
-          <div><div style="font-weight:500">${esc(m.name)}</div><div class="cs">${esc(m.stimme||'')} ${m.email?'· '+esc(m.email):''}</div></div>
+          <div><div style="font-weight:500">${esc(m.name)}</div>
+            <div class="cs">${esc(m.stimme||'')} ${m.email?'· '+esc(m.email):''}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">🕐 ${fLastSeen(m.last_seen)}</div>
+          </div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <span class="badge ${m.role==='admin'?'warn':''}">${m.role==='admin'?'Admin':'Mitglied'}</span>
             ${m.role2?`<span class="badge blue">${esc(m.role2.split(',').map(r=>r==='dirigent'?'Dirigent':'Klavier').join(' & '))}</span>`:''}
@@ -1733,35 +1803,7 @@ async function renderSettings(){
           <button class="btn btn-g btn-sm" onclick="toggleRole2('${m.id}','${m.role2||''}')">Zusatzrolle</button>
           ${!isMe?`<button class="btn ${isActive?'btn-d':'btn-i'} btn-sm" onclick="toggleActive('${m.id}',${isActive})">${isActive?'Deaktivieren':'Aktivieren'}</button>`:''}
         </div>
-      </div>`;}).join('')}
-    <div class="st" style="margin-top:16px">Kalender-Kategorien</div>
-    ${cachedCategories.map(c=>`<div class="card" style="cursor:default">
-      <div style="display:flex;align-items:center;gap:10px">
-        <input type="color" value="${esc(c.color)}" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:2px" oninput="updateCatColor('${c.id}',this.value)" onchange="updateCatColor('${c.id}',this.value)">
-        <input class="fi" value="${esc(c.name)}" style="flex:1;padding:6px 10px" onchange="updateCatName('${c.id}',this.value)" placeholder="Kategoriename">
-        <button class="btn btn-d btn-sm" onclick="deleteCat('${c.id}')">✕</button>
-      </div>
-    </div>`).join('')}
-    <div style="display:flex;gap:7px;margin-top:8px;align-items:center">
-      <input class="fi" id="new-cat-name" placeholder="Neue Kategorie" style="flex:2">
-      <input type="color" id="new-cat-color" value="#5b8dee" style="width:40px;height:38px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--card);cursor:pointer;padding:3px">
-      <button class="btn btn-p btn-sm" onclick="addCat()">+</button>
-    </div>
-    <div class="st" style="margin-top:16px">Repertoire</div>
-    <div class="card" style="cursor:default">
-      <div class="fr2">
-        <div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:7px">CSV importieren</div>
-          <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="importCSV(event)">
-          <button class="btn btn-g" style="width:100%" onclick="document.getElementById('csv-import').click()">CSV importieren</button>
-        </div>
-        <div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:7px">CSV exportieren</div>
-          <button class="btn btn-g" style="width:100%" onclick="exportCSV()">CSV exportieren</button>
-        </div>
-      </div>
-      <p style="font-size:10px;color:var(--text3);margin-top:8px">Spalten: liedanfang, title, refrain, besetzung, thema, anlass, textdichter, textdichter_lz, komponist, komponist_lz, arrangeur, arrangeur_lz, uebersetzer, uebersetzer_lz, rechte, originaltitel, quelle, quelle_nr, lizenz, schrank, notizen</p>
-    </div>`;
+      </div>`;}).join('')}`;
 }
 
 async function addCat(){
@@ -1772,7 +1814,7 @@ async function addCat(){
   if(error){T('Fehler: '+error.message,'err');return;}
   document.getElementById('new-cat-name').value='';
   await loadCategories();
-  renderSettings();
+  renderSettings('settings');
   T('Kategorie hinzugefügt','ok');
 }
 async function updateCatColor(id,color){
@@ -1786,10 +1828,10 @@ async function updateCatName(id,name){
   await loadCategories();
   T('Name gespeichert','ok');
 }
-async function deleteCat(id){if(!confirm('Kategorie löschen?'))return;await SB.from('cal_categories').delete().eq('id',id);renderSettings();}
-async function toggleMemberRole(id,role){const nr=role==='admin'?'member':'admin';if(!confirm(`Rolle zu "${nr==='admin'?'Admin':'Mitglied'}" wechseln?`))return;await SB.from('profiles').update({role:nr}).eq('id',id);renderSettings();T('Rolle geändert','ok');}
-async function toggleRole2(id,current){const opts=['','dirigent','klavier','dirigent,klavier'];const labels=['Keine','Dirigent','Klavier','Dirigent & Klavier'];const cur=opts.indexOf(current);const next=(cur+1)%opts.length;await SB.from('profiles').update({role2:opts[next]||null}).eq('id',id);renderSettings();T(`Zusatzrolle: ${labels[next]}`,'ok');}
-async function toggleActive(id,isActive){if(!confirm(isActive?'Mitglied deaktivieren?':'Mitglied aktivieren?'))return;await SB.from('profiles').update({active:!isActive}).eq('id',id);renderSettings();T(isActive?'Deaktiviert':'Aktiviert','ok');}
+async function deleteCat(id){if(!confirm('Kategorie löschen?'))return;await SB.from('cal_categories').delete().eq('id',id);renderSettings('settings');}
+async function toggleMemberRole(id,role){const nr=role==='admin'?'member':'admin';if(!confirm(`Rolle zu "${nr==='admin'?'Admin':'Mitglied'}" wechseln?`))return;await SB.from('profiles').update({role:nr}).eq('id',id);renderSettings('members');T('Rolle geändert','ok');}
+async function toggleRole2(id,current){const opts=['','dirigent','klavier','dirigent,klavier'];const labels=['Keine','Dirigent','Klavier','Dirigent & Klavier'];const cur=opts.indexOf(current);const next=(cur+1)%opts.length;await SB.from('profiles').update({role2:opts[next]||null}).eq('id',id);renderSettings('members');T(`Zusatzrolle: ${labels[next]}`,'ok');}
+async function toggleActive(id,isActive){if(!confirm(isActive?'Mitglied deaktivieren?':'Mitglied aktivieren?'))return;await SB.from('profiles').update({active:!isActive}).eq('id',id);renderSettings('members');T(isActive?'Deaktiviert':'Aktiviert','ok');}
 
 async function openAddMember(){['am-vname','am-nname','am-email','am-pass','am-phone'].forEach(id=>document.getElementById(id).value='');document.getElementById('am-stimme').value='';document.getElementById('am-role2').value='';openModal('m-add-member');}
 async function addMember(){
@@ -1800,7 +1842,7 @@ async function addMember(){
   const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{name,stimme,phone,role2}}});
   if(error){T('Fehler: '+error.message,'err');return;}
   if(data?.user)await SB.from('profiles').upsert({id:data.user.id,name,email,phone,stimme,role2,role:'member',active:true});
-  closeModal('m-add-member');renderSettings();T('Mitglied hinzugefügt','ok');
+  closeModal('m-add-member');renderSettings('members');T('Mitglied hinzugefügt','ok');
 }
 
 // ========== PROFILE ==========

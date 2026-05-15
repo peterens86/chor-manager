@@ -255,7 +255,8 @@ textarea.fi{resize:vertical;min-height:70px;}
     </div>
     <!-- LIEDER -->
     <div class="page" id="page-songs">
-      <div class="hrow"><h2>Repertoire</h2>
+      <div class="hrow">
+        <h2>Repertoire <span id="song-count" style="font-size:13px;font-weight:400;color:var(--text3)"></span></h2>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ic" id="song-add-btn" onclick="openSongForm()" style="display:none">+</button>
         </div>
@@ -660,13 +661,17 @@ function filteredSongs(){
 function filterSongs(){displaySongs(filteredSongs());}
 function displaySongs(songs){
   const el=document.getElementById('song-list');
+  const countEl=document.getElementById('song-count');
+  if(countEl)countEl.textContent=`${songs.length} / ${cachedSongs.length}`;
   if(!songs.length){el.innerHTML='<div class="empty"><p>Keine Lieder gefunden</p></div>';return;}
   el.innerHTML=songs.map(s=>{
-    const haupttext=s.liedanfang?`${esc(s.liedanfang)} <span style="color:var(--text3)">|</span> ${esc(s.title)}`:esc(s.title);
+    const haupttext=s.liedanfang?`${esc(s.liedanfang)}${s.title&&s.title!==s.liedanfang?` <span style="color:var(--text3)">|</span> ${esc(s.title)}`:''}`:esc(s.title);
+    const themen=(s.thema||'').split(',').map(t=>t.trim()).filter(Boolean);
+    const anlaesse=(s.anlass||'').split(',').map(a=>a.trim()).filter(Boolean);
     return`<div class="card" onclick="openSongDetail('${s.id}')">
       <div class="crow"><div style="flex:1"><div class="ct">${haupttext}</div><div class="cs">${esc(s.komponist)||'Unbekannt'}${s.arrangeur?' · Arr. '+esc(s.arrangeur):''}</div></div>
       <div>${s.besetzung?`<span class="badge">${esc(s.besetzung)}</span>`:''}</div></div>
-      ${s.thema||s.anlass?`<div class="cmeta">${s.thema?`<span class="badge blue">${esc(s.thema)}</span>`:''}${s.anlass?`<span class="badge green">${esc(s.anlass)}</span>`:''}</div>`:''}</div>`;
+      ${themen.length||anlaesse.length?`<div class="cmeta">${themen.map(t=>`<span class="badge blue">${esc(t)}</span>`).join('')}${anlaesse.map(a=>`<span class="badge green">${esc(a)}</span>`).join('')}</div>`:''}</div>`;
   }).join('');
 }
 
@@ -686,7 +691,7 @@ async function openSongDetail(id){
   // Upload files section for admin
   const uploadHtml=isAdmin?`<div class="ddiv"></div><div class="dl">Dateien hochladen</div><div style="margin-top:6px">${fileTypes.map(ft=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="font-size:12px;color:var(--text2);width:120px">${esc(fileLabels[ft])}</span><input type="file" accept=".pdf,.sib,.sibelius" id="sf-${ft}" style="flex:1;font-size:11px;color:var(--text2)"><button class="btn btn-g btn-sm" onclick="uploadSongFile('${id}','${ft}')">↑</button></div>`).join('')}</div>`:'';
   document.getElementById('sd-body').innerHTML=`
-    <div class="dgrid" style="margin-bottom:12px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}${df('Schrank',s.schrank)}</div>
+    <div class="dgrid" style="margin-bottom:12px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}${df('Bibelstelle',s.bibelstelle)}${df('Schrank',s.schrank)}</div>
     <div class="ddiv"></div>
     <div class="dgrid" style="margin-bottom:12px">
       ${df('Komponist',s.komponist)}${s.komponist_lz?df('Lebensdaten',s.komponist_lz):''}
@@ -695,7 +700,8 @@ async function openSongDetail(id){
       ${df('Übersetzer',s.uebersetzer)}${s.uebersetzer_lz?df('Lebensdaten',s.uebersetzer_lz):''}
     </div>
     <div class="ddiv"></div>
-    <div class="dgrid" style="margin-bottom:12px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${s.quelle_nr?df('Nr.',s.quelle_nr):''}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
+    <div class="dgrid" style="margin-bottom:12px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${df('Nr.',s.quelle_nr)}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
+    ${s.created_at?`<div style="font-size:10px;color:var(--text3);margin-bottom:10px">Eingetragen: ${fD(s.created_at?.slice(0,10))}</div>`:''}
     ${(s.links||[]).length?`<div class="ddiv"></div><div class="dl">Links</div><div style="margin-top:5px">${s.links.map(l=>`<a href="${esc(l)}" target="_blank" class="ffile">${esc(l.replace(/https?:\/\//,'').substring(0,30))}</a>`).join('')}</div>`:''}
     ${filesHtml}${uploadHtml}
     ${s.notizen?`<div class="ddiv"></div><div class="df" style="grid-column:1/-1"><div class="dl">Notizen</div><div class="dv">${esc(s.notizen)}</div></div>`:''}`;
@@ -710,15 +716,23 @@ async function openSongDetail(id){
 
 async function uploadSongFile(songId, fileType){
   const input=document.getElementById(`sf-${fileType}`);
-  if(!input?.files[0]){T('Keine Datei gewählt','err');return;}
+  if(!input?.files[0]){T('Keine Datei ausgewählt','err');return;}
   const file=input.files[0];
-  const ext=file.name.split('.').pop();
+  const ext=file.name.split('.').pop().toLowerCase();
   const path=`songs/${songId}/${fileType}.${ext}`;
+  T('Wird hochgeladen…');
+  // Check if bucket exists by trying upload
   const{error:upErr}=await SB.storage.from('choir-media').upload(path,file,{upsert:true});
-  if(upErr){T('Upload-Fehler: '+upErr.message,'err');return;}
+  if(upErr){
+    console.error('Upload error:',upErr);
+    T('Fehler: '+upErr.message+' (Storage Bucket "choir-media" vorhanden?)','err');
+    return;
+  }
   const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
-  await SB.from('song_files').upsert({song_id:songId,file_type:fileType,url:publicUrl,path},{onConflict:'song_id,file_type'});
-  T('Datei hochgeladen','ok');openSongDetail(songId);
+  const{error:dbErr}=await SB.from('song_files').upsert({song_id:songId,file_type:fileType,url:publicUrl,path},{onConflict:'song_id,file_type'});
+  if(dbErr){T('DB-Fehler: '+dbErr.message,'err');return;}
+  T('Datei hochgeladen ✓','ok');
+  openSongDetail(songId);
 }
 
 function openSongForm(id=null,prefill={}){
@@ -734,12 +748,13 @@ function buildSongFormHTML(s){
     <div class="fr2"><div class="fg"><label class="fl">Liedanfang</label><input class="fi" id="sf-anf" value="${esc(s.liedanfang||'')}"></div><div class="fg"><label class="fl">Refrainanfang</label><input class="fi" id="sf-ref" value="${esc(s.refrain||'')}"></div></div>
     <div class="fr2">
       <div class="fg"><label class="fl">Besetzung</label><select class="fi" id="sf-bes">${['','SATB','TTBB','SSAA','SSA','SAB','SSATBB','Gemischter Chor','Männerchor','Frauenchor'].map(b=>`<option value="${b}" ${(s.besetzung||'')==b?'selected':''}>${b||'– wählen –'}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Thema</label><input class="fi" id="sf-thema" value="${esc(s.thema||'')}"></div>
+      <div class="fg"><label class="fl">Thema (Komma-getrennt)</label><input class="fi" id="sf-thema" value="${esc(s.thema||'')}" placeholder="z.B. Worship, Advent"></div>
     </div>
     <div class="fr2">
-      <div class="fg"><label class="fl">Anlass</label><input class="fi" id="sf-anlass" value="${esc(s.anlass||'')}"></div>
+      <div class="fg"><label class="fl">Anlass (Komma-getrennt)</label><input class="fi" id="sf-anlass" value="${esc(s.anlass||'')}" placeholder="z.B. Weihnachten, Gottesdienst"></div>
       <div class="fg"><label class="fl">Schrank</label><select class="fi" id="sf-schrank"><option value="">–</option><option value="Haupt" ${s.schrank==='Haupt'?'selected':''}>Haupt</option><option value="Neben" ${s.schrank==='Neben'?'selected':''}>Neben</option></select></div>
     </div>
+    <div class="fg"><label class="fl">Bibelstelle</label><input class="fi" id="sf-bibel" value="${esc(s.bibelstelle||'')}" placeholder="z.B. Joh 3,16 · Ps 23"></div>
   </div>
   <div class="fs"><div class="fst">Personen & Lebensdaten</div>
     <div class="fr2"><div class="fg"><label class="fl">Komponist</label><input class="fi" id="sf-komp" value="${esc(s.komponist||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-komp-lz" value="${esc(s.komponist_lz||'')}" placeholder="z.B. 1685–1750"></div></div>
@@ -761,7 +776,7 @@ async function saveSong(){
   const title=document.getElementById('sf-title').value.trim();
   if(!title){T('Bitte Titel eingeben','err');return;}
   const lv=document.getElementById('sf-link').value.trim();
-  const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),schrank:document.getElementById('sf-schrank').value,komponist:document.getElementById('sf-komp').value.trim(),komponist_lz:document.getElementById('sf-komp-lz').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),textdichter_lz:document.getElementById('sf-text-lz').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),arrangeur_lz:document.getElementById('sf-arr-lz').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),uebersetzer_lz:document.getElementById('sf-ueb-lz').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),quelle_nr:document.getElementById('sf-quelle-nr').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
+  const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),bibelstelle:document.getElementById('sf-bibel').value.trim(),schrank:document.getElementById('sf-schrank').value,komponist:document.getElementById('sf-komp').value.trim(),komponist_lz:document.getElementById('sf-komp-lz').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),textdichter_lz:document.getElementById('sf-text-lz').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),arrangeur_lz:document.getElementById('sf-arr-lz').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),uebersetzer_lz:document.getElementById('sf-ueb-lz').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),quelle_nr:document.getElementById('sf-quelle-nr').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
   let error;
   if(editSongId){({error}=await SB.from('songs').update(payload).eq('id',editSongId));}
   else{({error}=await SB.from('songs').insert({...payload,created_by:currentUser.id}));}
@@ -826,10 +841,11 @@ async function importCSV(event){
     if(!lines[i].trim())continue;
     const vals=parseCSVLine(lines[i],sep);
     const liedanfang=getVal(vals,'liedanfang');
-    const title=getVal(vals,'title')||liedanfang;
-    if(!title){skipped++;continue;}
+    const title=getVal(vals,'title'); // Keep empty if not in CSV - do NOT fall back to liedanfang
+    if(!liedanfang&&!title){skipped++;continue;} // Skip only if both empty
     songs.push({
-      title,liedanfang,refrain:getVal(vals,'refrain'),
+      title:title||liedanfang, // DB needs a title, use liedanfang only as internal key
+      liedanfang,refrain:getVal(vals,'refrain'),
       besetzung:getVal(vals,'besetzung'),thema:getVal(vals,'thema'),anlass:getVal(vals,'anlass'),
       textdichter:getVal(vals,'textdichter'),textdichter_lz:getVal(vals,'textdichter_lz'),
       komponist:getVal(vals,'komponist'),komponist_lz:getVal(vals,'komponist_lz'),
@@ -1564,6 +1580,8 @@ function openProfile(){
     </div>
     <div class="fs"><div class="fst">Konto</div>
       <div class="df"><div class="dl">Rolle</div><div class="dv"><span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span>${p.role2?` <span class="badge blue">${esc(p.role2.split(',').map(r=>r==='dirigent'?'Dirigent':'Klavier').join(' & '))}</span>`:''}</div></div>
+      <div class="fg" style="margin-top:10px"><label class="fl">Neues Passwort</label><input class="fi" id="pm-pass" type="password" placeholder="Leer lassen = nicht ändern"></div>
+      <div class="fg"><label class="fl">Passwort bestätigen</label><input class="fi" id="pm-pass2" type="password" placeholder="Passwort wiederholen"></div>
       <button class="btn btn-d" style="width:100%;margin-top:8px" onclick="doLogout()">Abmelden</button>
     </div>`;
   openModal('m-profile');
@@ -1573,10 +1591,22 @@ async function saveProfile(){
   const name=(vname+' '+nname).trim();
   const u={name,phone:document.getElementById('pm-phone').value.trim(),address:document.getElementById('pm-addr').value.trim(),stimme:document.getElementById('pm-stimme').value};
   await SB.from('profiles').update(u).eq('id',currentUser.id);
+  // Password change
+  const pass=document.getElementById('pm-pass')?.value;
+  const pass2=document.getElementById('pm-pass2')?.value;
+  if(pass){
+    if(pass!==pass2){T('Passwörter stimmen nicht überein','err');return;}
+    if(pass.length<6){T('Passwort muss mindestens 6 Zeichen haben','err');return;}
+    const{error}=await SB.auth.updateUser({password:pass});
+    if(error){T('Passwort-Fehler: '+error.message,'err');return;}
+    T('Profil & Passwort gespeichert','ok');
+  } else {
+    T('Profil gespeichert','ok');
+  }
   currentProfile={...currentProfile,...u};
   document.getElementById('tb-name').textContent=name;
   document.getElementById('tb-av').textContent=initials(name)||'?';
-  closeModal('m-profile');T('Profil gespeichert','ok');
+  closeModal('m-profile');
 }
 
 // ========== MODAL CLOSE ==========

@@ -719,19 +719,24 @@ async function uploadSongFile(songId, fileType){
   if(!input?.files[0]){T('Keine Datei ausgewählt','err');return;}
   const file=input.files[0];
   const ext=file.name.split('.').pop().toLowerCase();
-  const path=`songs/${songId}/${fileType}.${ext}`;
+  const path=`${songId}/${fileType}.${ext}`;  // No subfolders - just flat path
   T('Wird hochgeladen…');
-  // Check if bucket exists by trying upload
-  const{error:upErr}=await SB.storage.from('choir-media').upload(path,file,{upsert:true});
+  // Try upload
+  const{data:upData,error:upErr}=await SB.storage.from('choir-media').upload(path,file,{upsert:true,cacheControl:'3600'});
   if(upErr){
-    console.error('Upload error:',upErr);
-    T('Fehler: '+upErr.message+' (Storage Bucket "choir-media" vorhanden?)','err');
-    return;
+    console.error('Storage upload error:',upErr);
+    // Try without upsert
+    const{data:upData2,error:upErr2}=await SB.storage.from('choir-media').upload(path,file);
+    if(upErr2){
+      T('Storage-Fehler: '+upErr2.message,'err');
+      console.error('Storage error details:',upErr2);
+      return;
+    }
   }
   const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
   const{error:dbErr}=await SB.from('song_files').upsert({song_id:songId,file_type:fileType,url:publicUrl,path},{onConflict:'song_id,file_type'});
   if(dbErr){T('DB-Fehler: '+dbErr.message,'err');return;}
-  T('Datei hochgeladen ✓','ok');
+  T('✓ Datei hochgeladen','ok');
   openSongDetail(songId);
 }
 

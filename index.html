@@ -1061,7 +1061,7 @@ function evCard(e){
     ${e.dirigent?`<div class="cmeta"><span class="badge green">Dir: ${esc(e.dirigent)}</span></div>`:''}</div>`;
 }
 async function openEvDetail(id){
-  const{data:e}=await SB.from('events').select('*,event_program(id,position,song_id,dirigent,klavier,instrumente,songs(title,besetzung)),event_tasks(*),attendance(member_id,status,profiles(name,stimme))').eq('id',id).single();
+  const{data:e}=await SB.from('events').select('*,event_program(id,position,song_id,dirigent,klavier,instrumente,placeholder,songs(title,liedanfang,besetzung)),event_tasks(*),attendance(member_id,status,profiles(name,stimme))').eq('id',id).single();
   if(!e)return;
   const isAdmin=currentProfile?.role==='admin';
   const prog=(e.event_program||[]).sort((a,b)=>a.position-b.position);
@@ -1074,7 +1074,7 @@ async function openEvDetail(id){
     </div>
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Programm</div>
-    ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${p.placeholder?`<span style="color:var(--text3)">📌 ${esc(p.placeholder)}</span>`:esc(p.songs?.title||'?')}</div><div style="font-size:11px;color:var(--text2)">${p.placeholder?'Platzhalter':esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
+    ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${p.placeholder?`<span style="color:var(--text3)">? ${esc(p.placeholder)}</span>`:(()=>{const la=p.songs?.liedanfang,ti=p.songs?.title;return la?(ti&&ti!==la?`${esc(la)} <span style="color:var(--text3)">|</span> ${esc(ti)}`:esc(la)):esc(ti||'?');})()}</div><div style="font-size:11px;color:var(--text2)">${p.placeholder?'Platzhalter':esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Rollen</div>
     <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Dirigent',e.dirigent]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
@@ -1110,7 +1110,7 @@ async function setAtt(evId,mId,val){
 }
 async function openEventForm(id=null){
   editEvId=id;
-  const{data:songs}=await SB.from('songs').select('id,title').order('title');
+  const{data:songs}=await SB.from('songs').select('id,title,liedanfang').order('liedanfang',{nullsFirst:false}).order('title');
   const{data:members}=await SB.from('profiles').select('id,name').order('name');
   let e={};
   if(id){const{data}=await SB.from('events').select('*,event_program(*),event_tasks(*)').eq('id',id).single();e=data||{};}
@@ -1141,7 +1141,10 @@ async function openEventForm(id=null){
   openModal('m-ev-form');
 }
 function buildProgRow(pos,p={},songs=[]){
-  const opts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title||s.liedanfang||'?')}</option>`).join('');
+  const opts=songs.map(s=>{
+    const label=s.liedanfang?(s.title&&s.title!==s.liedanfang?`${s.liedanfang} | ${s.title}`:s.liedanfang):s.title||'?';
+    return`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(label)}</option>`;
+  }).join('');
   const isPlaceholder=p.song_id===null&&(p.dirigent||p.klavier||p.instrumente||p.placeholder);
   return`<div class="ep-row prog-ep-row" draggable="true" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dragDrop(event)" ondragend="dragEnd(event)">
     <div class="ep-row-header">

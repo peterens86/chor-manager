@@ -775,10 +775,10 @@ function openSongForm(id=null,prefill={}){
   editSongId=id;
   const s=id?cachedSongs.find(x=>x.id===id)||{}:prefill;
   document.getElementById('sf-title-h').textContent=id?'Lied bearbeiten':'Lied hinzufügen';
-  document.getElementById('sf-body').innerHTML=buildSongFormHTML(s);
+  document.getElementById('sf-body').innerHTML=buildSongFormHTML(s,id);
   openModal('m-song-form');
 }
-function buildSongFormHTML(s){
+function buildSongFormHTML(s,id=null){
   return`<div class="fs"><div class="fst">Allgemein</div>
     <div class="fg"><label class="fl">Titel *</label><input class="fi" id="sf-title" value="${esc(s.title||'')}"></div>
     <div class="fr2"><div class="fg"><label class="fl">Liedanfang</label><input class="fi" id="sf-anf" value="${esc(s.liedanfang||'')}"></div><div class="fg"><label class="fl">Refrainanfang</label><input class="fi" id="sf-ref" value="${esc(s.refrain||'')}"></div></div>

@@ -685,7 +685,7 @@ async function renderDash(){
     </div>`;
   }).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>';
   const{data:evts}=await SB.from('events').select('*').gte('datum',today()).order('datum').limit(3);
-  document.getElementById('d-events').innerHTML=(evts||[]).length?evts.map(e=>`<div class="card" onclick="openEvDetail('${e.id}')"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>`).join(''):'<p style="color:var(--text3);font-size:12px">Keine Veranstaltungen</p>';
+  document.getElementById('d-events').innerHTML=(evts||[]).length?evts.map(e=>`<div class="card" onclick="openEvDetail('${e.id}')"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div>${e.chor?`<div class="cmeta"><span class="badge">${esc(e.chor)}</span></div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Keine Veranstaltungen</p>';
   loadUnread();
 }
 
@@ -1058,8 +1058,10 @@ function evCard(e){
   return`<div class="card" onclick="openEvDetail('${e.id}')">
     <div class="crow"><div style="flex:1"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)}${e.uhrzeit?' · '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>
     <div>${n?`<span class="badge blue">${n} Lieder</span>`:''}</div></div>
-    ${e.dirigent?`<div class="cmeta"><span class="badge green">Verantw.: ${esc(e.dirigent)}</span></div>`:''}
-    ${e.notizen?`<div style="font-size:11px;color:var(--text2);margin-top:5px;line-height:1.4">${esc(e.notizen)}</div>`:''}
+    <div class="cmeta">
+      ${e.dirigent?`<span class="badge green">Verantw.: ${esc(e.dirigent)}</span>`:''}
+      ${e.chor?`<span class="badge">${esc(e.chor)}</span>`:''}
+    </div>
   </div>`;
 }
 async function openEvDetail(id){
@@ -1079,7 +1081,7 @@ async function openEvDetail(id){
     ${prog.length?prog.map(p=>`<div class="pitem"><div style="display:flex;align-items:center;gap:9px"><div class="pnum">${p.position}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${p.placeholder?`<span style="color:var(--text3)">? ${esc(p.placeholder)}</span>`:(()=>{const la=p.songs?.liedanfang,ti=p.songs?.title;return la?(ti&&ti!==la?`${esc(la)} <span style="color:var(--text3)">|</span> ${esc(ti)}`:esc(la)):esc(ti||'?');})()}</div><div style="font-size:11px;color:var(--text2)">${p.placeholder?'Platzhalter':esc(p.songs?.besetzung||'')}</div></div></div>${(p.dirigent||p.klavier||p.instrumente)?`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">${p.dirigent?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Dirigent</span><span>${esc(p.dirigent)}</span></div>`:''}${p.klavier?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Klavier</span><span>${esc(p.klavier)}</span></div>`:''}${p.instrumente?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--text3)">Instrumente</span><span>${esc(p.instrumente)}</span></div>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Kein Programm</p>'}
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Rollen</div>
-    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Verantwortlich',e.dirigent]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
+    <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Verantwortlich',e.dirigent],['Chor',e.chor]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Anwesenheit</div>
     ${(()=>{
@@ -1132,6 +1134,9 @@ async function openEventForm(id=null){
     <div class="fs"><div class="fst">Allgemeine Rollen</div>
       <div class="fg"><label class="fl">Verantwortlich</label>
         <input class="fi" id="ef-dir" value="${esc(e.dirigent||'')}" list="dl-dirigent" autocomplete="off">
+      </div>
+      <div class="fg"><label class="fl">Chor</label>
+        <input class="fi" id="ef-chor" value="${esc(e.chor||'')}" placeholder="z.B. Erwachsenenchor, Jugendchor">
       </div>
     </div>
     <div class="fs"><div class="fst">Aufgaben</div>
@@ -1214,7 +1219,7 @@ function addAufgRow(){const d=document.createElement('div');d.className='fr2 auf
 async function saveEvent(){
   const title=document.getElementById('ef-title').value.trim();
   if(!title){T('Bitte Titel eingeben','err');return;}
-  const payload={title,datum:document.getElementById('ef-datum').value||null,uhrzeit:document.getElementById('ef-uhrzeit').value||null,ort:document.getElementById('ef-ort').value.trim(),dirigent:document.getElementById('ef-dir').value.trim(),notizen:document.getElementById('ef-notiz').value.trim(),updated_at:new Date().toISOString()};
+  const payload={title,datum:document.getElementById('ef-datum').value||null,uhrzeit:document.getElementById('ef-uhrzeit').value||null,ort:document.getElementById('ef-ort').value.trim(),dirigent:document.getElementById('ef-dir').value.trim(),chor:document.getElementById('ef-chor').value.trim(),notizen:document.getElementById('ef-notiz').value.trim(),updated_at:new Date().toISOString()};
   let evId=editEvId;
   if(editEvId){await SB.from('events').update(payload).eq('id',editEvId);}
   else{const{data,error}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();if(error){T('Fehler: '+error.message,'err');return;}evId=data?.id;}

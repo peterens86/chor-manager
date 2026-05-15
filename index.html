@@ -130,7 +130,10 @@ textarea.fi{resize:vertical;min-height:70px;}
 /* PROGRAM ITEMS */
 .pitem{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-bottom:7px;}
 .pnum{width:24px;height:24px;border-radius:50%;background:rgba(201,168,76,.15);color:var(--accent2);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.ep-row{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-bottom:7px;}
+.ep-row{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-bottom:7px;transition:border-color .15s;}
+.ep-row.dragging{opacity:.4;background:rgba(201,168,76,.1);}
+.ep-row.drag-over{border-color:var(--accent);border-style:dashed;}
+.drag-handle{cursor:grab;color:var(--text3);padding:0 4px;font-size:18px;user-select:none;flex-shrink:0;touch-action:none;}
 .ep-row-header{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .ep-roles{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px;}
 
@@ -780,7 +783,7 @@ function openSongForm(id=null,prefill={}){
 }
 function buildSongFormHTML(s,id=null){
   return`<div class="fs"><div class="fst">Allgemein</div>
-    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="sf-title" value="${esc(s.title||'')}"></div>
+    <div class="fg"><label class="fl">Titel (optional)</label><input class="fi" id="sf-title" value="${esc(s.title||'')}"></div>
     <div class="fr2"><div class="fg"><label class="fl">Liedanfang</label><input class="fi" id="sf-anf" value="${esc(s.liedanfang||'')}"></div><div class="fg"><label class="fl">Refrainanfang</label><input class="fi" id="sf-ref" value="${esc(s.refrain||'')}"></div></div>
     <div class="fr2">
       <div class="fg"><label class="fl">Besetzung</label><select class="fi" id="sf-bes">${['','SATB','TTBB','SSAA','SSA','SAB','SSATBB','Gemischter Chor','Männerchor','Frauenchor'].map(b=>`<option value="${b}" ${(s.besetzung||'')==b?'selected':''}>${b||'– wählen –'}</option>`).join('')}</select></div>
@@ -819,8 +822,9 @@ function buildSongFormHTML(s,id=null){
   </div>`:'<p style="font-size:11px;color:var(--text3);margin-top:4px">Dateien können nach dem ersten Speichern hochgeladen werden.</p>'}`;
 }
 async function saveSong(){
-  const title=document.getElementById('sf-title').value.trim();
-  if(!title){T('Bitte Titel eingeben','err');return;}
+  const liedanfang=document.getElementById('sf-anf').value.trim();
+  const title=document.getElementById('sf-title').value.trim()||liedanfang;
+  if(!title){T('Bitte Liedanfang oder Titel eingeben','err');return;}
   const lv=document.getElementById('sf-link').value.trim();
   const payload={title,liedanfang:document.getElementById('sf-anf').value.trim(),refrain:document.getElementById('sf-ref').value.trim(),besetzung:document.getElementById('sf-bes').value,thema:document.getElementById('sf-thema').value.trim(),anlass:document.getElementById('sf-anlass').value.trim(),bibelstelle:document.getElementById('sf-bibel').value.trim(),schrank:document.getElementById('sf-schrank').value,komponist:document.getElementById('sf-komp').value.trim(),komponist_lz:document.getElementById('sf-komp-lz').value.trim(),textdichter:document.getElementById('sf-text').value.trim(),textdichter_lz:document.getElementById('sf-text-lz').value.trim(),arrangeur:document.getElementById('sf-arr').value.trim(),arrangeur_lz:document.getElementById('sf-arr-lz').value.trim(),uebersetzer:document.getElementById('sf-ueb').value.trim(),uebersetzer_lz:document.getElementById('sf-ueb-lz').value.trim(),rechte:document.getElementById('sf-recht').value.trim(),lizenz:document.getElementById('sf-liz').value.trim(),originaltitel:document.getElementById('sf-orig').value.trim(),quelle:document.getElementById('sf-quelle').value.trim(),quelle_nr:document.getElementById('sf-quelle-nr').value.trim(),links:lv?[lv]:[],notizen:document.getElementById('sf-notiz').value.trim(),updated_at:new Date().toISOString()};
   let error;
@@ -1012,8 +1016,22 @@ async function openEvDetail(id){
     <div style="background:var(--card);border-radius:var(--r);border:0.5px solid var(--border)">${[['Dirigent',e.dirigent]].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${l}</span><span>${esc(v)}</span></div>`).join('')}${(e.event_tasks||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:0.5px solid var(--border);font-size:13px"><span style="color:var(--text2)">${esc(t.aufgabe)}</span><span>${esc(t.person)}</span></div>`).join('')}</div>
     <div class="ddiv"></div>
     <div class="dl" style="margin-bottom:7px">Anwesenheit</div>
-    ${(e.attendance||[]).map(m=>`<div class="atti"><div><span style="font-size:13px">${esc(m.profiles?.name||'?')}</span> <span style="font-size:11px;color:var(--text3)">${esc(m.profiles?.stimme||'')}</span></div>
-      <div class="attb"><button class="ab ${m.status==='yes'?'yes':''}" onclick="setAtt('${e.id}','${m.member_id}','yes')">✓</button><button class="ab ${m.status==='no'?'no':''}" onclick="setAtt('${e.id}','${m.member_id}','no')">✗</button></div></div>`).join('')}
+    ${(()=>{
+      const att=e.attendance||[];
+      const yes=att.filter(m=>m.status==='yes').length;
+      const no=att.filter(m=>m.status==='no').length;
+      return`${yes||no?`<div style="display:flex;gap:12px;margin-bottom:10px">
+        ${yes?`<div style="text-align:center"><div style="font-size:18px;font-weight:600;color:var(--success)">${yes}</div><div style="font-size:10px;color:var(--text3)">anwesend</div></div>`:''}
+        ${no?`<div style="text-align:center"><div style="font-size:18px;font-weight:600;color:var(--danger)">${no}</div><div style="font-size:10px;color:var(--text3)">abwesend</div></div>`:''}
+      </div>`:''}
+      ${att.map(m=>`<div class="atti">
+        <div><span style="font-size:13px">${esc(m.profiles?.name||'?')}</span> <span style="font-size:11px;color:var(--text3)">${esc(m.profiles?.stimme||'')}</span></div>
+        ${isAdmin?`<div class="attb">
+          <button class="ab ${m.status==='yes'?'yes':''}" onclick="setAtt('${e.id}','${m.member_id}','yes')">✓</button>
+          <button class="ab ${m.status==='no'?'no':''}" onclick="setAtt('${e.id}','${m.member_id}','no')">✗</button>
+        </div>`:`<span>${m.status==='yes'?'<span style="color:var(--success)">✓</span>':m.status==='no'?'<span style="color:var(--danger)">✗</span>':'<span style="color:var(--text3)">–</span>'}</span>`}
+      </div>`).join('')}`;
+    })()}
     ${e.notizen?`<div class="ddiv"></div><div class="dl">Notizen</div><div style="font-size:13px;margin-top:4px">${esc(e.notizen)}</div>`:''}`;
   const footer=document.getElementById('ed-footer');footer.innerHTML='';
   if(isAdmin){
@@ -1059,12 +1077,61 @@ async function openEventForm(id=null){
   openModal('m-ev-form');
 }
 function buildProgRow(pos,p={},songs=[]){
-  const opts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title)}</option>`).join('');
-  return`<div class="ep-row prog-ep-row"><div class="ep-row-header"><div class="pnum" style="width:22px;height:22px;font-size:11px">${pos}</div><select class="fi prog-song" style="flex:1"><option value="">– Lied –</option>${opts}</select><button type="button" class="btn btn-d btn-sm" onclick="this.closest('.prog-ep-row').remove();renumberProgRows()" style="width:28px;height:28px;padding:0">✕</button></div>
-    <div class="ep-roles"><input class="fi prog-dir" placeholder="Dirigent" list="dl-dirigent" autocomplete="off" value="${esc(p.dirigent||'')}"><input class="fi prog-klav" placeholder="Klavier" list="dl-klavier" autocomplete="off" value="${esc(p.klavier||'')}"><input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}"></div></div>`;
+  const opts=songs.map(s=>`<option value="${s.id}" ${s.id===(p.song_id||'')&&p.song_id?'selected':''}>${esc(s.title||s.liedanfang||'?')}</option>`).join('');
+  return`<div class="ep-row prog-ep-row" draggable="true" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dragDrop(event)" ondragend="dragEnd(event)">
+    <div class="ep-row-header">
+      <span class="drag-handle" title="Ziehen zum Sortieren">⠿</span>
+      <div class="pnum" style="width:22px;height:22px;font-size:11px">${pos}</div>
+      <select class="fi prog-song" style="flex:1"><option value="">– Lied –</option>${opts}</select>
+      <button type="button" class="btn btn-d btn-sm" onclick="this.closest('.prog-ep-row').remove();renumberProgRows()" style="width:28px;height:28px;padding:0">✕</button>
+    </div>
+    <div class="ep-roles">
+      <input class="fi prog-dir" placeholder="Dirigent" list="dl-dirigent" autocomplete="off" value="${esc(p.dirigent||'')}">
+      <input class="fi prog-klav" placeholder="Klavier" list="dl-klavier" autocomplete="off" value="${esc(p.klavier||'')}">
+      <input class="fi prog-instr" placeholder="Instrumente" style="grid-column:1/-1" value="${esc(p.instrumente||'')}">
+    </div>
+  </div>`;
 }
 function renumberProgRows(){document.querySelectorAll('.prog-ep-row .pnum').forEach((el,i)=>el.textContent=i+1);}
 function addProgRow(){const c=document.getElementById('prog-rows');const p=c.querySelectorAll('.prog-ep-row').length+1;const d=document.createElement('div');d.innerHTML=buildProgRow(p,{},window._efSongs||[]);c.appendChild(d.firstElementChild);}
+
+// ===== DRAG & DROP for program rows =====
+let dragSrc=null;
+function dragStart(e){
+  dragSrc=e.currentTarget;
+  dragSrc.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain','');
+}
+function dragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  const row=e.currentTarget;
+  if(row!==dragSrc){
+    document.querySelectorAll('.prog-ep-row').forEach(r=>r.classList.remove('drag-over'));
+    row.classList.add('drag-over');
+  }
+}
+function dragDrop(e){
+  e.preventDefault();
+  const target=e.currentTarget;
+  if(dragSrc&&target!==dragSrc){
+    const container=document.getElementById('prog-rows');
+    const rows=[...container.querySelectorAll('.prog-ep-row')];
+    const fromIdx=rows.indexOf(dragSrc);
+    const toIdx=rows.indexOf(target);
+    if(fromIdx>-1&&toIdx>-1){
+      if(fromIdx<toIdx)container.insertBefore(dragSrc,target.nextSibling);
+      else container.insertBefore(dragSrc,target);
+      renumberProgRows();
+    }
+  }
+  document.querySelectorAll('.prog-ep-row').forEach(r=>r.classList.remove('drag-over'));
+}
+function dragEnd(e){
+  document.querySelectorAll('.prog-ep-row').forEach(r=>{r.classList.remove('dragging');r.classList.remove('drag-over');});
+  dragSrc=null;
+}
 function addAufgRow(){const d=document.createElement('div');d.className='fr2 aufg-row';d.style.marginBottom='7px';d.innerHTML=`<input class="fi aufg-person" placeholder="Person" list="dl-members" autocomplete="off"><input class="fi aufg-task" placeholder="Aufgabe">`;document.getElementById('aufg-rows').appendChild(d);}
 async function saveEvent(){
   const title=document.getElementById('ef-title').value.trim();

@@ -183,7 +183,8 @@ textarea.fi{resize:vertical;min-height:70px;}
 .cevt.highlighted{background:rgba(201,168,76,.12);border-color:var(--accent);}
 .cevt-holiday{background:rgba(224,85,85,.07);border:0.5px solid rgba(224,85,85,.2);border-radius:var(--r);padding:6px 10px;margin-bottom:5px;font-size:12px;}
 /* Mini calendar */
-.cal-mini{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:7px;}
+.cal-mini{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:7px;min-width:0;}
+.cal-mini .cgrid{grid-template-columns:repeat(7,minmax(0,1fr));}
 .cal-mini .cdow{font-size:7px;}
 .cal-mini .cday{font-size:9px;}
 
@@ -1404,7 +1405,7 @@ async function renderCal(){
     for(let i=0;i<12;i++)minis+=buildMiniCal(y,i,allEvtsY,holidays,schoolDays);
     el.innerHTML=viewTabs+
       `<div class="chead"><button class="btn btn-g btn-sm" onclick="calNav(-12)">‹</button><div class="cmonth">Jahr ${y}</div><button class="btn btn-g btn-sm" onclick="calNav(12)">›</button></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">${minis}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px">${minis}</div>
       <div id="cal-evt-list">${allEvtsY.length?allEvtsY.sort((a,b)=>a.datum.localeCompare(b.datum)).map(e=>evtListItem(e,isAdmin)).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>'}</div>`;
   }
   // Init touch swipe after render

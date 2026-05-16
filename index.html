@@ -1045,7 +1045,7 @@ async function exportCSV(){
 
 // ========== EVENTS ==========
 let cachedEvents=[];
-let evFilter={chor:'',thema:''};
+let evFilter={chor:''};
 
 async function renderEvents(){
   const{data}=await SB.from('events').select('*,event_program(position,song_id,songs(title,besetzung))').order('datum');
@@ -1056,19 +1056,16 @@ async function renderEvents(){
 
 function buildEvFilters(){
   const chors=[...new Set(cachedEvents.map(e=>e.chor).filter(Boolean))];
-  const themen=[...new Set(cachedEvents.map(e=>e.thema).filter(Boolean))];
   const el=document.getElementById('ev-filters');
   if(!el)return;
   el.innerHTML='';
-  const addChip=(val,key)=>{
+  chors.forEach(val=>{
     const c=document.createElement('div');
-    c.className='fchip'+(evFilter[key]===val?' active':'');
+    c.className='fchip'+(evFilter.chor===val?' active':'');
     c.textContent=val;
-    c.onclick=()=>{evFilter[key]=evFilter[key]===val?'':val;buildEvFilters();displayEvents(filteredEvents());};
+    c.onclick=()=>{evFilter.chor=evFilter.chor===val?'':val;buildEvFilters();displayEvents(filteredEvents());};
     el.appendChild(c);
-  };
-  chors.forEach(v=>addChip(v,'chor'));
-  themen.forEach(v=>addChip(v,'thema'));
+  });
 }
 
 function filteredEvents(){
@@ -1076,7 +1073,6 @@ function filteredEvents(){
   return cachedEvents.filter(e=>{
     if(q&&!['title','chor','thema','ort','dirigent'].some(k=>(e[k]||'').toLowerCase().includes(q)))return false;
     if(evFilter.chor&&e.chor!==evFilter.chor)return false;
-    if(evFilter.thema&&e.thema!==evFilter.thema)return false;
     return true;
   });
 }

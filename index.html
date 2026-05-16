@@ -1805,10 +1805,9 @@ async function deleteMedia(id,path){
 
 // ========== EVENTS EXCEL EXPORT/IMPORT ==========
 async function exportEventsXLS(){
-  T('Excel wird erstellt…');
+  T('Export wird erstellt…');
   const{data:events}=await SB.from('events').select('*,event_program(position,placeholder,songs(title,liedanfang))').order('datum');
   if(!events?.length){T('Keine Veranstaltungen','err');return;}
-  // Build rows
   const rows=[['Datum','Titel','Uhrzeit','Ort','Chor','Thema','Verantwortlich','Notizen','Programm']];
   for(const e of events){
     const prog=(e.event_program||[]).sort((a,b)=>a.position-b.position).map(p=>{
@@ -1817,16 +1816,102 @@ async function exportEventsXLS(){
     }).join(' | ');
     rows.push([fD(e.datum),e.title||'',fT(e.uhrzeit||''),e.ort||'',e.chor||'',e.thema||'',e.dirigent||'',e.notizen||'',prog]);
   }
-  // Use SheetJS
-  const XLSX=await loadXLSX();
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  // Column widths
-  ws['!cols']=[{wch:12},{wch:25},{wch:8},{wch:15},{wch:15},{wch:15},{wch:20},{wch:20},{wch:60}];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,'Veranstaltungen',ws);
-  XLSX.writeFile(wb,'veranstaltungen.xlsx');
-  T('Excel exportiert','ok');
+  // Build CSV with semicolon separator (Excel Germany standard)
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  // BOM for Excel UTF-8 recognition
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='veranstaltungen.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  T('Export fertig – als CSV gespeichert','ok');
 }
+
+async function importEventsXLS(event){
+  const file=event.target.files[0];if(!file)return;
+  T('Wird importiert…');
+  try{
+    // Read as text (CSV) or try xlsx via FileReader
+    const buf=await file.arrayBuffer();
+    let text='';
+    for(const enc of['utf-8','windows-1252']){
+      try{const t=new TextDecoder(enc,{fatal:true}).decode(buf);text=t;break;}catch(e){}
+    }
+    if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length<2){T('Keine Daten gefunden','err');event.target.value='';return;}
+    // Detect separator
+    const first=lines[0];
+    let sep=';';
+    let inQ=false;let sc=0,cc=0;
+    for(const c of first){if(c==='"')inQ=!inQ;else if(!inQ){if(c===';')sc++;else if(c===',')cc++;}}
+    if(cc>sc)sep=',';
+    const parseCSV=line=>{const r=[];let cur='';let q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}else if(c===sep&&!q){r.push(cur.trim());cur='';}else cur+=c;}r.push(cur.trim());return r.map(v=>v.replace(/^"|"$/g,''));};
+    const hdr=parseCSV(lines[0]).map(h=>h.toLowerCase().trim());
+    const col=n=>hdr.indexOf(n);
+    const iDatum=col('datum'),iTitel=col('titel');
+    if(iDatum<0||iTitel<0){T(`Spalten "Datum"/"Titel" nicht gefunden. Gefunden: ${hdr.slice(0,5).join(', ')}`,'err');event.target.value='';return;}
+    const iUhr=col('uhrzeit'),iOrt=col('ort'),iChor=col('chor'),iThema=col('thema'),iVerantw=col('verantwortlich'),iNotiz=col('notizen'),iProg=col('programm');
+    // Load songs for matching
+    const{data:allSongs}=await SB.from('songs').select('id,title,liedanfang');
+    function norm(s){return(s||'').toLowerCase().trim();}
+    const songMap={};
+    (allSongs||[]).forEach(s=>{
+      if(s.title)songMap[norm(s.title)]=s.id;
+      if(s.liedanfang)songMap[norm(s.liedanfang)]=s.id;
+    });
+    function parseDate(v){
+      if(!v)return null;
+      const s=String(v).trim();
+      const m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+      if(m){let y=parseInt(m[3]);if(y<100)y+=2000;return`${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;}
+      if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+      return null;
+    }
+    let created=0,updated=0,errors=0;
+    for(let i=1;i<lines.length;i++){
+      const row=parseCSV(lines[i]);
+      if(!row.some(c=>c))continue;
+      const datum=parseDate(row[iDatum]);
+      const title=(row[iTitel]||'').trim();
+      if(!datum||!title)continue;
+      const payload={title,datum,
+        uhrzeit:iUhr>=0?row[iUhr]||null:null,
+        ort:iOrt>=0?row[iOrt]||'Bielefeld':'Bielefeld',
+        chor:iChor>=0?row[iChor]||null:null,
+        thema:iThema>=0?row[iThema]||null:null,
+        dirigent:iVerantw>=0?row[iVerantw]||null:null,
+        notizen:iNotiz>=0?row[iNotiz]||null:null
+      };
+      const{data:ex}=await SB.from('events').select('id').eq('datum',datum).eq('title',title);
+      let evId=ex?.[0]?.id;
+      if(evId){await SB.from('events').update(payload).eq('id',evId);updated++;}
+      else{const{data:nw,error}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();if(error){errors++;continue;}evId=nw.id;created++;}
+      if(iProg>=0&&row[iProg]){
+        const songTitles=row[iProg].split('|').map(s=>s.trim()).filter(Boolean);
+        if(songTitles.length){
+          await SB.from('event_program').delete().eq('event_id',evId);
+          const items=songTitles.map((t,idx)=>{
+            if(t.startsWith('?')){return{event_id:evId,position:idx+1,song_id:null,placeholder:t.slice(1).trim()||'Platzhalter'};}
+            const nT=norm(t);
+            let sid=songMap[nT];
+            if(!sid){const k=Object.keys(songMap).find(k=>k.includes(nT)||nT.includes(k));if(k)sid=songMap[k];}
+            return{event_id:evId,position:idx+1,song_id:sid||null,placeholder:sid?null:t};
+          });
+          if(items.length)await SB.from('event_program').insert(items);
+        }
+      }
+    }
+    event.target.value='';
+    renderEvents();
+    T(`✅ ${created} neu · ${updated} aktualisiert${errors?` · ${errors} Fehler`:''}`, 'ok');
+  }catch(e){T('Fehler: '+e.message,'err');console.error(e);event.target.value='';}
+}
+
+function loadXLSX(){return Promise.resolve(null);} // not used
 
 async function importEventsXLS(event){
   const file=event.target.files[0];if(!file)return;

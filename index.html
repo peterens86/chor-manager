@@ -532,6 +532,10 @@ textarea.fi{resize:vertical;min-height:70px;}
 <datalist id="dl-dirigent"></datalist>
 <datalist id="dl-klavier"></datalist>
 <datalist id="dl-members"></datalist>
+<datalist id="dl-komp"></datalist>
+<datalist id="dl-text"></datalist>
+<datalist id="dl-arr"></datalist>
+<datalist id="dl-ueb"></datalist>
 
 <script>
 // ========== GLOBALS ==========
@@ -871,10 +875,10 @@ function buildSongFormHTML(s,id=null){
     <div class="fg"><label class="fl">Bibelstelle</label><input class="fi" id="sf-bibel" value="${esc(s.bibelstelle||'')}" placeholder="z.B. Joh 3,16 · Ps 23"></div>
   </div>
   <div class="fs"><div class="fst">Personen & Lebensdaten</div>
-    <div class="fr2"><div class="fg"><label class="fl">Komponist</label><input class="fi" id="sf-komp" value="${esc(s.komponist||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-komp-lz" value="${esc(s.komponist_lz||'')}" placeholder="z.B. 1685–1750"></div></div>
-    <div class="fr2"><div class="fg"><label class="fl">Textdichter</label><input class="fi" id="sf-text" value="${esc(s.textdichter||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-text-lz" value="${esc(s.textdichter_lz||'')}"></div></div>
-    <div class="fr2"><div class="fg"><label class="fl">Arrangeur</label><input class="fi" id="sf-arr" value="${esc(s.arrangeur||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-arr-lz" value="${esc(s.arrangeur_lz||'')}"></div></div>
-    <div class="fr2"><div class="fg"><label class="fl">Übersetzer</label><input class="fi" id="sf-ueb" value="${esc(s.uebersetzer||'')}"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-ueb-lz" value="${esc(s.uebersetzer_lz||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Komponist</label><input class="fi" id="sf-komp" value="${esc(s.komponist||'')}" list="dl-komp" autocomplete="off" oninput="fillPersonLz(this,'sf-komp-lz','komponist')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-komp-lz" value="${esc(s.komponist_lz||'')}" placeholder="z.B. 1685–1750"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Textdichter</label><input class="fi" id="sf-text" value="${esc(s.textdichter||'')}" list="dl-text" autocomplete="off" oninput="fillPersonLz(this,'sf-text-lz','textdichter')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-text-lz" value="${esc(s.textdichter_lz||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Arrangeur</label><input class="fi" id="sf-arr" value="${esc(s.arrangeur||'')}" list="dl-arr" autocomplete="off" oninput="fillPersonLz(this,'sf-arr-lz','arrangeur')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-arr-lz" value="${esc(s.arrangeur_lz||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Übersetzer</label><input class="fi" id="sf-ueb" value="${esc(s.uebersetzer||'')}" list="dl-ueb" autocomplete="off" oninput="fillPersonLz(this,'sf-ueb-lz','uebersetzer')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-ueb-lz" value="${esc(s.uebersetzer_lz||'')}"></div></div>
   </div>
   <div class="fs"><div class="fst">Rechtliches</div>
     <div class="fr2"><div class="fg"><label class="fl">Rechte</label><input class="fi" id="sf-recht" value="${esc(s.rechte||'')}"></div><div class="fg"><label class="fl">Lizenz</label><input class="fi" id="sf-liz" value="${esc(s.lizenz||'')}"></div></div>
@@ -1136,7 +1140,7 @@ function displayEvents(data){
   el.innerHTML=html;
 }
 function evCard(e){
-  const n=(e.event_program||[]).length;
+  const n=(e.event_program||[]).filter(p=>p.song_id||(p.placeholder&&!p.placeholder.startsWith('[Predigt]')&&!p.placeholder.startsWith('[Sonstiges]'))).length;
   return`<div class="card" onclick="openEvDetail('${e.id}')">
     <div class="crow"><div style="flex:1"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)}${e.uhrzeit?' · '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div></div>
     <div>${n?`<span class="badge blue">${n} Lieder</span>`:''}</div></div>
@@ -1410,20 +1414,55 @@ async function saveEvent(){
 async function delEvent(id){await SB.from('events').delete().eq('id',id);closeModal('m-ev-detail');renderEvents();T('Veranstaltung gelöscht');}
 
 // ========== AUTOCOMPLETE ==========
+let personLzMap={}; // name -> lebensdaten
+
 async function loadAutocompleteLists(){
-  const{data:members}=await SB.from('profiles').select('name,role2').eq('active',true).order('name');
-  if(!members)return;
-  const dirigenten=members.filter(m=>(m.role2||'').includes('dirigent')).map(m=>m.name);
-  const klavieristen=members.filter(m=>(m.role2||'').includes('klavier')).map(m=>m.name);
-  const allNames=members.map(m=>m.name);
-  const fill=(id,names)=>{
-    const dl=document.getElementById(id);
-    if(!dl)return;
-    dl.innerHTML=names.map(n=>`<option value="${esc(n)}">`).join('');
-  };
+  const[{data:members},{data:songs}]=await Promise.all([
+    SB.from('profiles').select('name,role2').eq('active',true).order('name'),
+    SB.from('songs').select('komponist,komponist_lz,textdichter,textdichter_lz,arrangeur,arrangeur_lz,uebersetzer,uebersetzer_lz')
+  ]);
+  // Member lists
+  const allMembers=members||[];
+  const dirigenten=allMembers.filter(m=>(m.role2||'').includes('dirigent')).map(m=>m.name);
+  const klavieristen=allMembers.filter(m=>(m.role2||'').includes('klavier')).map(m=>m.name);
+  const allNames=allMembers.map(m=>m.name);
+  const fill=(id,names)=>{const dl=document.getElementById(id);if(!dl)return;dl.innerHTML=names.map(n=>`<option value="${esc(n)}">`).join('');};
   fill('dl-dirigent',dirigenten.length?dirigenten:allNames);
   fill('dl-klavier',klavieristen.length?klavieristen:allNames);
   fill('dl-members',allNames);
+  // Build person->lebensdaten map from songs
+  personLzMap={};
+  const roles=[['komponist','komponist_lz'],['textdichter','textdichter_lz'],['arrangeur','arrangeur_lz'],['uebersetzer','uebersetzer_lz']];
+  const personSets={komp:new Set(),text:new Set(),arr:new Set(),ueb:new Set()};
+  const dlMap={komp:'dl-komp',text:'dl-text',arr:'dl-arr',ueb:'dl-ueb'};
+  const roleKeys=['komp','text','arr','ueb'];
+  (songs||[]).forEach(s=>{
+    roles.forEach(([nameKey,lzKey],i)=>{
+      const name=(s[nameKey]||'').trim();
+      const lz=(s[lzKey]||'').trim();
+      if(name){
+        personSets[roleKeys[i]].add(name);
+        if(lz&&!personLzMap[name.toLowerCase()])personLzMap[name.toLowerCase()]=lz;
+      }
+    });
+  });
+  // Also cross-reference: same person different roles
+  Object.values(personSets).forEach(set=>set.forEach(name=>{
+    // already in map from above
+  }));
+  // Fill datalists
+  Object.entries(dlMap).forEach(([key,dlId])=>{
+    fill(dlId,[...personSets[key]].sort());
+  });
+}
+
+function fillPersonLz(inputEl, lzFieldId, role){
+  const name=inputEl.value.trim().toLowerCase();
+  if(!name)return;
+  const lzField=document.getElementById(lzFieldId);
+  if(!lzField||lzField.value.trim())return; // don't overwrite existing
+  const lz=personLzMap[name];
+  if(lz)lzField.value=lz;
 }
 
 // ========== CALENDAR ==========

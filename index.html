@@ -232,7 +232,14 @@ textarea.fi{resize:vertical;min-height:70px;}
 /* File chips */
 .ffile{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:var(--r);background:var(--card);border:0.5px solid var(--border);font-size:11px;color:var(--text2);margin:3px;cursor:pointer;}
 .ffile:hover{border-color:var(--accent2);}
-/* Mobile calendar */
+/* Assistant chat */
+.ast-msg{margin-bottom:10px;clear:both;}
+.ast-msg.user .ast-bbl{background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;display:inline-block;max-width:88%;float:right;}
+.ast-msg.bot .ast-bbl{background:var(--card);border:0.5px solid var(--border);border-radius:12px 12px 12px 4px;padding:8px 12px;font-size:13px;display:inline-block;max-width:95%;white-space:pre-wrap;line-height:1.5;}
+.ast-song-match{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 10px;margin:4px 0;font-size:12px;}
+.ast-song-match.found{border-color:rgba(76,175,130,.4);}
+.ast-song-match.notfound{border-color:rgba(224,85,85,.4);}
+.ast-song-match.ambiguous{border-color:rgba(232,160,32,.4);}
 @media(max-width:600px){
   .cal-mini .cdow{font-size:6px;}
   .cal-mini .cdnum{font-size:8px;}
@@ -316,6 +323,7 @@ textarea.fi{resize:vertical;min-height:70px;}
     <div class="page" id="page-events">
       <div class="hrow"><h2>Veranstaltungen</h2>
         <div style="display:flex;gap:6px">
+          <button class="btn btn-ic" id="ev-chat-btn" onclick="openAssistant()" title="KI-Assistent" style="display:none">✦</button>
           <button class="btn btn-ic" id="ev-add-btn" onclick="openEventForm(null)" style="display:none">+</button>
           <button class="btn btn-ic" id="ev-export-btn" onclick="exportEventsXLS()" title="Excel exportieren" style="display:none">↓</button>
           <button class="btn btn-ic" id="ev-import-btn" onclick="document.getElementById('ev-xl-file').click()" title="Excel importieren" style="display:none">↑</button>
@@ -528,6 +536,20 @@ textarea.fi{resize:vertical;min-height:70px;}
   <button onclick="closeFull()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer">×</button>
 </div>
 
+<!-- KI Assistent -->
+<div class="mo" id="m-assistant"><div class="md" style="max-height:96vh">
+  <div class="mhandle"></div>
+  <div class="mh"><h3>✦ KI-Assistent</h3><button class="mclose" onclick="closeModal('m-assistant')">×</button></div>
+  <div class="mb" style="display:flex;flex-direction:column;gap:0;padding:0">
+    <div id="ast-msgs" style="flex:1;overflow-y:auto;padding:12px;min-height:200px;max-height:50vh"></div>
+    <div id="ast-actions" style="padding:10px 12px;border-top:0.5px solid var(--border);display:none"></div>
+    <div style="padding:10px 12px;border-top:0.5px solid var(--border);display:flex;gap:8px">
+      <input class="fi" id="ast-input" placeholder="Programm eingeben oder Lied beschreiben…" style="flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAssistant();}">
+      <button class="btn btn-p btn-sm" onclick="sendAssistant()">→</button>
+    </div>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 <datalist id="dl-dirigent"></datalist>
 <datalist id="dl-klavier"></datalist>
@@ -631,7 +653,7 @@ function startApp(){
   const isAdmin=p.role==='admin';
   if(isAdmin){
     document.getElementById('ni-settings').style.display='flex';
-    ['song-add-btn','ev-add-btn','ev-export-btn','ev-import-btn','ann-add-btn','cal-add-btn','media-add-btn','media-album-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
+    ['song-add-btn','ev-add-btn','ev-chat-btn','ev-export-btn','ev-import-btn','ann-add-btn','cal-add-btn','media-add-btn','media-album-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
   }
   SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
   // Track last seen
@@ -2245,6 +2267,278 @@ async function doImportEvents(){
   window._pendingEvents=null;
   T(`${evCreated} Veranstaltungen importiert`,'ok');
 }
+
+// ========== KI ASSISTENT ==========
+let astState={mode:null,pendingEvent:null,pendingMatches:[],pendingSong:null};
+
+function openAssistant(){
+  astState={mode:null,pendingEvent:null,pendingMatches:[],pendingSong:null};
+  document.getElementById('ast-msgs').innerHTML='';
+  document.getElementById('ast-actions').style.display='none';
+  document.getElementById('ast-input').value='';
+  astBot('Hallo! Ich helfe dir beim Anlegen von Veranstaltungen und Liedern.\n\nMoeglichkeiten:\n- Programm eingeben (Datum, Lieder, Predigten)\n- "Neues Lied: [Titel] von [Komponist]"\n\nWie kann ich helfen?');
+  openModal('m-assistant');
+}
+
+function astAddMsg(role,html){
+  const el=document.getElementById('ast-msgs');
+  const d=document.createElement('div');
+  d.className='ast-msg '+role;
+  d.innerHTML='<div class="ast-bbl">'+html+'</div>';
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+function astBot(txt){astAddMsg('bot',txt.replace(/\n/g,'<br>'));}
+function astUser(txt){astAddMsg('user',esc(txt));}
+function astShowActions(buttons){
+  const el=document.getElementById('ast-actions');
+  el.style.display='';
+  el.innerHTML=buttons.map(b=>'<button class="btn btn-g btn-sm" style="margin:3px" onclick="'+b.fn+'">'+esc(b.label)+'</button>').join('');
+}
+function astClearActions(){const el=document.getElementById('ast-actions');if(el){el.style.display='none';el.innerHTML='';}}
+
+async function sendAssistant(){
+  const inp=document.getElementById('ast-input');
+  const text=inp.value.trim();if(!text)return;
+  inp.value='';astUser(text);astClearActions();
+  await processAssistant(text);
+}
+
+function normStr(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+
+function fuzzyMatch(query,target){
+  const q=normStr(query),t=normStr(target);
+  if(!q||!t)return false;
+  if(t.includes(q)||q.includes(t))return true;
+  const qw=q.split(' ').filter(w=>w.length>2);
+  const tw=t.split(' ');
+  const overlap=qw.filter(w=>tw.some(tw2=>tw2.includes(w)||w.includes(tw2)));
+  return overlap.length>=Math.min(2,Math.max(1,qw.length-1));
+}
+
+function findSongs(query,songs){
+  const q=normStr(query);
+  const exact=songs.filter(s=>normStr(s.liedanfang||s.title||'')===q||normStr(s.title||'')===q);
+  if(exact.length)return{type:'exact',matches:exact};
+  const strong=songs.filter(s=>normStr(s.liedanfang||'').startsWith(q.split(' ')[0])||normStr(s.title||'').startsWith(q.split(' ')[0]));
+  const fuzzy=songs.filter(s=>!strong.includes(s)&&(fuzzyMatch(q,s.liedanfang||'')||fuzzyMatch(q,s.title||'')));
+  const all=[...strong,...fuzzy];
+  if(!all.length)return{type:'notfound',matches:[]};
+  if(all.length===1)return{type:'exact',matches:all};
+  return{type:'ambiguous',matches:all.slice(0,4)};
+}
+
+function resolveInitials(initStr,members){
+  if(!initStr)return'';
+  const parts=initStr.trim().split(/[\s,]+/).filter(Boolean);
+  return parts.map(init=>{
+    const up=init.toUpperCase();
+    const low=init.toLowerCase();
+    // 1. Exact 2-letter initials: SF → Siegfried Frey
+    if(/^[A-ZÜÖÄ]{2}$/.test(up)){
+      const m=members.find(m=>{const np=m.name.split(' ');const ini=np.map(p=>p.charAt(0).toUpperCase()).join('');return ini===up;});
+      if(m)return m.name;
+    }
+    // 2. First name match: "Max" → "Max Muster"
+    const byFirst=members.find(m=>m.name.split(' ')[0].toLowerCase()===low);
+    if(byFirst)return byFirst.name;
+    // 3. Last name match: "Muster" → "Max Muster"
+    const byLast=members.find(m=>m.name.split(' ').slice(-1)[0].toLowerCase()===low);
+    if(byLast)return byLast.name;
+    // 4. Partial name match (at least 3 chars)
+    if(init.length>=3){
+      const byPartial=members.find(m=>m.name.toLowerCase().includes(low));
+      if(byPartial)return byPartial.name;
+    }
+    // Return as-is if no match
+    return init;
+  }).join(', ');
+}
+
+function parseProgramLine(line,members){
+  const l=line.trim();
+  const liedMatch=l.match(/^(?:lied|l\.?):?\s*(.+)/i);
+  if(liedMatch){
+    let rest=liedMatch[1].trim();
+    const initialsMatch=rest.match(/^(.+?)\s+([A-ZÜÖÄ]{2,3}(?:[,\s]+[A-ZÜÖÄ]{2,3})*)\s*$/);
+    let title=rest,dirigent='',klavier='';
+    if(initialsMatch){
+      title=initialsMatch[1].trim();
+      const inits=initialsMatch[2].split(/[,\s]+/).filter(i=>i.length>=2);
+      if(inits[0])dirigent=resolveInitials(inits[0],members);
+      if(inits[1])klavier=resolveInitials(inits[1],members);
+    }
+    return{type:'lied',title,dirigent,klavier};
+  }
+  const predMatch=l.match(/^predigt\s*\d*:?\s*(.+)/i);
+  if(predMatch){
+    const parts=predMatch[1].split(/[,;]\s*/);
+    return{type:'predigt',thema:parts[0]||'',bibel:parts.slice(1).join(', ')};
+  }
+  const sonstKeys=['einleitung','begruessung','begrü','gebet','ansage','kollekte','abendmahl','sonstiges','abkündigung'];
+  if(sonstKeys.some(k=>normStr(l).includes(normStr(k)))){return{type:'sonstiges',name:l};}
+  if(l.length>2&&l.length<80&&!/^\d+\./.test(l)){return{type:'lied',title:l,dirigent:'',klavier:''};}
+  return null;
+}
+
+async function processAssistant(text){
+  const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
+  const{data:members}=await SB.from('profiles').select('name,role2').eq('active',true);
+  const allMembers=members||[];
+
+  if(astState.mode==='confirm_songs'){
+    if(/^ja|ok|richtig|stimmt|yes|passt/i.test(text)){await createEventFromState();}
+    else if(/^nein|no|falsch|anders/i.test(text)){astBot('Was soll ich anders zuordnen? Schreib z.B. "Zeile 2: Gott ist gut"');astState.mode=null;}
+    else{astBot('Bitte antworte mit "Ja" oder "Nein".');}
+    return;
+  }
+  if(astState.mode==='new_song'||astState.mode==='add_song'){
+    const songInfo=parseSongInput(text);
+    astBot('Lied anlegen:\n- Liedanfang: '+(songInfo.liedanfang||songInfo.title||'–')+'\n- Komponist: '+(songInfo.komponist||'–')+'\n\nSoll ich es aufnehmen?');
+    astState.pendingSong=songInfo;astState.mode='confirm_song';
+    astShowActions([{label:'✓ Ja',fn:'confirmAddSong()'},{label:'✗ Nein',fn:"astState.mode=null;astClearActions();"}]);
+    return;
+  }
+  if(astState.mode==='confirm_song'){
+    if(/^ja|ok|yes/i.test(text)){await confirmAddSong();}
+    else{astBot('Abgebrochen.');astState.mode=null;}
+    return;
+  }
+
+  if(/neues?\s+lied|lied\s+(hinzuf|anlegen)/i.test(text)){
+    astBot('Gib bitte die Liedinfos ein, z.B.:\n"Du bist da, Komponist: Max Muster"');
+    astState.mode='new_song';return;
+  }
+
+  const lines=text.split(/\n/).map(l=>l.trim()).filter(l=>l);
+  let eventDate=null,eventTitle='Chor';
+  const dateLine=lines[0]?.match(/^(\d{1,2})\.(\d{1,2})\.?(\d{2,4})?\s*(.*)/);
+  if(dateLine){
+    let y=dateLine[3]?parseInt(dateLine[3]):new Date().getFullYear();if(y<100)y+=2000;
+    eventDate=y+'-'+dateLine[2].padStart(2,'0')+'-'+dateLine[1].padStart(2,'0');
+    eventTitle=dateLine[4]||'Chor';lines.shift();
+  }
+  const parsed=[];
+  for(const line of lines){const p=parseProgramLine(line,allMembers);if(p)parsed.push({...p,original:line});}
+  if(!parsed.length){
+    astBot('Kein Programm erkannt.\n\nBeispiel:\n21.05.2026 Chor\nLied: Du bist da SF LB\nPredigt: Gottes Liebe, Joh 3,16\nEinleitung');
+    return;
+  }
+  const matchResults=[];
+  for(const item of parsed){
+    if(item.type==='lied'){const r=findSongs(item.title,songs);matchResults.push({...item,matchType:r.type,matches:r.matches});}
+    else matchResults.push({...item,matchType:'special'});
+  }
+  astState.pendingMatches=matchResults;
+  astState.pendingEvent={datum:eventDate,title:eventTitle,ort:'Bielefeld',uhrzeit:'10:00'};
+  astState.mode='confirm_songs';
+
+  let msg=eventDate?'Datum: '+fD(eventDate)+' – '+eventTitle+'\n\n':'';
+  msg+='Habe ich alles richtig erkannt?\n\n';
+  matchResults.forEach((m,i)=>{
+    const pos=i+1;
+    if(m.type==='lied'){
+      if(m.matchType==='exact'){
+        const s=m.matches[0];msg+=pos+'. ✅ "'+m.title+'" → '+(s.liedanfang||s.title);
+        if(m.dirigent)msg+=' (Dir: '+m.dirigent+')';
+        if(m.klavier)msg+=' (Kl: '+m.klavier+')';
+        msg+='\n';
+      } else if(m.matchType==='ambiguous'){
+        msg+=pos+'. ❓ "'+m.title+'" – welches?\n';
+        m.matches.forEach((s,j)=>{msg+='   '+(j+1)+') '+(s.liedanfang||s.title)+'\n';});
+      } else {
+        msg+=pos+'. ❌ "'+m.title+'" – nicht im Repertoire\n';
+      }
+    } else if(m.type==='predigt'){
+      msg+=pos+'. 🎤 Predigt: '+m.thema+(m.bibel?' ('+m.bibel+')':'')+'\n';
+    } else {
+      msg+=pos+'. ✦ '+m.name+'\n';
+    }
+  });
+  msg+='\nJa = anlegen, Nein = korrigieren';
+  astBot(msg);
+  const hasNotFound=matchResults.some(m=>m.matchType==='notfound');
+  const btns=[{label:'✓ Ja, anlegen',fn:'sendAssistantYes()'}];
+  if(hasNotFound)btns.push({label:'+ Fehlende ins Repertoire',fn:'addMissingToRepertoire()'});
+  btns.push({label:'✗ Abbrechen',fn:"astState.mode=null;astClearActions();"});
+  astShowActions(btns);
+}
+
+function sendAssistantYes(){astClearActions();astUser('Ja');createEventFromState();}
+
+async function confirmAddSong(){
+  if(!astState.pendingSong)return;
+  const{error}=await SB.from('songs').insert({...astState.pendingSong,created_by:currentUser.id});
+  if(error){astBot('Fehler: '+error.message);return;}
+  const{data:ns}=await SB.from('songs').select('*').order('liedanfang',{nullsFirst:false});
+  if(ns)cachedSongs=ns;
+  astBot('✓ Lied wurde ins Repertoire aufgenommen!');
+  astState.mode=null;astClearActions();T('Lied hinzugefügt','ok');
+}
+
+async function addMissingToRepertoire(){
+  astClearActions();
+  const missing=astState.pendingMatches.filter(m=>m.matchType==='notfound');
+  astBot('Fehlende Lieder:\n'+missing.map(m=>'• "'+m.title+'"').join('\n')+'\n\nGib zuerst für "'+missing[0].title+'" die Infos ein (oder schreib "überspringen"):');
+  astState._missingQueue=[...missing];astState._missingIdx=0;astState.mode='fill_missing';
+}
+
+async function createEventFromState(){
+  astClearActions();
+  const ev=astState.pendingEvent;const matches=astState.pendingMatches;
+  let evId=null;
+  const{data:newEv,error}=await SB.from('events').insert({title:ev.title||'Chor',datum:ev.datum,uhrzeit:ev.uhrzeit,ort:ev.ort,created_by:currentUser.id}).select().single();
+  if(error){astBot('Fehler: '+error.message);return;}
+  evId=newEv.id;
+  const prog=matches.map((m,i)=>{
+    if(m.type==='predigt')return{event_id:evId,position:i+1,song_id:null,placeholder:'[Predigt] '+m.thema+'|'+m.prediger+'|'+m.bibel};
+    if(m.type==='sonstiges')return{event_id:evId,position:i+1,song_id:null,placeholder:'[Sonstiges] '+m.name+'|'};
+    if(m.matchType==='exact'||m.matchType==='ambiguous'){const s=m.matches[0];return{event_id:evId,position:i+1,song_id:s.id,dirigent:m.dirigent||'',klavier:m.klavier||'',placeholder:null};}
+    return{event_id:evId,position:i+1,song_id:null,placeholder:m.title};
+  });
+  if(prog.length)await SB.from('event_program').insert(prog);
+  astBot('✅ Veranstaltung'+(ev.datum?' vom '+fD(ev.datum):'')+' angelegt!\n'+prog.length+' Programmpunkte eingetragen.');
+  astState={mode:null,pendingEvent:null,pendingMatches:[],pendingSong:null};
+  renderEvents();
+  astShowActions([{label:'Fertig',fn:"closeModal('m-assistant')"},{label:'Weiteres anlegen',fn:"document.getElementById('ast-input').focus();astClearActions();"}]);
+}
+
+function parseSongInput(text){
+  const song={title:'',liedanfang:'',komponist:'',textdichter:'',arrangeur:'',uebersetzer:'',komponist_lz:'',textdichter_lz:'',arrangeur_lz:'',links:[],created_by:currentUser.id};
+  // Field aliases – full names and shortcuts
+  const aliases={
+    komponist:   /(?:komponist|komp?\.?|k\.?|musik|music|composer|comp\.?):\s*([^\n,]+)/gi,
+    textdichter: /(?:textdichter|text\.?|t\.?|dichter|lyricist|lyrics\.?):\s*([^\n,]+)/gi,
+    arrangeur:   /(?:arrangeur|arr\.?|a\.?):\s*([^\n,]+)/gi,
+    uebersetzer: /(?:übersetzer|uebersetzer|übers\.?|transl\.?):\s*([^\n,]+)/gi,
+    liedanfang:  /(?:liedanfang|anfang|la\.?):\s*([^\n,]+)/gi,
+    komponist_lz:/(?:lebensdaten[-\s]?komponist|lz[-\s]?k|kl\.?):\s*([^\n,]+)/gi,
+    textdichter_lz:/(?:lebensdaten[-\s]?text|lz[-\s]?t|tl\.?):\s*([^\n,]+)/gi,
+  };
+  let remaining=text.replace(/^neues?\s+lied:?\s*/i,'').trim();
+  // Extract all known fields
+  for(const[field,re] of Object.entries(aliases)){
+    re.lastIndex=0;
+    const m=re.exec(remaining);
+    if(m&&!song[field]){
+      song[field]=m[1].trim();
+      remaining=remaining.replace(m[0],'').trim();
+    }
+  }
+  // "Titel von Komponist" pattern
+  const vonMatch=remaining.match(/^([^,\n]+?)\s+von\s+([^,\n]+)/i);
+  if(vonMatch&&!song.komponist){
+    song.title=vonMatch[1].trim();
+    song.komponist=vonMatch[2].trim();
+    remaining='';
+  }
+  // Remaining first part = title
+  if(!song.title&&remaining){
+    song.title=remaining.split(/[,\n]/)[0].trim();
+  }
+  if(!song.liedanfang)song.liedanfang=song.title;
+  return song;
+}
+
 async function renderSettings(tab='members'){
   if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins.</p>';return;}
   const tabs=`<div class="view-tabs" style="margin-bottom:16px">

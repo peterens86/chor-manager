@@ -542,12 +542,12 @@ textarea.fi{resize:vertical;min-height:70px;}
   <div class="mhandle"></div>
   <div class="mh"><h3>✦ KI-Assistent</h3><button class="mclose" onclick="closeModal('m-assistant')">×</button></div>
   <div class="mb" style="display:flex;flex-direction:column;gap:0;padding:0">
-    <div id="ast-msgs" style="flex:1;overflow-y:auto;padding:12px;min-height:200px;max-height:50vh"></div>
+    <div id="ast-msgs" style="flex:1;overflow-y:auto;padding:12px;min-height:120px;max-height:40vh"></div>
     <div id="ast-actions" style="padding:10px 12px;border-top:0.5px solid var(--border);display:none"></div>
     <div style="padding:6px 12px;border-top:0.5px solid var(--border);display:flex;align-items:flex-end;gap:8px;position:relative">
       <label title="PDF hochladen" style="cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding-bottom:6px">📄<input type="file" id="ast-pdf" accept=".pdf,.txt" multiple style="display:none" onchange="handleAstFiles(event)"></label>
       <div style="flex:1;position:relative">
-        <textarea class="fi" id="ast-input" placeholder="Programm, Liedinfos oder PDF hochladen…" style="width:100%;min-height:38px;max-height:180px;resize:vertical;line-height:1.5" rows="1"
+        <textarea class="fi" id="ast-input" placeholder="Programm, Liedinfos oder PDF hochladen…" style="width:100%;min-height:38px;max-height:300px;resize:vertical;line-height:1.8;font-size:13px" rows="1"
           onkeydown="astKeyDown(event)"
           oninput="astInputChanged(this)"></textarea>
         <div id="ast-suggest" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);max-height:200px;overflow-y:auto;z-index:200;margin-bottom:4px;box-shadow:0 -4px 16px rgba(0,0,0,.4)"></div>
@@ -2409,7 +2409,9 @@ function astClearActions(){const el=document.getElementById('ast-actions');if(el
 async function sendAssistant(){
   const inp=document.getElementById('ast-input');
   const text=inp.value.trim();if(!text)return;
-  inp.value='';astUser(text);astClearActions();
+  inp.value='';inp.style.minHeight='38px';
+  astHideSuggest();
+  astUser(text);astClearActions();
   await processAssistant(text);
 }
 
@@ -2620,6 +2622,7 @@ Lizenz: `;
     // Put template in input field so user can edit it
     const inp=document.getElementById('ast-input');
     inp.value=template;inp.focus();
+    inp.style.minHeight='220px';
     astState.mode='new_song';return;
   }
 

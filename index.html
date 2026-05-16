@@ -232,6 +232,7 @@ textarea.fi{resize:vertical;min-height:70px;}
 /* File chips */
 .ffile{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:var(--r);background:var(--card);border:0.5px solid var(--border);font-size:11px;color:var(--text2);margin:3px;cursor:pointer;}
 .ffile:hover{border-color:var(--accent2);}
+.ast-sug-item.active{background:rgba(201,168,76,.15)!important;}
 /* Assistant chat */
 .ast-msg{margin-bottom:10px;clear:both;}
 .ast-msg.user .ast-bbl{background:rgba(201,168,76,.15);border:0.5px solid rgba(201,168,76,.3);border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;display:inline-block;max-width:88%;float:right;}
@@ -543,10 +544,15 @@ textarea.fi{resize:vertical;min-height:70px;}
   <div class="mb" style="display:flex;flex-direction:column;gap:0;padding:0">
     <div id="ast-msgs" style="flex:1;overflow-y:auto;padding:12px;min-height:200px;max-height:50vh"></div>
     <div id="ast-actions" style="padding:10px 12px;border-top:0.5px solid var(--border);display:none"></div>
-    <div style="padding:6px 12px;border-top:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
-      <label title="PDF hochladen" style="cursor:pointer;color:var(--text3);font-size:18px;line-height:1">📄<input type="file" id="ast-pdf" accept=".pdf,.txt" multiple style="display:none" onchange="handleAstFiles(event)"></label>
-      <input class="fi" id="ast-input" placeholder="Programm, Liedinfos oder PDF hochladen…" style="flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAssistant();}">
-      <button class="btn btn-p btn-sm" onclick="sendAssistant()">→</button>
+    <div style="padding:6px 12px;border-top:0.5px solid var(--border);display:flex;align-items:flex-end;gap:8px;position:relative">
+      <label title="PDF hochladen" style="cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding-bottom:6px">📄<input type="file" id="ast-pdf" accept=".pdf,.txt" multiple style="display:none" onchange="handleAstFiles(event)"></label>
+      <div style="flex:1;position:relative">
+        <textarea class="fi" id="ast-input" placeholder="Programm, Liedinfos oder PDF hochladen…" style="width:100%;min-height:38px;max-height:180px;resize:vertical;line-height:1.5" rows="1"
+          onkeydown="astKeyDown(event)"
+          oninput="astInputChanged(this)"></textarea>
+        <div id="ast-suggest" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);max-height:200px;overflow-y:auto;z-index:200;margin-bottom:4px;box-shadow:0 -4px 16px rgba(0,0,0,.4)"></div>
+      </div>
+      <button class="btn btn-p btn-sm" style="flex-shrink:0;margin-bottom:2px" onclick="sendAssistant()">→</button>
     </div>
   </div>
 </div></div>
@@ -2407,7 +2413,84 @@ async function sendAssistant(){
   await processAssistant(text);
 }
 
-function normStr(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+let _astSuggestIdx=-1;
+
+function astKeyDown(e){
+  const sug=document.getElementById('ast-suggest');
+  const items=sug?.querySelectorAll('.ast-sug-item')||[];
+  if(sug&&sug.style.display!=='none'&&items.length){
+    if(e.key==='ArrowDown'){e.preventDefault();_astSuggestIdx=Math.min(_astSuggestIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('active',i===_astSuggestIdx));items[_astSuggestIdx]?.scrollIntoView({block:'nearest'});return;}
+    if(e.key==='ArrowUp'){e.preventDefault();_astSuggestIdx=Math.max(_astSuggestIdx-1,0);items.forEach((el,i)=>el.classList.toggle('active',i===_astSuggestIdx));items[_astSuggestIdx]?.scrollIntoView({block:'nearest'});return;}
+    if(e.key==='Tab'||e.key==='Enter'&&_astSuggestIdx>=0){e.preventDefault();items[Math.max(_astSuggestIdx,0)]?.click();return;}
+    if(e.key==='Escape'){astHideSuggest();return;}
+  }
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();astHideSuggest();sendAssistant();}
+}
+
+function astInputChanged(ta){
+  const val=ta.value;
+  // Get current line being typed
+  const lines=val.split('\n');
+  const curLine=lines[lines.length-1];
+  // Check if we're on a field line: "Feldname: partialValue"
+  const fieldMatch=curLine.match(/^(\w[\w\s\.]*?):\s*(.*)$/);
+  if(!fieldMatch||fieldMatch[2].length<1){astHideSuggest();return;}
+  const query=fieldMatch[2].trim().toLowerCase();
+  const fieldName=fieldMatch[1].toLowerCase();
+  // Determine what to search
+  let candidates=[];
+  const songs=cachedSongs;
+  if(/komponist|komp|k\./i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.komponist).filter(Boolean))];}
+  else if(/textdichter|text|t\./i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.textdichter).filter(Boolean))];}
+  else if(/arrangeur|arr/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.arrangeur).filter(Boolean))];}
+  else if(/uebersetzer|übersetzer/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.uebersetzer).filter(Boolean))];}
+  else if(/liedanfang|anfang|titel|title/i.test(fieldName)){candidates=[...new Set(songs.flatMap(s=>[s.liedanfang,s.title]).filter(Boolean))];}
+  else if(/besetzung|voicing/i.test(fieldName)){candidates=['SATB','TTBB','SSA','SAB','SSAA','Gemischter Chor','Männerchor','Frauenchor'];}
+  else{astHideSuggest();return;}
+  // Filter candidates
+  const matches=candidates.filter(c=>c.toLowerCase().includes(query)).slice(0,8);
+  if(!matches.length){astHideSuggest();return;}
+  astShowSuggest(matches,fieldMatch[1]+': ',lines,val);
+}
+
+function astShowSuggest(matches,prefix,lines,fullVal){
+  const sug=document.getElementById('ast-suggest');
+  _astSuggestIdx=-1;
+  sug.innerHTML=matches.map((m,i)=>`<div class="ast-sug-item" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:0.5px solid var(--border)" onmousedown="event.preventDefault();astSelectSuggest('${esc(prefix)}','${esc(m)}')" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background=''">${esc(m)}</div>`).join('');
+  sug.style.display='';
+  // Store context for selection
+  sug._prefix=prefix;sug._lines=lines;sug._fullVal=fullVal;
+}
+
+function astSelectSuggest(prefix,value){
+  const ta=document.getElementById('ast-input');
+  const lines=ta.value.split('\n');
+  // Replace last line with completed value
+  lines[lines.length-1]=prefix+value;
+  // Also auto-fill lebensdaten if person found
+  const lz=personLzMap[value.toLowerCase()];
+  const lzFieldMap={'Komponist: ':'Komp. Lebensdaten: ','Textdichter: ':'Text. Lebensdaten: ','Arrangeur: ':'Arr. Lebensdaten: ','Übersetzer: ':'Übers. Lebensdaten: '};
+  if(lz&&lzFieldMap[prefix]){
+    // Check if next line is the lz field – if empty, fill it
+    const nextIdx=lines.length; // would be next line
+    const lzLine=lines[nextIdx];
+    const lzPrefix=lzFieldMap[prefix];
+    if(lzLine&&lzLine.startsWith(lzPrefix)&&!lzLine.slice(lzPrefix.length).trim()){
+      lines[nextIdx]=lzPrefix+lz;
+    }
+  }
+  ta.value=lines.join('\n');
+  astHideSuggest();ta.focus();
+  // Move cursor to end of completed line
+  const pos=lines.slice(0,lines.length).join('\n').length;
+  ta.setSelectionRange(pos,pos);
+}
+
+function astHideSuggest(){
+  const sug=document.getElementById('ast-suggest');
+  if(sug)sug.style.display='none';
+  _astSuggestIdx=-1;
+}
 
 function fuzzyMatch(query,target){
   const q=normStr(query),t=normStr(target);
@@ -2537,8 +2620,6 @@ Lizenz: `;
     // Put template in input field so user can edit it
     const inp=document.getElementById('ast-input');
     inp.value=template;inp.focus();
-    // Make textarea-like for multiline
-    inp.style.height='auto';
     astState.mode='new_song';return;
   }
 

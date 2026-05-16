@@ -2445,8 +2445,10 @@ function astInputChanged(ta){
   if(/komponist|komp|k\./i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.komponist).filter(Boolean))];}
   else if(/textdichter|text|t\./i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.textdichter).filter(Boolean))];}
   else if(/arrangeur|arr/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.arrangeur).filter(Boolean))];}
-  else if(/uebersetzer|übersetzer/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.uebersetzer).filter(Boolean))];}
-  else if(/liedanfang|anfang|titel|title/i.test(fieldName)){candidates=[...new Set(songs.flatMap(s=>[s.liedanfang,s.title]).filter(Boolean))];}
+  else if(/uebersetzer|übersetzer|übers/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.uebersetzer).filter(Boolean))];}
+  else if(/liedanfang|anfang/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.liedanfang).filter(Boolean))];}
+  else if(/^titel|^title/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.title).filter(Boolean))];}
+  else if(/originaltitel/i.test(fieldName)){candidates=[...new Set(songs.map(s=>s.originaltitel).filter(Boolean))];}
   else if(/besetzung|voicing/i.test(fieldName)){candidates=['SATB','TTBB','SSA','SAB','SSAA','Gemischter Chor','Männerchor','Frauenchor'];}
   else{astHideSuggest();return;}
   // Filter candidates
@@ -2469,23 +2471,46 @@ function astSelectSuggest(prefix,value){
   const lines=ta.value.split('\n');
   // Replace last line with completed value
   lines[lines.length-1]=prefix+value;
-  // Also auto-fill lebensdaten if person found
+  // Auto-fill lebensdaten on the NEXT line if it's a lz field and still empty
+  const lzFieldMap={
+    'Komponist: ':'Komp. Lebensdaten: ',
+    'Textdichter: ':'Text. Lebensdaten: ',
+    'Arrangeur: ':'Arr. Lebensdaten: ',
+    'Übersetzer: ':'Übers. Lebensdaten: ',
+  };
+  const lzPrefix=lzFieldMap[prefix];
   const lz=personLzMap[value.toLowerCase()];
-  const lzFieldMap={'Komponist: ':'Komp. Lebensdaten: ','Textdichter: ':'Text. Lebensdaten: ','Arrangeur: ':'Arr. Lebensdaten: ','Übersetzer: ':'Übers. Lebensdaten: '};
-  if(lz&&lzFieldMap[prefix]){
-    // Check if next line is the lz field – if empty, fill it
-    const nextIdx=lines.length; // would be next line
-    const lzLine=lines[nextIdx];
-    const lzPrefix=lzFieldMap[prefix];
-    if(lzLine&&lzLine.startsWith(lzPrefix)&&!lzLine.slice(lzPrefix.length).trim()){
-      lines[nextIdx]=lzPrefix+lz;
+  if(lz&&lzPrefix){
+    // Find next lz line in template and fill it
+    for(let i=lines.length;i<lines.length+5;i++){
+      if(lines[i]&&lines[i].startsWith(lzPrefix)&&!lines[i].slice(lzPrefix.length).trim()){
+        lines[i]=lzPrefix+lz;break;
+      }
     }
   }
   ta.value=lines.join('\n');
   astHideSuggest();ta.focus();
-  // Move cursor to end of completed line
-  const pos=lines.slice(0,lines.length).join('\n').length;
+  const pos=ta.value.length;
   ta.setSelectionRange(pos,pos);
+  // Show validation hint if name is new to repertoire
+  if(['Komponist: ','Textdichter: ','Arrangeur: ','Übersetzer: '].includes(prefix)){
+    const isKnown=personLzMap[value.toLowerCase()]||cachedSongs.some(s=>
+      [s.komponist,s.textdichter,s.arrangeur,s.uebersetzer].some(n=>n===value));
+    if(!isKnown){
+      // Small hint – person not yet in repertoire
+      const hint=document.createElement('div');
+      hint.style.cssText='position:absolute;bottom:100%;right:0;background:rgba(232,160,32,.15);border:0.5px solid rgba(232,160,32,.4);border-radius:var(--r);padding:4px 10px;font-size:11px;color:var(--warn);margin-bottom:4px;white-space:nowrap;pointer-events:none;z-index:201';
+      hint.textContent='⚠ Neu im Repertoire';
+      ta.parentElement.appendChild(hint);
+      setTimeout(()=>hint.remove(),2500);
+    } else if(lz){
+      const hint=document.createElement('div');
+      hint.style.cssText='position:absolute;bottom:100%;right:0;background:rgba(76,175,130,.1);border:0.5px solid rgba(76,175,130,.3);border-radius:var(--r);padding:4px 10px;font-size:11px;color:var(--success);margin-bottom:4px;white-space:nowrap;pointer-events:none;z-index:201';
+      hint.textContent=`✓ ${lz}`;
+      ta.parentElement.appendChild(hint);
+      setTimeout(()=>hint.remove(),2500);
+    }
+  }
 }
 
 function astHideSuggest(){
@@ -2583,17 +2608,32 @@ async function processAssistant(text){
   if(astState.mode==='new_song'||astState.mode==='add_song'){
     // User filled in the template - parse it
     const songInfo=parseSongInput(text);
-    // Show preview of all filled fields
+    // Auto-fill lebensdaten from existing songs
+    const lzFields=[['komponist','komponist_lz'],['textdichter','textdichter_lz'],['arrangeur','arrangeur_lz'],['uebersetzer','uebersetzer_lz']];
+    lzFields.forEach(([nameKey,lzKey])=>{
+      const name=(songInfo[nameKey]||'').toLowerCase().trim();
+      if(name&&!songInfo[lzKey]&&personLzMap[name])songInfo[lzKey]=personLzMap[name];
+    });
+    // Validate names against known persons (warn if not found)
+    const personFields=['komponist','textdichter','arrangeur','uebersetzer'];
+    const unknownPersons=personFields.filter(f=>songInfo[f]&&!personLzMap[songInfo[f].toLowerCase().trim()]&&!cachedSongs.some(s=>s[f]===songInfo[f]));
+    // Show preview
     const fields=[
-      ['Liedanfang',songInfo.liedanfang],['Titel',songInfo.title&&songInfo.title!==songInfo.liedanfang?songInfo.title:''],
-      ['Komponist',songInfo.komponist],['Komp. Lebensdaten',songInfo.komponist_lz],
-      ['Textdichter',songInfo.textdichter],['Text. Lebensdaten',songInfo.textdichter_lz],
-      ['Arrangeur',songInfo.arrangeur],['Besetzung',songInfo.besetzung],
-      ['Rechte',songInfo.rechte],['Lizenz',songInfo.lizenz],
+      ['Liedanfang',songInfo.liedanfang],
+      ['Titel',songInfo.title&&songInfo.title!==songInfo.liedanfang?songInfo.title:''],
+      ['Originaltitel',songInfo.originaltitel],
+      ['Komponist',songInfo.komponist+(songInfo.komponist_lz?' ('+songInfo.komponist_lz+')':'')],
+      ['Textdichter',songInfo.textdichter+(songInfo.textdichter_lz?' ('+songInfo.textdichter_lz+')':'')],
+      ['Arrangeur',songInfo.arrangeur+(songInfo.arrangeur_lz?' ('+songInfo.arrangeur_lz+')':'')],
+      ['Übersetzer',songInfo.uebersetzer+(songInfo.uebersetzer_lz?' ('+songInfo.uebersetzer_lz+')':'')],
+      ['Besetzung',songInfo.besetzung],
+      ['Rechte',songInfo.rechte],
     ].filter(([,v])=>v);
-    const preview=fields.length
-      ?'Lied anlegen:\n'+fields.map(([k,v])=>`• ${k}: ${v}`).join('\n')+'\n\nSoll ich es aufnehmen?'
+    let preview=fields.length
+      ?'Lied anlegen:\n'+fields.map(([k,v])=>`• ${k}: ${v}`).join('\n')
       :'Ich konnte keine Felder erkennen. Bitte die Vorlage ausfüllen.';
+    if(unknownPersons.length)preview+=`\n\n⚠️ Unbekannte Personen (neu im Repertoire):\n${unknownPersons.map(f=>`• ${songInfo[f]}`).join('\n')}`;
+    preview+='\n\nSoll ich es aufnehmen?';
     astBot(preview);
     if(fields.length){
       astState.pendingSong=songInfo;astState.mode='confirm_song';
@@ -2611,13 +2651,12 @@ async function processAssistant(text){
     const template=`Liedanfang: 
 Titel: 
 Komponist: 
-Komp. Lebensdaten: 
 Textdichter: 
-Text. Lebensdaten: 
 Arrangeur: 
+Übersetzer: 
+Originaltitel: 
 Besetzung: 
-Rechte: 
-Lizenz: `;
+Rechte: `;
     astBot('Fülle die Felder aus (leere Felder einfach leer lassen) und schicke es ab:');
     // Put template in input field so user can edit it
     const inp=document.getElementById('ast-input');

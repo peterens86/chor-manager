@@ -543,8 +543,9 @@ textarea.fi{resize:vertical;min-height:70px;}
   <div class="mb" style="display:flex;flex-direction:column;gap:0;padding:0">
     <div id="ast-msgs" style="flex:1;overflow-y:auto;padding:12px;min-height:200px;max-height:50vh"></div>
     <div id="ast-actions" style="padding:10px 12px;border-top:0.5px solid var(--border);display:none"></div>
-    <div style="padding:10px 12px;border-top:0.5px solid var(--border);display:flex;gap:8px">
-      <input class="fi" id="ast-input" placeholder="Programm eingeben oder Lied beschreiben…" style="flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAssistant();}">
+    <div style="padding:6px 12px;border-top:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
+      <label title="PDF hochladen" style="cursor:pointer;color:var(--text3);font-size:18px;line-height:1">📄<input type="file" id="ast-pdf" accept=".pdf,.txt" multiple style="display:none" onchange="handleAstFiles(event)"></label>
+      <input class="fi" id="ast-input" placeholder="Programm, Liedinfos oder PDF hochladen…" style="flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAssistant();}">
       <button class="btn btn-p btn-sm" onclick="sendAssistant()">→</button>
     </div>
   </div>
@@ -2276,9 +2277,112 @@ function openAssistant(){
   document.getElementById('ast-msgs').innerHTML='';
   document.getElementById('ast-actions').style.display='none';
   document.getElementById('ast-input').value='';
-  astBot('Hallo! Ich helfe dir beim Anlegen von Veranstaltungen und Liedern.\n\nMoeglichkeiten:\n- Programm eingeben (Datum, Lieder, Predigten)\n- "Neues Lied: [Titel] von [Komponist]"\n\nWie kann ich helfen?');
+  astBot('Hallo! Ich helfe dir.\n\nMoeglichkeiten:\n- Programm eingeben (Datum, Lieder, Predigten)\n- "Neues Lied: Titel von Komponist"\n- PDF hochladen (Noten/Liedblatt) - ich lese Liedinformationen aus\n\nWie kann ich helfen?');
   openModal('m-assistant');
 }
+
+async function handleAstFiles(evt){
+  const files=[...evt.target.files];evt.target.value='';
+  for(const f of files){astUser('Datei: '+f.name);await processAstFile(f);}
+}
+
+async function processAstFile(file){
+  astBot('Lese "'+file.name+'"...');
+  let text='';
+  try{
+    if(file.name.toLowerCase().endsWith('.pdf')){text=await extractPdfText(file);}
+    else{const buf=await file.arrayBuffer();for(const enc of['utf-8','windows-1252']){try{const t=new TextDecoder(enc,{fatal:true}).decode(buf);text=t;break;}catch(e){}}}
+    if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  }catch(e){astBot('Fehler beim Lesen: '+e.message);return;}
+  if(!text.trim()){astBot('Konnte keinen Text lesen. Gescannte PDFs (Bilder) werden nicht unterstuetzt.');return;}
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  console.log('PDF lines[0..8]:',lines.slice(0,8));
+  const hasSongMeta=lines.filter(l=>/komponist|textdichter|arrangeur|besetzung|satb|ttbb|copyright|ccli|lizenz/i.test(l)).length>=1;
+  const hasProgram=lines.some(l=>/^\d{1,2}\.\d{1,2}\./.test(l));
+  if(hasProgram&&!hasSongMeta){document.getElementById('ast-input').value=lines.join('\n');astBot('Programm erkannt. Druecke Enter um es zu verarbeiten.');}
+  else{await processSongInfoPdf(lines,file.name);}
+}
+
+async function extractPdfText(file){
+  if(!window.pdfjsLib){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+      s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';res();};
+      s.onerror=rej;document.head.appendChild(s);
+    });
+  }
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  let full='';
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const content=await page.getTextContent();
+    full+=content.items.map(it=>it.str).join(' ')+'\n';
+  }
+  return full;
+}
+
+async function processSongInfoPdf(lines,filename){
+  const song={title:'',liedanfang:'',komponist:'',komponist_lz:'',textdichter:'',textdichter_lz:'',arrangeur:'',arrangeur_lz:'',besetzung:'',rechte:'',lizenz:'',links:[],created_by:currentUser.id};
+  const patterns=[
+    {f:'title',re:/^(?:titel|title):?\s*(.+)/i},
+    {f:'liedanfang',re:/^(?:liedanfang|anfang):?\s*(.+)/i},
+    {f:'komponist',re:/^(?:komponist|musik|music|composed?\s*by|melody):?\s*(.+)/i},
+    {f:'textdichter',re:/^(?:textdichter|text|words?\s*by|lyrics?):?\s*(.+)/i},
+    {f:'arrangeur',re:/^(?:arrangeur|arr\.?):?\s*(.+)/i},
+    {f:'besetzung',re:/^(?:besetzung|voicing|stimmen):?\s*(.+)/i},
+    {f:'rechte',re:/^(?:copyright|[\u00a9\(c\)]):?\s*(.+)/i},
+    {f:'lizenz',re:/^(?:lizenz|ccli|license):?\s*(.+)/i},
+  ];
+  const lzRe=/(\d{4})\s*[-\u2013\u2014]\s*(\d{4}|\?)/;
+  for(const line of lines){
+    for(const{f,re} of patterns){
+      const m=line.match(re);
+      if(m&&m[1]&&!song[f]){
+        song[f]=m[1].trim();
+        const lzm=m[1].match(lzRe);
+        if(lzm&&f+'_lz' in song){song[f+'_lz']=lzm[1]+'-'+lzm[2];song[f]=song[f].replace(lzRe,'').trim();}
+        break;
+      }
+    }
+  }
+  if(!song.title&&!song.liedanfang){const fl=lines.find(l=>l.length>2&&l.length<100&&!/^[\d\.]/.test(l));if(fl){song.title=fl;song.liedanfang=fl;}}
+  if(!song.title)song.title=song.liedanfang;
+  if(!song.liedanfang)song.liedanfang=song.title;
+  const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
+  const existing=songs.find(s=>normStr(s.liedanfang||s.title||'')===normStr(song.liedanfang||song.title||''));
+  let msg='Aus "'+filename+'" erkannt:\n\n';
+  msg+=(song.title||song.liedanfang||'Unbekannt')+'\n';
+  if(song.komponist)msg+='- Komponist: '+song.komponist+(song.komponist_lz?' ('+song.komponist_lz+')':'')+'\n';
+  if(song.textdichter)msg+='- Textdichter: '+song.textdichter+(song.textdichter_lz?' ('+song.textdichter_lz+')':'')+'\n';
+  if(song.arrangeur)msg+='- Arrangeur: '+song.arrangeur+'\n';
+  if(song.besetzung)msg+='- Besetzung: '+song.besetzung+'\n';
+  if(song.rechte)msg+='- Rechte: '+song.rechte+'\n';
+  if(song.lizenz)msg+='- Lizenz: '+song.lizenz+'\n';
+  if(existing){
+    const canUpdate=Object.entries(song).filter(([k,v])=>v&&typeof v==='string'&&!['title','links','created_by'].includes(k)&&!existing[k]);
+    if(canUpdate.length){
+      msg+='\nLied bereits vorhanden. Fehlende Infos ergaenzen:\n'+canUpdate.map(([k,v])=>'- '+k+': '+v).join('\n');
+      astBot(msg);astState.pendingSong={_id:existing.id,...Object.fromEntries(canUpdate)};astState.mode='update_song';
+      astShowActions([{label:'Infos ergaenzen',fn:'updateExistingSong()'},{label:'Abbrechen',fn:"astState.mode=null;astClearActions();"}]);
+    } else {msg+='\nAlles bereits vorhanden.';astBot(msg);}
+  } else {
+    msg+='\nSoll ich es ins Repertoire aufnehmen?';astBot(msg);
+    astState.pendingSong=song;astState.mode='confirm_song';
+    astShowActions([{label:'Aufnehmen',fn:'confirmAddSong()'},{label:'Abbrechen',fn:"astState.mode=null;astClearActions();"}]);
+  }
+}
+
+async function updateExistingSong(){
+  if(!astState.pendingSong?._id)return;
+  const{_id,...fields}=astState.pendingSong;
+  const{error}=await SB.from('songs').update(fields).eq('id',_id);
+  if(error){astBot('Fehler: '+error.message);return;}
+  const{data:ns}=await SB.from('songs').select('*').order('liedanfang',{nullsFirst:false});if(ns)cachedSongs=ns;
+  astBot('Lied aktualisiert!');astState.mode=null;astClearActions();T('Aktualisiert','ok');
+}
+
 
 function astAddMsg(role,html){
   const el=document.getElementById('ast-msgs');
@@ -2392,10 +2496,24 @@ async function processAssistant(text){
     return;
   }
   if(astState.mode==='new_song'||astState.mode==='add_song'){
+    // User filled in the template - parse it
     const songInfo=parseSongInput(text);
-    astBot('Lied anlegen:\n- Liedanfang: '+(songInfo.liedanfang||songInfo.title||'–')+'\n- Komponist: '+(songInfo.komponist||'–')+'\n\nSoll ich es aufnehmen?');
-    astState.pendingSong=songInfo;astState.mode='confirm_song';
-    astShowActions([{label:'✓ Ja',fn:'confirmAddSong()'},{label:'✗ Nein',fn:"astState.mode=null;astClearActions();"}]);
+    // Show preview of all filled fields
+    const fields=[
+      ['Liedanfang',songInfo.liedanfang],['Titel',songInfo.title&&songInfo.title!==songInfo.liedanfang?songInfo.title:''],
+      ['Komponist',songInfo.komponist],['Komp. Lebensdaten',songInfo.komponist_lz],
+      ['Textdichter',songInfo.textdichter],['Text. Lebensdaten',songInfo.textdichter_lz],
+      ['Arrangeur',songInfo.arrangeur],['Besetzung',songInfo.besetzung],
+      ['Rechte',songInfo.rechte],['Lizenz',songInfo.lizenz],
+    ].filter(([,v])=>v);
+    const preview=fields.length
+      ?'Lied anlegen:\n'+fields.map(([k,v])=>`• ${k}: ${v}`).join('\n')+'\n\nSoll ich es aufnehmen?'
+      :'Ich konnte keine Felder erkennen. Bitte die Vorlage ausfüllen.';
+    astBot(preview);
+    if(fields.length){
+      astState.pendingSong=songInfo;astState.mode='confirm_song';
+      astShowActions([{label:'✓ Ja, aufnehmen',fn:'confirmAddSong()'},{label:'✗ Abbrechen',fn:"astState.mode=null;astClearActions();"}]);
+    }
     return;
   }
   if(astState.mode==='confirm_song'){
@@ -2405,7 +2523,22 @@ async function processAssistant(text){
   }
 
   if(/neues?\s+lied|lied\s+(hinzuf|anlegen)/i.test(text)){
-    astBot('Gib bitte die Liedinfos ein, z.B.:\n"Du bist da, Komponist: Max Muster"');
+    const template=`Liedanfang: 
+Titel: 
+Komponist: 
+Komp. Lebensdaten: 
+Textdichter: 
+Text. Lebensdaten: 
+Arrangeur: 
+Besetzung: 
+Rechte: 
+Lizenz: `;
+    astBot('Fülle die Felder aus (leere Felder einfach leer lassen) und schicke es ab:');
+    // Put template in input field so user can edit it
+    const inp=document.getElementById('ast-input');
+    inp.value=template;inp.focus();
+    // Make textarea-like for multiline
+    inp.style.height='auto';
     astState.mode='new_song';return;
   }
 
@@ -2503,16 +2636,19 @@ async function createEventFromState(){
 }
 
 function parseSongInput(text){
-  const song={title:'',liedanfang:'',komponist:'',textdichter:'',arrangeur:'',uebersetzer:'',komponist_lz:'',textdichter_lz:'',arrangeur_lz:'',links:[],created_by:currentUser.id};
+  const song={title:'',liedanfang:'',komponist:'',komponist_lz:'',textdichter:'',textdichter_lz:'',arrangeur:'',arrangeur_lz:'',uebersetzer:'',besetzung:'',rechte:'',lizenz:'',links:[],created_by:currentUser.id};
   // Field aliases – full names and shortcuts
   const aliases={
-    komponist:   /(?:komponist|komp?\.?|k\.?|musik|music|composer|comp\.?):\s*([^\n,]+)/gi,
-    textdichter: /(?:textdichter|text\.?|t\.?|dichter|lyricist|lyrics\.?):\s*([^\n,]+)/gi,
+    komponist:   /(?:komponist|komp\.?\s*lebensdaten|komp\.?|k\.?|musik|music|composer|comp\.?):\s*([^\n,]+)/gi,
+    textdichter: /(?:textdichter|text\.?\s*lebensdaten|text\.?|t\.?|dichter|lyricist|lyrics\.?):\s*([^\n,]+)/gi,
     arrangeur:   /(?:arrangeur|arr\.?|a\.?):\s*([^\n,]+)/gi,
     uebersetzer: /(?:übersetzer|uebersetzer|übers\.?|transl\.?):\s*([^\n,]+)/gi,
     liedanfang:  /(?:liedanfang|anfang|la\.?):\s*([^\n,]+)/gi,
-    komponist_lz:/(?:lebensdaten[-\s]?komponist|lz[-\s]?k|kl\.?):\s*([^\n,]+)/gi,
-    textdichter_lz:/(?:lebensdaten[-\s]?text|lz[-\s]?t|tl\.?):\s*([^\n,]+)/gi,
+    besetzung:   /(?:besetzung|voicing|stimmen|satb|ttbb):\s*([^\n,]+)/gi,
+    rechte:      /(?:rechte|copyright|©):\s*([^\n,]+)/gi,
+    lizenz:      /(?:lizenz|ccli|license):\s*([^\n,]+)/gi,
+    komponist_lz:/(?:komp(?:onist)?\.?\s*lebensdaten|lz[-\s]?k):\s*([^\n,]+)/gi,
+    textdichter_lz:/(?:text(?:dichter)?\.?\s*lebensdaten|lz[-\s]?t):\s*([^\n,]+)/gi,
   };
   let remaining=text.replace(/^neues?\s+lied:?\s*/i,'').trim();
   // Extract all known fields

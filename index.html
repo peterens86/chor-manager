@@ -325,6 +325,7 @@ textarea.fi{resize:vertical;min-height:70px;}
       <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Titel, Chor, Thema…" oninput="filterEvents()" id="ev-search"></div>
       <div class="frow" id="ev-filters"></div>
       <div id="ev-placeholders" style="display:none;margin-bottom:10px"></div>
+      <button id="ev-ph-btn" onclick="togglePlaceholders()" style="display:none;width:100%;margin-bottom:10px" class="btn btn-g btn-sm"></button>
       <div id="ev-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
     </div>
     <!-- KALENDER -->
@@ -1065,18 +1066,37 @@ async function renderEvents(){
   displayEvents(filteredEvents());
   // Show placeholder list
   const phEl=document.getElementById('ev-placeholders');
+  const phBtn=document.getElementById('ev-ph-btn');
   const phs=(placeholders||[]).filter(p=>p.placeholder);
-  if(phs.length&&phEl){
-    phEl.style.display='';
-    phEl.innerHTML=`<div style="background:rgba(232,160,32,.08);border:0.5px solid rgba(232,160,32,.3);border-radius:var(--r2);padding:12px 14px">
+  if(phs.length&&phEl&&phBtn){
+    phBtn.style.display='';
+    phBtn.textContent=`📌 ${phs.length} offene Platzhalter anzeigen`;
+    window._phsHtml=`<div style="background:rgba(232,160,32,.08);border:0.5px solid rgba(232,160,32,.3);border-radius:var(--r2);padding:12px 14px">
       <div style="font-size:10px;font-weight:500;color:var(--warn);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">📌 Offene Platzhalter (${phs.length})</div>
       ${phs.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid rgba(232,160,32,.15);font-size:13px">
         <span style="color:var(--text2)">? ${esc(p.placeholder)}</span>
         <span style="font-size:11px;color:var(--text3);cursor:pointer" onclick="openEvDetail('${p.events?.id}')">${esc(p.events?.title||'')} · ${fD(p.events?.datum?.slice(0,10))}</span>
       </div>`).join('')}
     </div>`;
-  } else if(phEl){
     phEl.style.display='none';
+    window._phVisible=false;
+  } else if(phEl&&phBtn){
+    phBtn.style.display='none';
+    phEl.style.display='none';
+  }
+}
+
+function togglePlaceholders(){
+  const phEl=document.getElementById('ev-placeholders');
+  const phBtn=document.getElementById('ev-ph-btn');
+  window._phVisible=!window._phVisible;
+  if(window._phVisible){
+    phEl.innerHTML=window._phsHtml||'';
+    phEl.style.display='';
+    phBtn.textContent=phBtn.textContent.replace('anzeigen','ausblenden');
+  } else {
+    phEl.style.display='none';
+    phBtn.textContent=phBtn.textContent.replace('ausblenden','anzeigen');
   }
 }
 

@@ -315,6 +315,8 @@ textarea.fi{resize:vertical;min-height:70px;}
     <!-- VERANSTALTUNGEN -->
     <div class="page" id="page-events">
       <div class="hrow"><h2>Veranstaltungen</h2><button class="btn btn-ic" id="ev-add-btn" onclick="openEventForm(null)" style="display:none">+</button></div>
+      <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Titel, Chor, Thema…" oninput="filterEvents()" id="ev-search"></div>
+      <div class="frow" id="ev-filters"></div>
       <div id="ev-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
     </div>
     <!-- KALENDER -->
@@ -1042,10 +1044,48 @@ async function exportCSV(){
 }
 
 // ========== EVENTS ==========
+let cachedEvents=[];
+let evFilter={chor:'',thema:''};
+
 async function renderEvents(){
   const{data}=await SB.from('events').select('*,event_program(position,song_id,songs(title,besetzung))').order('datum');
+  cachedEvents=data||[];
+  buildEvFilters();
+  displayEvents(filteredEvents());
+}
+
+function buildEvFilters(){
+  const chors=[...new Set(cachedEvents.map(e=>e.chor).filter(Boolean))];
+  const themen=[...new Set(cachedEvents.map(e=>e.thema).filter(Boolean))];
+  const el=document.getElementById('ev-filters');
+  if(!el)return;
+  el.innerHTML='';
+  const addChip=(val,key)=>{
+    const c=document.createElement('div');
+    c.className='fchip'+(evFilter[key]===val?' active':'');
+    c.textContent=val;
+    c.onclick=()=>{evFilter[key]=evFilter[key]===val?'':val;buildEvFilters();displayEvents(filteredEvents());};
+    el.appendChild(c);
+  };
+  chors.forEach(v=>addChip(v,'chor'));
+  themen.forEach(v=>addChip(v,'thema'));
+}
+
+function filteredEvents(){
+  const q=(document.getElementById('ev-search')?.value||'').toLowerCase();
+  return cachedEvents.filter(e=>{
+    if(q&&!['title','chor','thema','ort','dirigent'].some(k=>(e[k]||'').toLowerCase().includes(q)))return false;
+    if(evFilter.chor&&e.chor!==evFilter.chor)return false;
+    if(evFilter.thema&&e.thema!==evFilter.thema)return false;
+    return true;
+  });
+}
+
+function filterEvents(){displayEvents(filteredEvents());}
+
+function displayEvents(data){
   const el=document.getElementById('ev-list');
-  if(!(data?.length)){el.innerHTML='<div class="empty"><p>Keine Veranstaltungen</p></div>';return;}
+  if(!data?.length){el.innerHTML='<div class="empty"><p>Keine Veranstaltungen</p></div>';return;}
   const now=today();
   const up=data.filter(e=>e.datum>=now),pa=data.filter(e=>e.datum<now).reverse();
   let html='';

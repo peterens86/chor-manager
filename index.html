@@ -324,6 +324,7 @@ textarea.fi{resize:vertical;min-height:70px;}
       </div>
       <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Titel, Chor, Thema…" oninput="filterEvents()" id="ev-search"></div>
       <div class="frow" id="ev-filters"></div>
+      <div id="ev-placeholders" style="display:none;margin-bottom:10px"></div>
       <div id="ev-list"><div class="loading"><div class="spin"></div>Lade…</div></div>
     </div>
     <!-- KALENDER -->
@@ -1055,10 +1056,28 @@ let cachedEvents=[];
 let evFilter={chor:''};
 
 async function renderEvents(){
-  const{data}=await SB.from('events').select('*,event_program(position,song_id,songs(title,besetzung))').order('datum');
+  const[{data},{data:placeholders}]=await Promise.all([
+    SB.from('events').select('*,event_program(position,song_id,songs(title,besetzung))').order('datum'),
+    SB.from('event_program').select('placeholder,events(id,title,datum)').not('placeholder','is',null).order('events(datum)',{ascending:false})
+  ]);
   cachedEvents=data||[];
   buildEvFilters();
   displayEvents(filteredEvents());
+  // Show placeholder list
+  const phEl=document.getElementById('ev-placeholders');
+  const phs=(placeholders||[]).filter(p=>p.placeholder);
+  if(phs.length&&phEl){
+    phEl.style.display='';
+    phEl.innerHTML=`<div style="background:rgba(232,160,32,.08);border:0.5px solid rgba(232,160,32,.3);border-radius:var(--r2);padding:12px 14px">
+      <div style="font-size:10px;font-weight:500;color:var(--warn);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">📌 Offene Platzhalter (${phs.length})</div>
+      ${phs.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid rgba(232,160,32,.15);font-size:13px">
+        <span style="color:var(--text2)">? ${esc(p.placeholder)}</span>
+        <span style="font-size:11px;color:var(--text3);cursor:pointer" onclick="openEvDetail('${p.events?.id}')">${esc(p.events?.title||'')} · ${fD(p.events?.datum?.slice(0,10))}</span>
+      </div>`).join('')}
+    </div>`;
+  } else if(phEl){
+    phEl.style.display='none';
+  }
 }
 
 function buildEvFilters(){
@@ -1808,26 +1827,33 @@ async function exportEventsXLS(){
   T('Export wird erstellt…');
   const{data:events}=await SB.from('events').select('*,event_program(position,placeholder,songs(title,liedanfang))').order('datum');
   if(!events?.length){T('Keine Veranstaltungen','err');return;}
-  const rows=[['Datum','Titel','Uhrzeit','Ort','Chor','Thema','Verantwortlich','Notizen','Programm']];
+  // Find max number of songs across all events
+  let maxSongs=0;
+  for(const e of events){
+    const n=(e.event_program||[]).length;
+    if(n>maxSongs)maxSongs=n;
+  }
+  // Build header
+  const songCols=Array.from({length:maxSongs},(_,i)=>`Lied ${i+1}`);
+  const hdr=['Datum','Titel','Uhrzeit','Ort','Chor','Thema','Verantwortlich','Notizen',...songCols];
+  const rows=[hdr];
   for(const e of events){
     const prog=(e.event_program||[]).sort((a,b)=>a.position-b.position).map(p=>{
       if(p.placeholder)return`? ${p.placeholder}`;
       const s=p.songs;return s?(s.liedanfang||s.title||'?'):'?';
-    }).join(' | ');
-    rows.push([fD(e.datum),e.title||'',fT(e.uhrzeit||''),e.ort||'',e.chor||'',e.thema||'',e.dirigent||'',e.notizen||'',prog]);
+    });
+    // Pad to maxSongs
+    while(prog.length<maxSongs)prog.push('');
+    rows.push([fD(e.datum),e.title||'',fT(e.uhrzeit||''),e.ort||'',e.chor||'',e.thema||'',e.dirigent||'',e.notizen||'',...prog]);
   }
-  // Build CSV with semicolon separator (Excel Germany standard)
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
-  // BOM for Excel UTF-8 recognition
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='veranstaltungen.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(a.href);
-  T('Export fertig – als CSV gespeichert','ok');
+  T('Export fertig','ok');
 }
 
 async function importEventsXLS(event){
@@ -1855,6 +1881,8 @@ async function importEventsXLS(event){
     const iDatum=col('datum'),iTitel=col('titel');
     if(iDatum<0||iTitel<0){T(`Spalten "Datum"/"Titel" nicht gefunden. Gefunden: ${hdr.slice(0,5).join(', ')}`,'err');event.target.value='';return;}
     const iUhr=col('uhrzeit'),iOrt=col('ort'),iChor=col('chor'),iThema=col('thema'),iVerantw=col('verantwortlich'),iNotiz=col('notizen'),iProg=col('programm');
+    // Find all "Lied N" columns
+    const liedCols=hdr.map((h,i)=>h.match(/^lied\s*\d+$/)?i:-1).filter(i=>i>=0);
     // Load songs for matching
     const{data:allSongs}=await SB.from('songs').select('id,title,liedanfang');
     function norm(s){return(s||'').toLowerCase().trim();}
@@ -1890,9 +1918,14 @@ async function importEventsXLS(event){
       let evId=ex?.[0]?.id;
       if(evId){await SB.from('events').update(payload).eq('id',evId);updated++;}
       else{const{data:nw,error}=await SB.from('events').insert({...payload,created_by:currentUser.id}).select().single();if(error){errors++;continue;}evId=nw.id;created++;}
-      if(iProg>=0&&row[iProg]){
-        const songTitles=row[iProg].split('|').map(s=>s.trim()).filter(Boolean);
-        if(songTitles.length){
+      // Collect songs from individual columns or programm column
+      let songTitles=[];
+      if(liedCols.length>0){
+        songTitles=liedCols.map(i=>row[i]||'').filter(Boolean);
+      } else if(iProg>=0&&row[iProg]){
+        songTitles=row[iProg].split('|').map(s=>s.trim()).filter(Boolean);
+      }
+      if(songTitles.length){
           await SB.from('event_program').delete().eq('event_id',evId);
           const items=songTitles.map((t,idx)=>{
             if(t.startsWith('?')){return{event_id:evId,position:idx+1,song_id:null,placeholder:t.slice(1).trim()||'Platzhalter'};}

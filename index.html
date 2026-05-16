@@ -2833,9 +2833,13 @@ function openSongAssistant(){
   _sastMode=null;_sastPendingSong=null;
   document.getElementById('sast-msgs').innerHTML='';
   document.getElementById('sast-actions').style.display='none';
-  document.getElementById('sast-input').value='';
-  sastBot('Hallo! Ich helfe dir beim Hinzufuegen von Liedern.\n\nMoeglichkeiten:\n- "Neues Lied" - Vorlage mit Feldern\n- Liedinfos direkt eingeben\n- PDF hochladen (📄) - ich lese Infos aus\n\nWie kann ich helfen?');
+  const template='Liedanfang: \nTitel: \nKomponist: \nTextdichter: \nArrangeur: \nÜbersetzer: \nOriginaltitel: \nBesetzung: \nRechte: ';
+  const inp=document.getElementById('sast-input');
+  inp.value=template;inp.style.minHeight='220px';
+  _sastMode='new_song';
+  sastBot('Fülle die Felder aus und schicke es ab.\nLeere Felder einfach leer lassen.\nOder 📄 PDF hochladen – ich lese die Infos automatisch aus.');
   openModal('m-song-assistant');
+  setTimeout(()=>inp.focus(),300);
 }
 function sastBot(txt){const el=document.getElementById('sast-msgs');const d=document.createElement('div');d.className='ast-msg bot';d.innerHTML='<div class="ast-bbl">'+txt.replace(/\n/g,'<br>')+'</div>';el.appendChild(d);el.scrollTop=el.scrollHeight;}
 function sastUser(txt){const el=document.getElementById('sast-msgs');const d=document.createElement('div');d.className='ast-msg user';d.innerHTML='<div class="ast-bbl">'+esc(txt)+'</div>';el.appendChild(d);el.scrollTop=el.scrollHeight;}
@@ -2939,7 +2943,7 @@ async function sastConfirmSong(){
   }
   const{data:ns}=await SB.from('songs').select('*').order('liedanfang',{nullsFirst:false});if(ns)cachedSongs=ns;
   _sastMode=null;_sastPendingSong=null;sastClearActions();T('Gespeichert','ok');renderSongs();
-  sastShowActions([{label:"Weiteres Lied",fn:"_sastMode=null;document.getElementById('sast-input').value='';document.getElementById('sast-input').focus();"},{label:"Fertig",fn:"closeModal('m-song-assistant')"}]);
+  sastShowActions([{label:'Weiteres Lied',fn:"_sastMode='new_song';const i=document.getElementById('sast-input');i.value='Liedanfang: \\nTitel: \\nKomponist: \\nTextdichter: \\nArrangeur: \\n\u00dcbersetzer: \\nOriginaltitel: \\nBesetzung: \\nRechte: ';i.style.minHeight='220px';i.focus();"},{label:'Fertig',fn:"closeModal('m-song-assistant')"}]);
 }
 
 async function handleSastFiles(evt){

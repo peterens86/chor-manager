@@ -307,6 +307,7 @@ textarea.fi{resize:vertical;min-height:70px;}
       <div class="hrow">
         <h2>Repertoire <span id="song-count" style="font-size:13px;font-weight:400;color:var(--text3)"></span></h2>
         <div style="display:flex;gap:6px">
+          <button class="btn btn-ic" id="song-ai-btn" onclick="openSongAssistant()" title="KI-Assistent" style="display:none">✦</button>
           <button class="btn btn-ic" id="song-add-btn" onclick="openSongForm()" style="display:none">+</button>
         </div>
       </div>
@@ -537,6 +538,26 @@ textarea.fi{resize:vertical;min-height:70px;}
   <button onclick="closeFull()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer">×</button>
 </div>
 
+<!-- Song KI Assistent -->
+<div class="mo" id="m-song-assistant"><div class="md" style="max-height:96vh">
+  <div class="mhandle"></div>
+  <div class="mh"><h3>✦ Lied-Assistent</h3><button class="mclose" onclick="closeModal('m-song-assistant')">×</button></div>
+  <div class="mb" style="display:flex;flex-direction:column;gap:0;padding:0">
+    <div id="sast-msgs" style="flex:1;overflow-y:auto;padding:12px;min-height:120px;max-height:40vh"></div>
+    <div id="sast-actions" style="padding:10px 12px;border-top:0.5px solid var(--border);display:none"></div>
+    <div style="padding:6px 12px;border-top:0.5px solid var(--border);display:flex;align-items:flex-end;gap:8px;position:relative">
+      <label title="PDF hochladen" style="cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding-bottom:6px">📄<input type="file" id="sast-pdf" accept=".pdf,.txt" multiple style="display:none" onchange="handleSastFiles(event)"></label>
+      <div style="flex:1;position:relative">
+        <textarea class="fi" id="sast-input" placeholder="Liedinfos eingeben oder PDF hochladen…" style="width:100%;min-height:38px;max-height:300px;resize:vertical;line-height:1.8;font-size:13px" rows="1"
+          onkeydown="sastKeyDown(event)"
+          oninput="sastInputChanged(this)"></textarea>
+        <div id="sast-suggest" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);max-height:200px;overflow-y:auto;z-index:200;margin-bottom:4px;box-shadow:0 -4px 16px rgba(0,0,0,.4)"></div>
+      </div>
+      <button class="btn btn-p btn-sm" style="flex-shrink:0;margin-bottom:2px" onclick="sendSast()">→</button>
+    </div>
+  </div>
+</div></div>
+
 <!-- KI Assistent -->
 <div class="mo" id="m-assistant"><div class="md" style="max-height:96vh">
   <div class="mhandle"></div>
@@ -660,7 +681,7 @@ function startApp(){
   const isAdmin=p.role==='admin';
   if(isAdmin){
     document.getElementById('ni-settings').style.display='flex';
-    ['song-add-btn','ev-add-btn','ev-chat-btn','ev-export-btn','ev-import-btn','ann-add-btn','cal-add-btn','media-add-btn','media-album-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
+    ['song-add-btn','song-ai-btn','ev-add-btn','ev-chat-btn','ev-export-btn','ev-import-btn','ann-add-btn','cal-add-btn','media-add-btn','media-album-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
   }
   SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
   // Track last seen
@@ -2759,43 +2780,202 @@ async function createEventFromState(){
 }
 
 function parseSongInput(text){
-  const song={title:'',liedanfang:'',komponist:'',komponist_lz:'',textdichter:'',textdichter_lz:'',arrangeur:'',arrangeur_lz:'',uebersetzer:'',besetzung:'',rechte:'',lizenz:'',links:[],created_by:currentUser.id};
-  // Field aliases – full names and shortcuts
-  const aliases={
-    komponist:   /(?:komponist|komp\.?\s*lebensdaten|komp\.?|k\.?|musik|music|composer|comp\.?):\s*([^\n,]+)/gi,
-    textdichter: /(?:textdichter|text\.?\s*lebensdaten|text\.?|t\.?|dichter|lyricist|lyrics\.?):\s*([^\n,]+)/gi,
-    arrangeur:   /(?:arrangeur|arr\.?|a\.?):\s*([^\n,]+)/gi,
-    uebersetzer: /(?:übersetzer|uebersetzer|übers\.?|transl\.?):\s*([^\n,]+)/gi,
-    liedanfang:  /(?:liedanfang|anfang|la\.?):\s*([^\n,]+)/gi,
-    besetzung:   /(?:besetzung|voicing|stimmen|satb|ttbb):\s*([^\n,]+)/gi,
-    rechte:      /(?:rechte|copyright|©):\s*([^\n,]+)/gi,
-    lizenz:      /(?:lizenz|ccli|license):\s*([^\n,]+)/gi,
-    komponist_lz:/(?:komp(?:onist)?\.?\s*lebensdaten|lz[-\s]?k):\s*([^\n,]+)/gi,
-    textdichter_lz:/(?:text(?:dichter)?\.?\s*lebensdaten|lz[-\s]?t):\s*([^\n,]+)/gi,
-  };
-  let remaining=text.replace(/^neues?\s+lied:?\s*/i,'').trim();
-  // Extract all known fields
-  for(const[field,re] of Object.entries(aliases)){
-    re.lastIndex=0;
-    const m=re.exec(remaining);
-    if(m&&!song[field]){
-      song[field]=m[1].trim();
-      remaining=remaining.replace(m[0],'').trim();
+  const song={title:'',liedanfang:'',originaltitel:'',komponist:'',komponist_lz:'',textdichter:'',textdichter_lz:'',arrangeur:'',arrangeur_lz:'',uebersetzer:'',uebersetzer_lz:'',besetzung:'',rechte:'',lizenz:'',links:[],created_by:currentUser.id};
+  const fieldMap=[
+    {re:/^(?:liedanfang|anfang|la\.?)/i,        field:'liedanfang'},
+    {re:/^(?:titel|title)$/i,                     field:'title'},
+    {re:/^(?:originaltitel|orig\.?)/i,           field:'originaltitel'},
+    {re:/^(?:komp(?:onist)?\.?\s*lebensdaten|kl\.?)/i, field:'komponist_lz'},
+    {re:/^(?:komponist|komp\.?|k\.?|musik|composer)/i,  field:'komponist'},
+    {re:/^(?:text(?:dichter)?\.?\s*lebensdaten|tl\.?)/i,field:'textdichter_lz'},
+    {re:/^(?:textdichter|text\.?|t\.?(?!itel)|dichter|lyricist)/i, field:'textdichter'},
+    {re:/^(?:arr(?:angeur)?\.?\s*lebensdaten|al\.?)/i, field:'arrangeur_lz'},
+    {re:/^(?:arrangeur|arr\.?)/i,                field:'arrangeur'},
+    {re:/^(?:[üÜ]bers\.?\s*lebensdaten|ul\.?)/i, field:'uebersetzer_lz'},
+    {re:/^(?:[üÜ]bersetzer|uebersetzer|[üÜ]bers\.?|transl\.?)/i, field:'uebersetzer'},
+    {re:/^(?:besetzung|voicing|stimmen)/i,        field:'besetzung'},
+    {re:/^(?:rechte|copyright)/i,                 field:'rechte'},
+    {re:/^(?:lizenz|ccli|license)/i,              field:'lizenz'},
+  ];
+  // Split on newlines only - commas inside values are allowed
+  const inputLines=text.split(/\n/).map(l=>l.trim()).filter(l=>l);
+  const unmatched=[];
+  for(const line of inputLines){
+    const colon=line.indexOf(':');
+    if(colon<0){unmatched.push(line);continue;}
+    const label=line.slice(0,colon).trim();
+    const value=line.slice(colon+1).trim();
+    if(!value)continue;
+    let matched=false;
+    for(const{re,field} of fieldMap){
+      if(re.test(label)){if(!song[field])song[field]=value;matched=true;break;}
     }
+    if(!matched)unmatched.push(line);
   }
-  // "Titel von Komponist" pattern
-  const vonMatch=remaining.match(/^([^,\n]+?)\s+von\s+([^,\n]+)/i);
-  if(vonMatch&&!song.komponist){
-    song.title=vonMatch[1].trim();
-    song.komponist=vonMatch[2].trim();
-    remaining='';
+  // Free-text fallback: "Titel von Komponist"
+  if(!song.title&&!song.liedanfang&&unmatched.length){
+    const first=unmatched[0].replace(/^neues?\s+lied:?\s*/i,'').trim();
+    const vonM=first.match(/^(.+?)\s+von\s+(.+)/i);
+    if(vonM&&!song.komponist){song.title=vonM[1].trim();song.liedanfang=song.title;song.komponist=vonM[2].trim();}
+    else{song.title=first;song.liedanfang=first;}
   }
-  // Remaining first part = title
-  if(!song.title&&remaining){
-    song.title=remaining.split(/[,\n]/)[0].trim();
-  }
+  if(!song.title)song.title=song.liedanfang;
   if(!song.liedanfang)song.liedanfang=song.title;
   return song;
+}
+
+
+
+// ========== SONG ASSISTANT ==========
+let _sastSuggestIdx=-1,_sastMode=null,_sastPendingSong=null;
+
+function openSongAssistant(){
+  _sastMode=null;_sastPendingSong=null;
+  document.getElementById('sast-msgs').innerHTML='';
+  document.getElementById('sast-actions').style.display='none';
+  document.getElementById('sast-input').value='';
+  sastBot('Hallo! Ich helfe dir beim Hinzufuegen von Liedern.\n\nMoeglichkeiten:\n- "Neues Lied" - Vorlage mit Feldern\n- Liedinfos direkt eingeben\n- PDF hochladen (📄) - ich lese Infos aus\n\nWie kann ich helfen?');
+  openModal('m-song-assistant');
+}
+function sastBot(txt){const el=document.getElementById('sast-msgs');const d=document.createElement('div');d.className='ast-msg bot';d.innerHTML='<div class="ast-bbl">'+txt.replace(/\n/g,'<br>')+'</div>';el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function sastUser(txt){const el=document.getElementById('sast-msgs');const d=document.createElement('div');d.className='ast-msg user';d.innerHTML='<div class="ast-bbl">'+esc(txt)+'</div>';el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function sastShowActions(btns){const el=document.getElementById('sast-actions');el.style.display='';el.innerHTML=btns.map(b=>'<button class="btn btn-g btn-sm" style="margin:3px" onclick="'+b.fn+'">'+esc(b.label)+'</button>').join('');}
+function sastClearActions(){const el=document.getElementById('sast-actions');if(el){el.style.display='none';el.innerHTML='';}}
+function sastHideSuggest(){const s=document.getElementById('sast-suggest');if(s)s.style.display='none';_sastSuggestIdx=-1;}
+
+function sastKeyDown(e){
+  const sug=document.getElementById('sast-suggest');
+  const items=sug?sug.querySelectorAll('.ast-sug-item'):[];
+  if(sug&&sug.style.display!=='none'&&items.length){
+    if(e.key==='ArrowDown'){e.preventDefault();_sastSuggestIdx=Math.min(_sastSuggestIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('active',i===_sastSuggestIdx));items[_sastSuggestIdx]&&items[_sastSuggestIdx].scrollIntoView({block:'nearest'});return;}
+    if(e.key==='ArrowUp'){e.preventDefault();_sastSuggestIdx=Math.max(_sastSuggestIdx-1,0);items.forEach((el,i)=>el.classList.toggle('active',i===_sastSuggestIdx));return;}
+    if(e.key==='Tab'||(e.key==='Enter'&&_sastSuggestIdx>=0)){e.preventDefault();(items[Math.max(_sastSuggestIdx,0)]||items[0]).click();return;}
+    if(e.key==='Escape'){sastHideSuggest();return;}
+  }
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sastHideSuggest();sendSast();}
+}
+
+function sastInputChanged(ta){
+  const lines=ta.value.split('\n');const curLine=lines[lines.length-1];
+  const fm=curLine.match(/^(\w[\w\s\.]*?):\s*(.+)$/);
+  if(!fm){sastHideSuggest();return;}
+  const query=fm[2].toLowerCase(),fn=fm[1].toLowerCase();
+  const songs=cachedSongs;let cands=[];
+  if(/komponist|komp|^k\./.test(fn))cands=[...new Set(songs.map(s=>s.komponist).filter(Boolean))];
+  else if(/textdichter|^text|^t\./.test(fn))cands=[...new Set(songs.map(s=>s.textdichter).filter(Boolean))];
+  else if(/arrangeur|arr/.test(fn))cands=[...new Set(songs.map(s=>s.arrangeur).filter(Boolean))];
+  else if(/uebersetzer|\u00fcbersetzer|\u00fcbers/.test(fn))cands=[...new Set(songs.map(s=>s.uebersetzer).filter(Boolean))];
+  else if(/liedanfang|anfang/.test(fn))cands=[...new Set(songs.map(s=>s.liedanfang).filter(Boolean))];
+  else if(/^titel|^title/.test(fn))cands=[...new Set(songs.map(s=>s.title).filter(Boolean))];
+  else if(/originaltitel/.test(fn))cands=[...new Set(songs.map(s=>s.originaltitel).filter(Boolean))];
+  else if(/besetzung/.test(fn))cands=['SATB','TTBB','SSA','SAB','SSAA','Gemischter Chor','M\u00e4nnerchor','Frauenchor'];
+  else{sastHideSuggest();return;}
+  const matches=cands.filter(c=>c.toLowerCase().includes(query)).slice(0,8);
+  if(!matches.length){sastHideSuggest();return;}
+  const sug=document.getElementById('sast-suggest');_sastSuggestIdx=-1;
+  sug.innerHTML=matches.map(m=>`<div class="ast-sug-item" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:0.5px solid var(--border)" onmousedown="event.preventDefault();sastSelect('${esc(fm[1]+': ')}','${esc(m)}')" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background=''">${esc(m)}</div>`).join('');
+  sug.style.display='';
+}
+
+function sastSelect(prefix,value){
+  const ta=document.getElementById('sast-input');
+  const lines=ta.value.split('\n');
+  lines[lines.length-1]=prefix+value;
+  ta.value=lines.join('\n');
+  sastHideSuggest();ta.focus();
+  // Show hint
+  const lz=personLzMap[value.toLowerCase()];
+  const isKnown=lz||cachedSongs.some(s=>[s.komponist,s.textdichter,s.arrangeur,s.uebersetzer].includes(value));
+  const hint=document.createElement('div');
+  hint.style.cssText='position:absolute;bottom:100%;right:0;border-radius:var(--r);padding:4px 10px;font-size:11px;margin-bottom:4px;white-space:nowrap;pointer-events:none;z-index:201;'+(isKnown?'background:rgba(76,175,130,.1);border:0.5px solid rgba(76,175,130,.3);color:var(--success)':'background:rgba(232,160,32,.1);border:0.5px solid rgba(232,160,32,.3);color:var(--warn)');
+  hint.textContent=isKnown?(lz?'\u2713 '+lz:'\u2713 Bekannt'):'\u26a0 Neu im Repertoire';
+  ta.parentElement.appendChild(hint);setTimeout(()=>hint.remove(),2500);
+}
+
+async function sendSast(){
+  const inp=document.getElementById('sast-input');
+  const text=inp.value.trim();if(!text)return;
+  inp.value='';inp.style.minHeight='38px';
+  sastHideSuggest();sastUser(text);sastClearActions();
+
+  if(_sastMode==='new_song'){
+    const si=parseSongInput(text);
+    [['komponist','komponist_lz'],['textdichter','textdichter_lz'],['arrangeur','arrangeur_lz'],['uebersetzer','uebersetzer_lz']].forEach(([n,lz])=>{
+      const nm=(si[n]||'').toLowerCase().trim();
+      if(nm&&!si[lz]&&personLzMap[nm])si[lz]=personLzMap[nm];
+    });
+    const unk=['komponist','textdichter','arrangeur','uebersetzer'].filter(f=>si[f]&&!personLzMap[si[f].toLowerCase()]&&!cachedSongs.some(s=>s[f]===si[f]));
+    const flds=[['Liedanfang',si.liedanfang],['Titel',si.title&&si.title!==si.liedanfang?si.title:''],['Originaltitel',si.originaltitel],['Komponist',si.komponist+(si.komponist_lz?' ('+si.komponist_lz+')':'')],['Textdichter',si.textdichter+(si.textdichter_lz?' ('+si.textdichter_lz+')':'')],['Arrangeur',si.arrangeur+(si.arrangeur_lz?' ('+si.arrangeur_lz+')':'')],['\u00dcbersetzer',si.uebersetzer+(si.uebersetzer_lz?' ('+si.uebersetzer_lz+')':'')],['Besetzung',si.besetzung],['Rechte',si.rechte]].filter(([,v])=>v);
+    let msg=flds.length?'Lied anlegen:\n'+flds.map(([k,v])=>'- '+k+': '+v).join('\n'):'Keine Felder erkannt.';
+    if(unk.length)msg+='\n\n\u26a0 Neu im Repertoire:\n'+unk.map(f=>'- '+si[f]).join('\n');
+    msg+='\n\nAufnehmen?';sastBot(msg);
+    if(flds.length){_sastPendingSong=si;_sastMode='confirm';sastShowActions([{label:'\u2713 Ja, aufnehmen',fn:'sastConfirmSong()'},{label:'\u2717 Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);}
+    return;
+  }
+  if(_sastMode==='confirm'){if(/^ja|ok|yes/i.test(text))await sastConfirmSong();else{sastBot('Abgebrochen.');_sastMode=null;}return;}
+
+  if(/neues?\s+lied|lied\s+(hinzuf|anlegen)/i.test(text)){
+    const template='Liedanfang: \nTitel: \nKomponist: \nTextdichter: \nArrangeur: \n\u00dcbersetzer: \nOriginaltitel: \nBesetzung: \nRechte: ';
+    sastBot('F\u00fclle die Felder aus und schicke es ab:');
+    const inp2=document.getElementById('sast-input');inp2.value=template;inp2.focus();inp2.style.minHeight='220px';
+    _sastMode='new_song';return;
+  }
+  const si=parseSongInput(text);
+  if(si.liedanfang||si.title){_sastPendingSong=si;_sastMode='new_song';await sendSast();}
+  else sastBot('Schreibe "Neues Lied" f\u00fcr die Vorlage, oder lade eine PDF hoch.');
+}
+
+async function sastConfirmSong(){
+  if(!_sastPendingSong)return;
+  const{_id,...fields}=_sastPendingSong;
+  if(_id){
+    const{error}=await SB.from('songs').update(fields).eq('id',_id);
+    if(error){sastBot('Fehler: '+error.message);return;}
+    sastBot('\u2705 Lied aktualisiert!');
+  } else {
+    const{error}=await SB.from('songs').insert({...fields,created_by:currentUser.id});
+    if(error){sastBot('Fehler: '+error.message);return;}
+    sastBot('\u2705 Lied aufgenommen!');
+  }
+  const{data:ns}=await SB.from('songs').select('*').order('liedanfang',{nullsFirst:false});if(ns)cachedSongs=ns;
+  _sastMode=null;_sastPendingSong=null;sastClearActions();T('Gespeichert','ok');renderSongs();
+  sastShowActions([{label:"Weiteres Lied",fn:"_sastMode=null;document.getElementById('sast-input').value='';document.getElementById('sast-input').focus();"},{label:"Fertig",fn:"closeModal('m-song-assistant')"}]);
+}
+
+async function handleSastFiles(evt){
+  const files=[...evt.target.files];evt.target.value='';
+  for(const f of files){sastUser('\ud83d\udcc4 '+f.name);await processSastFile(f);}
+}
+async function processSastFile(file){
+  sastBot('Lese "'+file.name+'"...');
+  let text='';
+  try{
+    if(file.name.toLowerCase().endsWith('.pdf')){text=await extractPdfText(file);}
+    else{const buf=await file.arrayBuffer();for(const enc of['utf-8','windows-1252']){try{const t=new TextDecoder(enc,{fatal:true}).decode(buf);text=t;break;}catch(e){}}}
+    if(text.charCodeAt&&text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  }catch(e){sastBot('Fehler: '+e.message);return;}
+  if(!text.trim()){sastBot('Kein Text gefunden. Nur text-basierte PDFs werden unterst\u00fctzt.');return;}
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  // Reuse processSongInfoPdf logic
+  const song={title:'',liedanfang:'',originaltitel:'',komponist:'',komponist_lz:'',textdichter:'',textdichter_lz:'',arrangeur:'',arrangeur_lz:'',uebersetzer:'',besetzung:'',rechte:'',lizenz:'',links:[],created_by:currentUser.id};
+  const pats=[{f:'title',re:/^(?:titel|title):?\s*(.+)/i},{f:'liedanfang',re:/^(?:liedanfang|anfang):?\s*(.+)/i},{f:'komponist',re:/^(?:komponist|musik|music|composed?\s*by|melody):?\s*(.+)/i},{f:'textdichter',re:/^(?:textdichter|text|words?\s*by|lyrics?):?\s*(.+)/i},{f:'arrangeur',re:/^(?:arrangeur|arr\.?):?\s*(.+)/i},{f:'uebersetzer',re:/^(?:\u00fcbersetzer|uebersetzer|\u00fcbers\.?):?\s*(.+)/i},{f:'besetzung',re:/^(?:besetzung|voicing):?\s*(.+)/i},{f:'rechte',re:/^(?:copyright|\u00a9):?\s*(.+)/i},{f:'lizenz',re:/^(?:lizenz|ccli):?\s*(.+)/i}];
+  const lzRe=/(\d{4})\s*[-\u2013\u2014]\s*(\d{4}|\?)/;
+  for(const line of lines){for(const{f,re} of pats){const m=line.match(re);if(m&&m[1]&&!song[f]){song[f]=m[1].trim();const lzm=m[1].match(lzRe);if(lzm&&f+'_lz' in song){song[f+'_lz']=lzm[1]+'\u2013'+lzm[2];song[f]=song[f].replace(lzRe,'').trim();}break;}}}
+  if(!song.title&&!song.liedanfang){const fl=lines.find(l=>l.length>2&&l.length<100&&!/^[\d\.]/.test(l));if(fl){song.title=fl;song.liedanfang=fl;}}
+  if(!song.title)song.title=song.liedanfang;if(!song.liedanfang)song.liedanfang=song.title;
+  const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
+  const existing=songs.find(s=>normStr(s.liedanfang||s.title||'')===normStr(song.liedanfang||song.title||''));
+  let msg='Aus "'+file.name+'":\n\n'+(song.title||'Unbekannt')+'\n';
+  if(song.komponist)msg+='- Komponist: '+song.komponist+(song.komponist_lz?' ('+song.komponist_lz+')':'')+'\n';
+  if(song.textdichter)msg+='- Textdichter: '+song.textdichter+'\n';
+  if(song.arrangeur)msg+='- Arrangeur: '+song.arrangeur+'\n';
+  if(song.besetzung)msg+='- Besetzung: '+song.besetzung+'\n';
+  if(song.rechte)msg+='- Rechte: '+song.rechte+'\n';
+  if(existing){
+    const upd=Object.entries(song).filter(([k,v])=>v&&typeof v==='string'&&!['title','links','created_by'].includes(k)&&!existing[k]);
+    if(upd.length){msg+='\nBereits vorhanden. Erg\u00e4nzen:\n'+upd.map(([k,v])=>'- '+k+': '+v).join('\n');sastBot(msg);_sastPendingSong={_id:existing.id,...Object.fromEntries(upd)};_sastMode='confirm';sastShowActions([{label:'Infos erg\u00e4nzen',fn:'sastConfirmSong()'},{label:'Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);}
+    else{msg+='\nAlle Infos bereits vorhanden.';sastBot(msg);}
+  } else {msg+='\nAufnehmen?';sastBot(msg);_sastPendingSong=song;_sastMode='confirm';sastShowActions([{label:'Aufnehmen',fn:'sastConfirmSong()'},{label:'Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);}
 }
 
 async function renderSettings(tab='members'){

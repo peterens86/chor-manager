@@ -867,7 +867,7 @@ async function openSongDetail(id){
       ${df('Komponist',s.komponist)}${s.komponist_lz?df('Lebensdaten',s.komponist_lz):''}
       ${df('Textdichter',s.textdichter)}${s.textdichter_lz?df('Lebensdaten',s.textdichter_lz):''}
       ${df('Arrangeur',s.arrangeur)}${s.arrangeur_lz?df('Lebensdaten',s.arrangeur_lz):''}
-      ${df('Übersetzer',s.uebersetzer)}${s.uebersetzer_lz?df('Lebensdaten',s.uebersetzer_lz):''}
+      ${df('Übersetzer / Deutscher Text',s.uebersetzer)}${s.uebersetzer_lz?df('Lebensdaten',s.uebersetzer_lz):''}
     </div>
     <div class="ddiv"></div>
     <div class="dgrid" style="margin-bottom:12px">${df('Originaltitel',s.originaltitel)}${df('Quelle',s.quelle)}${df('Nr.',s.quelle_nr)}${df('Rechte',s.rechte)}${df('Lizenz',s.lizenz)}</div>
@@ -928,7 +928,7 @@ function buildSongFormHTML(s,id=null){
     <div class="fr2"><div class="fg"><label class="fl">Komponist</label><input class="fi" id="sf-komp" value="${esc(s.komponist||'')}" list="dl-komp" autocomplete="off" oninput="fillPersonLz(this,'sf-komp-lz','komponist')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-komp-lz" value="${esc(s.komponist_lz||'')}" placeholder="z.B. 1685–1750"></div></div>
     <div class="fr2"><div class="fg"><label class="fl">Textdichter</label><input class="fi" id="sf-text" value="${esc(s.textdichter||'')}" list="dl-text" autocomplete="off" oninput="fillPersonLz(this,'sf-text-lz','textdichter')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-text-lz" value="${esc(s.textdichter_lz||'')}"></div></div>
     <div class="fr2"><div class="fg"><label class="fl">Arrangeur</label><input class="fi" id="sf-arr" value="${esc(s.arrangeur||'')}" list="dl-arr" autocomplete="off" oninput="fillPersonLz(this,'sf-arr-lz','arrangeur')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-arr-lz" value="${esc(s.arrangeur_lz||'')}"></div></div>
-    <div class="fr2"><div class="fg"><label class="fl">Übersetzer</label><input class="fi" id="sf-ueb" value="${esc(s.uebersetzer||'')}" list="dl-ueb" autocomplete="off" oninput="fillPersonLz(this,'sf-ueb-lz','uebersetzer')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-ueb-lz" value="${esc(s.uebersetzer_lz||'')}"></div></div>
+    <div class="fr2"><div class="fg"><label class="fl">Übersetzer / Deutscher Text</label><input class="fi" id="sf-ueb" value="${esc(s.uebersetzer||'')}" list="dl-ueb" autocomplete="off" oninput="fillPersonLz(this,'sf-ueb-lz','uebersetzer')"></div><div class="fg"><label class="fl">Lebensdaten</label><input class="fi" id="sf-ueb-lz" value="${esc(s.uebersetzer_lz||'')}"></div></div>
   </div>
   <div class="fs"><div class="fst">Rechtliches</div>
     <div class="fr2"><div class="fg"><label class="fl">Rechte</label><input class="fi" id="sf-recht" value="${esc(s.rechte||'')}"></div><div class="fg"><label class="fl">Lizenz</label><input class="fi" id="sf-liz" value="${esc(s.lizenz||'')}"></div></div>
@@ -2878,7 +2878,7 @@ function parseSongInput(text){
     {re:/^(?:arr(?:angeur)?\.?\s*lebensdaten|al\.?)/i, field:'arrangeur_lz'},
     {re:/^(?:arrangeur|arr\.?)/i,                field:'arrangeur'},
     {re:/^(?:[üÜ]bers\.?\s*lebensdaten|ul\.?)/i, field:'uebersetzer_lz'},
-    {re:/^(?:[üÜ]bersetzer|uebersetzer|[üÜ]bers\.?|transl\.?)/i, field:'uebersetzer'},
+    {re:/^(?:[üÜ]bersetzer|uebersetzer|[üÜ]bers\.?|transl\.?|[üÜ]bersetzer\/Deutscher\s+Text|deutscher\s+text)/i, field:'uebersetzer'},
     {re:/^(?:besetzung|voicing|stimmen)/i,        field:'besetzung'},
     {re:/^(?:rechte|copyright)/i,                 field:'rechte'},
     {re:/^(?:lizenz|ccli|license)/i,              field:'lizenz'},
@@ -2919,7 +2919,7 @@ function openSongAssistant(){
   _sastMode=null;_sastPendingSong=null;
   document.getElementById('sast-msgs').innerHTML='';
   document.getElementById('sast-actions').style.display='none';
-  const template='Liedanfang: \nTitel: \nKomponist: \nTextdichter: \nArrangeur: \nÜbersetzer: \nOriginaltitel: \nBesetzung: \nRechte: ';
+  const template='Liedanfang: \nTitel: \nKomponist: \nTextdichter: \nArrangeur: \nÜbersetzer/Deutscher Text: \nOriginaltitel: \nBesetzung: \nRechte: ';
   const inp=document.getElementById('sast-input');
   inp.value=template;inp.style.minHeight='220px';
   _sastMode='new_song';
@@ -3064,45 +3064,69 @@ async function processSastFile(file){
 }
 async function processSastInfoPdf(lines,filename){
   const song={title:'',liedanfang:'',originaltitel:'',komponist:'',komponist_lz:'',textdichter:'',textdichter_lz:'',arrangeur:'',arrangeur_lz:'',uebersetzer:'',besetzung:'',rechte:'',lizenz:'',links:[],created_by:currentUser.id};
-  const pats=[{f:'title',re:/^(?:titel|title):?\s*(.+)/i},{f:'liedanfang',re:/^(?:liedanfang|anfang):?\s*(.+)/i},{f:'komponist',re:/^(?:komponist|musik|music|composed?\s*by|melody):?\s*(.+)/i},{f:'textdichter',re:/^(?:textdichter|text|words?\s*by|lyrics?):?\s*(.+)/i},{f:'arrangeur',re:/^(?:arrangeur|arr\.?):?\s*(.+)/i},{f:'uebersetzer',re:/^(?:\u00fcbersetzer|uebersetzer|\u00fcbers\.?):?\s*(.+)/i},{f:'besetzung',re:/^(?:besetzung|voicing):?\s*(.+)/i},{f:'rechte',re:/^(?:copyright|\u00a9):?\s*(.+)/i},{f:'lizenz',re:/^(?:lizenz|ccli):?\s*(.+)/i}];
-  const lzRe=/(\d{4})\s*[-\u2013\u2014]\s*(\d{4}|\?)/;
-  for(const line of lines){for(const{f,re} of pats){const m=line.match(re);if(m&&m[1]&&!song[f]){song[f]=m[1].trim();const lzm=m[1].match(lzRe);if(lzm&&f+'_lz' in song){song[f+'_lz']=lzm[1]+'\u2013'+lzm[2];song[f]=song[f].replace(lzRe,'').trim();}break;}}}
-  if(!song.title&&!song.liedanfang){const fl=lines.find(l=>l.length>2&&l.length<100&&!/^[\d\.]/.test(l));if(fl){song.title=fl;song.liedanfang=fl;}}
-  if(!song.title)song.title=song.liedanfang;if(!song.liedanfang)song.liedanfang=song.title;
+  const fullText=lines.join(' ');
+
+  // Search both full text and individual lines
+  const labeled=[
+    {f:'title',        re:/(?:^|\s)(?:Titel|Title):\s*([^\n,]+)/i},
+    {f:'liedanfang',   re:/(?:^|\s)(?:Liedanfang|Anfang):\s*([^\n,]+)/i},
+    {f:'originaltitel',re:/(?:Originaltitel|Original[- ]?title):\s*([^\n]+?)(?:\s{2,}|$)/i},
+    {f:'komponist',    re:/(?:Musik|Music|Komponist|Composer):\s*([^\n]+?)(?:\s{2,}|$)/i},
+    {f:'textdichter',  re:/(?:^|\s)(?:Text|Words|Lyrics|Textdichter):\s*([^\n]+?)(?:\s{2,}|$)/i},
+    {f:'uebersetzer',  re:/(?:Deutscher Text|\u00dcbersetzung|\u00dcbersetzer|German[- ]?Text):\s*([^\n]+?)(?:\s{2,}|$)/i},
+    {f:'arrangeur',    re:/(?:Chorsatz|Arr(?:angement|angeur)?|Satz):\s*([^\n]+?)(?:\s{2,}|$)/i},
+    {f:'besetzung',    re:/(?:Besetzung|Voicing|Stimmen):\s*([^\n]+?)(?:\s{2,}|$)/i},
+    {f:'rechte',       re:/(\u00a9\s*\d{4}[^\n]*?)(?:\s{2,}|$)/},
+    {f:'lizenz',       re:/(?:CCLI|Lizenz(?:nummer)?)\s*[:#]?\s*([^\n]+?)(?:\s{2,}|$)/i},
+  ];
+  for(const{f,re} of labeled){
+    if(!song[f]){const m=fullText.match(re);if(m&&m[1])song[f]=m[1].trim().replace(/\s+/g,' ');}
+    if(!song[f]){for(const l of lines){const m=l.match(re);if(m&&m[1]){song[f]=m[1].trim().replace(/\s+/g,' ');break;}}}
+  }
+
+  // Title fallback: first line that looks like a real title
+  if(!song.title&&!song.liedanfang){
+    const t=lines.find(l=>{
+      const s=l.trim();
+      return s.length>2&&s.length<80
+        &&!/^(?:Text|Musik|Chorsatz|Piano|Originaltitel|\u00a9|L\d|Lizenz|CCLI)/i.test(s)
+        &&!/^\d/.test(s)&&!/^[A-G][#b]?(?:m|maj|sus|add|dim|aug|\d)/.test(s)
+        &&(s.match(/[a-z\u00e4\u00f6\u00fc\u00df]/)||[]).length>2;
+    });
+    if(t){song.title=t.trim();song.liedanfang=song.title;}
+  }
+  if(!song.title)song.title=song.liedanfang;
+  if(!song.liedanfang)song.liedanfang=song.title;
+
   const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
   const existing=songs.find(s=>normStr(s.liedanfang||s.title||'')===normStr(song.liedanfang||song.title||''));
+  const foundCount=[song.komponist,song.textdichter,song.arrangeur,song.rechte,song.uebersetzer].filter(Boolean).length;
 
-  // Check how much we found
-  const foundFields=[song.komponist,song.textdichter,song.arrangeur,song.besetzung,song.rechte].filter(Boolean).length;
-
-  if(!existing&&foundFields<2){
-    // Not enough info extracted – show editable template pre-filled with what we have
-    sastBot('Ich habe wenig Informationen gefunden. Bitte ergänze die Felder:');
+  if(!existing&&foundCount<1){
+    sastBot('Wenig erkannt. Bitte erg\u00e4nze die Felder:');
     const inp=document.getElementById('sast-input');
-    inp.value=
-      'Liedanfang: '+(song.liedanfang||'')+'\n'+
-      'Titel: '+(song.title&&song.title!==song.liedanfang?song.title:'')+'\n'+
-      'Komponist: '+(song.komponist||'')+'\n'+
-      'Textdichter: '+(song.textdichter||'')+'\n'+
-      'Arrangeur: '+(song.arrangeur||'')+'\n'+
-      'Übersetzer: '+(song.uebersetzer||'')+'\n'+
-      'Originaltitel: '+(song.originaltitel||'')+'\n'+
-      'Besetzung: '+(song.besetzung||'')+'\n'+
-      'Rechte: '+(song.rechte||'');
+    inp.value='Liedanfang: '+(song.liedanfang||'')+'\nTitel: '+(song.title&&song.title!==song.liedanfang?song.title:'')+'\nKomponist: '+(song.komponist||'')+'\nTextdichter: '+(song.textdichter||'')+'\nArrangeur: '+(song.arrangeur||'')+'\n\u00dcbersetzer: '+(song.uebersetzer||'')+'\nOriginaltitel: '+(song.originaltitel||'')+'\nBesetzung: '+(song.besetzung||'')+'\nRechte: '+(song.rechte||'');
     inp.style.minHeight='220px';inp.focus();_sastMode='new_song';return;
   }
-  let msg='Aus "'+filename+'":\n\n'+(song.title||'Unbekannt')+'\n';
-  if(song.komponist)msg+='- Komponist: '+song.komponist+(song.komponist_lz?' ('+song.komponist_lz+')':'')+'\n';
-  if(song.textdichter)msg+='- Textdichter: '+song.textdichter+'\n';
-  if(song.arrangeur)msg+='- Arrangeur: '+song.arrangeur+'\n';
-  if(song.besetzung)msg+='- Besetzung: '+song.besetzung+'\n';
+
+  let msg='Aus "'+filename+'" erkannt:\n\n\ud83d\udcd6 '+(song.title||song.liedanfang||'?')+'\n';
+  if(song.originaltitel)msg+='- Originaltitel: '+song.originaltitel+'\n';
+  if(song.komponist)msg+='- Musik: '+song.komponist+'\n';
+  if(song.textdichter)msg+='- Text: '+song.textdichter+'\n';
+  if(song.uebersetzer)msg+='- Deutscher Text: '+song.uebersetzer+'\n';
+  if(song.arrangeur)msg+='- Chorsatz/Arr.: '+song.arrangeur+'\n';
   if(song.rechte)msg+='- Rechte: '+song.rechte+'\n';
+
   if(existing){
     const upd=Object.entries(song).filter(([k,v])=>v&&typeof v==='string'&&!['title','links','created_by'].includes(k)&&!existing[k]);
-    if(upd.length){msg+='\nBereits vorhanden. Erg\u00e4nzen:\n'+upd.map(([k,v])=>'- '+k+': '+v).join('\n');sastBot(msg);_sastPendingSong={_id:existing.id,...Object.fromEntries(upd)};_sastMode='confirm';sastShowActions([{label:'Infos erg\u00e4nzen',fn:'sastConfirmSong()'},{label:'Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);}
-    else{msg+='\nAlle Infos bereits vorhanden.';sastBot(msg);}
-  } else {msg+='\nAufnehmen?';sastBot(msg);_sastPendingSong=song;_sastMode='confirm';sastShowActions([{label:'Aufnehmen',fn:'sastConfirmSong()'},{label:'Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);}
+    if(upd.length){msg+='\n\u2713 Bereits vorhanden. Fehlende Infos erg\u00e4nzen:\n'+upd.map(([k,v])=>'+ '+k+': '+v).join('\n');sastBot(msg);_sastPendingSong={_id:existing.id,...Object.fromEntries(upd)};_sastMode='confirm';sastShowActions([{label:'\u2713 Infos erg\u00e4nzen',fn:'sastConfirmSong()'},{label:'\u2717 Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);}
+    else{msg+='\n\u2713 Bereits vollst\u00e4ndig vorhanden.';sastBot(msg);}
+  } else {
+    msg+='\nAufnehmen?';sastBot(msg);_sastPendingSong=song;_sastMode='confirm';
+    sastShowActions([{label:'\u2713 Aufnehmen',fn:'sastConfirmSong()'},{label:'\u270f Bearbeiten',fn:"_sastMode='new_song';const i=document.getElementById('sast-input');i.value='Liedanfang: '+(song.liedanfang||'')+'\\nKomponist: '+(song.komponist||'')+'\\nTextdichter: '+(song.textdichter||'')+'\\nArrangeur: '+(song.arrangeur||'')+'\\n\u00dcbersetzer: '+(song.uebersetzer||'')+'\\nOriginaltitel: '+(song.originaltitel||'')+'\\nBesetzung: '+(song.besetzung||'')+'\\nRechte: '+(song.rechte||'');i.style.minHeight='220px';i.focus();sastClearActions();"},{label:'\u2717 Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);
+  }
 }
+
 
 async function renderSettings(tab='members'){
   if(currentProfile?.role!=='admin'){document.getElementById('settings-body').innerHTML='<p style="color:var(--text2)">Nur für Admins.</p>';return;}

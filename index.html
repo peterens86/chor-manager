@@ -3050,9 +3050,14 @@ async function processSastFile(file){
     const base64=btoa(binary);
     const isPdf=file.name.toLowerCase().endsWith('.pdf');
 
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    // Call via Supabase Edge Function proxy (avoids CORS)
+    const proxyUrl=SB_URL+'/functions/v1/claude-proxy';
+    const resp=await fetch(proxyUrl,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+SB_KEY,
+      },
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:800,

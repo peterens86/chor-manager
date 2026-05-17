@@ -3090,7 +3090,9 @@ async function processSastFile(file){
     while((m=metaRe.exec(raw))!==null)allText+=m[1]+'\n';
 
     if(allText.trim().length>20){
-      text=allText;
+      // Validate: must have enough readable characters
+      const readable=(allText.match(/[a-zA-Z\u00C0-\u024F\s]{3,}/g)||[]).join(' ');
+      if(readable.length>30)text=allText;
       console.log('PDF text OK:',text.slice(0,200));
     }
   }catch(e){console.log('PDF read error:',e);}
@@ -3108,11 +3110,26 @@ async function processSastFile(file){
       {f:'arrangeur',re:/(?:Chorsatz|Arr(?:angement)?|Satz):\s*([^\n]+?)(?:\s{2,}|$)/i},
       {f:'rechte',re:/(\u00a9\s*\d{4}[^\n]{0,60})/},
     ];
-    for(const{f,re} of pats){const m=fullT.match(re);if(m&&m[1])song[f]=m[1].trim().replace(/\s+/g,' ');}
+    for(const{f,re} of pats){
+      const m=fullT.match(re);
+      if(m&&m[1]){
+        const val=m[1].trim().replace(/\s+/g,' ');
+        // Only accept if mostly readable characters
+        const readable=(val.match(/[a-zA-Z\u00C0-\u024F\s]/g)||[]).length;
+        if(readable/val.length>0.6)song[f]=val;
+      }
+    }
 
-    // Title: first line that looks like words
+    // Title: first line that looks like real words
     if(!song.liedanfang){
-      const tlines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>3&&l.length<80&&/[a-z\u00e4\u00f6\u00fc\u00df]/i.test(l)&&!/^(?:Musik|Text|Chorsatz|Piano|\u00a9|L\d)/i.test(l));
+      const tlines=text.split('\n').map(l=>l.trim()).filter(l=>{
+        if(l.length<3||l.length>80)return false;
+        if(!/[a-z\u00e4\u00f6\u00fc\u00df]/i.test(l))return false;
+        if(/^(?:Musik|Text|Chorsatz|Piano|\u00a9|L\d)/i.test(l))return false;
+        // Must be mostly readable
+        const readable=(l.match(/[a-zA-Z\u00C0-\u024F\s]/g)||[]).length;
+        return readable/l.length>0.7;
+      });
       if(tlines[0])song.liedanfang=tlines[0];
     }
   }

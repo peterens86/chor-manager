@@ -749,8 +749,17 @@ async function renderDash(){
       ${isMulti?'<span class="badge blue" style="font-size:9px;margin-top:3px">Mehrtägig</span>':''}
     </div>`;
   }).join(''):'<p style="color:var(--text3);font-size:12px">Keine Termine</p>';
-  const{data:evts}=await SB.from('events').select('*').gte('datum',today()).order('datum').limit(3);
-  document.getElementById('d-events').innerHTML=(evts||[]).length?evts.map(e=>`<div class="card" onclick="openEvDetail('${e.id}')"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div>${(e.chor||e.thema)?`<div class="cmeta">${e.chor?`<span class="badge">${esc(e.chor)}</span>`:''} ${e.thema?`<span class="badge blue">${esc(e.thema)}</span>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Keine Veranstaltungen</p>';
+  const{data:evts}=await SB.from('events').select('*').gte('datum',today()).order('datum').limit(10);
+  const nowD=new Date();
+  const upEvts=(evts||[]).filter(e=>{
+    if(e.datum>today())return true;
+    if(e.datum<today())return false;
+    if(!e.uhrzeit)return false;
+    const[h,m]=(e.uhrzeit||'00:00').split(':').map(Number);
+    const evEnd=new Date(nowD);evEnd.setHours(h+2,m,0,0);
+    return nowD<evEnd;
+  }).slice(0,3);
+  document.getElementById('d-events').innerHTML=upEvts.length?upEvts.map(e=>`<div class="card" onclick="openEvDetail('${e.id}')"><div class="ct">${esc(e.title)}</div><div class="cs">${fD(e.datum)} ${e.uhrzeit?'· '+fT(e.uhrzeit):''} · ${esc(e.ort||'')}</div>${(e.chor||e.thema)?`<div class="cmeta">${e.chor?`<span class="badge">${esc(e.chor)}</span>`:''} ${e.thema?`<span class="badge blue">${esc(e.thema)}</span>`:''}</div>`:''}</div>`).join(''):'<p style="color:var(--text3);font-size:12px">Keine Veranstaltungen</p>';
   loadUnread();
 }
 

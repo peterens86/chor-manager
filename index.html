@@ -730,8 +730,8 @@ const VAPID_PUBLIC='BPp1ZDfFrJXJ9dIq4H4_2or4nRdTCere6_EchSDS7hn40zUaWpiuDH1SDT1Y
 
 async function setupPush(){
   if(!('serviceWorker' in navigator))return;
-  try{navigator.serviceWorker.register('/chor-manager/sw.js');}
-  catch(e){console.log('SW:',e);}
+  // Register SW in background, don't await
+  navigator.serviceWorker.register('/chor-manager/sw.js').catch(e=>console.log('SW:',e));
 }
 
 async function enablePush(){
@@ -740,32 +740,36 @@ async function enablePush(){
   try{
     if(!('serviceWorker' in navigator)){log('\u274c Kein SW');return;}
     if(!('PushManager' in window)){log('\u274c Kein PushManager');return;}
-    // Permission already granted (user just confirmed)
     const perm=Notification.permission;
     log('Berechtigung: '+perm);
-    if(perm==='denied'){log('\u274c Blockiert in Android-Einstellungen');return;}
-    if(perm!=='granted'){log('\u274c Nicht erlaubt');return;}
-    log('SW registrieren...');
-    const reg=await navigator.serviceWorker.register('/chor-manager/sw.js');
-    log('SW Status: '+(reg.active?'aktiv':reg.installing?'installiert':reg.waiting?'wartend':'?'));
-    log('Versuche Abonnement...');
-    // Use the registration directly - don't wait for active state
-    const existing=await reg.pushManager.getSubscription();
-    if(existing){
-      log('Bereits abonniert!');
-      await savePushSub(existing);
-      if(btn)btn.disabled=true;
-      return;
+    if(perm==='denied'){log('\u274c Blockiert - Android Einstellungen > Chrome > Benachrichtigungen');return;}
+    if(perm!=='granted'){log('\u274c Nicht erlaubt ('+perm+')');return;}
+    log('SW holen...');
+    // Get registration with 8s timeout
+    let reg=null;
+    const existing=await navigator.serviceWorker.getRegistrations();
+    if(existing.length){reg=existing[0];log('SW vorhanden: '+reg.scope);}
+    else{
+      // Register with timeout
+      reg=await Promise.race([
+        navigator.serviceWorker.register('/chor-manager/sw.js'),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('SW Timeout - bitte App neu installieren')),8000))
+      ]);
+      log('SW neu: '+reg.scope);
     }
-    const sub=await reg.pushManager.subscribe({
-      userVisibleOnly:true,
-      applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
-    });
-    log('Speichere...');
+    log('Push abonnieren...');
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
+      });
+    }
+    log('Speichern...');
     await savePushSub(sub);
-    log('\u2713 Benachrichtigungen aktiv!');
+    log('\u2713 Aktiv!');
     if(btn)btn.disabled=true;
-  }catch(e){log('\u274c Fehler: '+e.message);console.error(e);}
+  }catch(e){log('\u274c '+e.message);}
 }
 
 

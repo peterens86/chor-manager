@@ -3117,7 +3117,8 @@ async function processSastFile(file){
     };
 
     const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
-    const existing=songs.find(s=>normStr(s.liedanfang||s.title||'')===normStr(song.liedanfang||song.title||''));
+    const _norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    const existing=songs.find(s=>_norm(s.liedanfang||s.title||'')===_norm(song.liedanfang||song.title||''));
 
     if(existing){
       const upd=Object.entries(song).filter(([k,v])=>v&&typeof v==='string'&&!['title','links','created_by'].includes(k)&&!existing[k]);

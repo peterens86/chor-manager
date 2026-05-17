@@ -859,9 +859,7 @@ async function openSongDetail(id){
   // Song files - display only
   const{data:files}=await SB.from('song_files').select('*').eq('song_id',id);
   const fileLabels={'chorsatz':'PDF Chorsatz','klaviersatz':'PDF Klaviersatz','chor_klavier':'PDF Chor+Klavier','orchestersatz':'PDF Orchestersatz','sibelius':'Sibelius-Datei'};
-  const isAdminFile=currentProfile?.role==='admin';
-  const filesHtml=(files||[]).length?`<div class="ddiv"></div><div class="dl">Dateien</div><div style="margin-top:6px">${(files||[]).map(f=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:3px"><a href="${esc(f.url)}" target="_blank" class="ffile">📄 ${esc(fileLabels[f.file_type]||f.file_type)}</a>${isAdminFile?`<button onclick="deleteSongFile('${f.id}','${esc(f.path||'')}','${id}')" style="background:rgba(224,85,85,.15);border:0.5px solid rgba(224,85,85,.3);color:var(--danger);border-radius:var(--r);width:20px;height:20px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>`:''}​</span>`).join('')}</div>`:'';
-  document.getElementById('sd-body').innerHTML=`
+  const filesHtml=(files||[]).length?`<div class="ddiv"></div><div class="dl">Dateien</div><div style="margin-top:6px">${(files||[]).map(f=>`<a href="${esc(f.url)}" target="_blank" class="ffile">📄 ${esc(fileLabels[f.file_type]||f.file_type)}</a>`).join('')}</div>`:'';  document.getElementById('sd-body').innerHTML=`
     <div class="dgrid" style="margin-bottom:12px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}${df('Bibelstelle',s.bibelstelle)}${df('Schrank',s.schrank)}</div>
     <div class="ddiv"></div>
     <div class="dgrid" style="margin-bottom:12px">
@@ -883,6 +881,30 @@ async function openSongDetail(id){
     footer.appendChild(eb);footer.appendChild(db);
   }
   openModal('m-song-detail');
+}
+
+async function changeSongFileType(fileId,songId,newType,oldPath){
+  // Move file in storage to new path
+  const ext=(oldPath||'').split('.').pop()||'pdf';
+  const newPath=`${songId}/${newType}.${ext}`;
+  if(oldPath&&oldPath!==newPath){
+    // Copy: download and re-upload
+    try{
+      const{data:dlData}=await SB.storage.from('choir-media').download(oldPath);
+      if(dlData){
+        await SB.storage.from('choir-media').upload(newPath,dlData,{upsert:true});
+        await SB.storage.from('choir-media').remove([oldPath]);
+        const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(newPath);
+        await SB.from('song_files').update({file_type:newType,path:newPath,url:publicUrl}).eq('id',fileId);
+      }
+    }catch(e){
+      // Just update type in DB if move fails
+      await SB.from('song_files').update({file_type:newType}).eq('id',fileId);
+    }
+  } else {
+    await SB.from('song_files').update({file_type:newType}).eq('id',fileId);
+  }
+  T('Dateityp geändert','ok');
 }
 
 async function deleteSongFile(fileId,path,songId){
@@ -918,6 +940,24 @@ function openSongForm(id=null,prefill={}){
   document.getElementById('sf-title-h').textContent=id?'Lied bearbeiten':'Lied hinzufügen';
   document.getElementById('sf-body').innerHTML=buildSongFormHTML(s,id);
   openModal('m-song-form');
+  // Load existing files if editing
+  if(id){
+    SB.from('song_files').select('*').eq('song_id',id).then(({data:files})=>{
+      const el=document.getElementById('sff-existing-'+id);
+      if(!el||!files?.length)return;
+      const labels={'chorsatz':'PDF Chorsatz','klaviersatz':'PDF Klaviersatz','chor_klavier':'PDF Chor+Klavier','orchestersatz':'PDF Orchestersatz','sibelius':'Sibelius-Datei'};
+      const ftOptions=Object.keys(labels).map(ft=>`<option value="${ft}">${labels[ft]}</option>`).join('');
+      el.innerHTML='<div class="dl" style="margin-bottom:6px">Vorhandene Dateien</div>'+
+        files.map(f=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;background:rgba(0,0,0,.15);border-radius:var(--r);padding:7px 10px">
+          <span style="font-size:12px;flex:1">📄 ${esc(labels[f.file_type]||f.file_type)}</span>
+          <select class="fi" style="font-size:11px;padding:4px 6px;width:140px" onchange="changeSongFileType('${f.id}','${f.song_id}',this.value,'${esc(f.path||'')}')">
+            ${Object.keys(labels).map(ft=>`<option value="${ft}" ${ft===f.file_type?'selected':''}>${labels[ft]}</option>`).join('')}
+          </select>
+          <a href="${esc(f.url)}" target="_blank" class="btn btn-g btn-sm">↗</a>
+          <button class="btn btn-d btn-sm" onclick="deleteSongFile('${f.id}','${esc(f.path||'')}',null)">✕</button>
+        </div>`).join('');
+    });
+  }
 }
 function buildSongFormHTML(s,id=null){
   return`<div class="fs"><div class="fst">Allgemein</div>
@@ -948,7 +988,8 @@ function buildSongFormHTML(s,id=null){
     <div class="fg"><label class="fl">YouTube / Spotify</label><input class="fi" id="sf-link" value="${esc((s.links||[])[0]||'')}" placeholder="https://…"></div>
     <div class="fg"><label class="fl">Notizen</label><textarea class="fi" id="sf-notiz">${esc(s.notizen||'')}</textarea></div>
   </div>
-  ${id?`<div class="fs"><div class="fst">Dateien hochladen</div>
+  ${id?`<div class="fs"><div class="fst">Dateien</div>
+    <div id="sff-existing-${id}"></div>
     ${['chorsatz','klaviersatz','chor_klavier','orchestersatz','sibelius'].map(ft=>{
       const labels={'chorsatz':'PDF Chorsatz','klaviersatz':'PDF Klaviersatz','chor_klavier':'PDF Chor+Klavier','orchestersatz':'PDF Orchestersatz','sibelius':'Sibelius-Datei'};
       return`<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
@@ -3079,6 +3120,10 @@ async function processSastFile(file){
 
     // Call via Supabase Edge Function proxy (avoids CORS)
     const proxyUrl=SB_URL+'/functions/v1/claude-proxy';
+    // Build list of existing themen and anlässe for context
+    const existingThemen=[...new Set(cachedSongs.map(s=>s.thema).filter(Boolean).flatMap(t=>t.split(',').map(x=>x.trim())))].join(', ');
+    const existingAnlaesse=[...new Set(cachedSongs.map(s=>s.anlass).filter(Boolean).flatMap(a=>a.split(',').map(x=>x.trim())))].join(', ');
+
     const resp=await fetch(proxyUrl,{
       method:'POST',
       headers:{
@@ -3094,7 +3139,7 @@ async function processSastFile(file){
             isPdf
               ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
               :{type:'text',text:new TextDecoder().decode(bytes)},
-            {type:'text',text:'Extrahiere die Lied-Metadaten. Antworte NUR mit JSON, kein Markdown:\n{"liedanfang":"","titel":"","komponist":"","textdichter":"","uebersetzer":"","arrangeur":"","originaltitel":"","besetzung":"","rechte":"","datei_typ":""}\n\nRegeln:\n- liedanfang = erster Satz/Vers des Liedes auf Deutsch\n- textdichter = Autor des Originaltexts (Text: ...)\n- uebersetzer = Deutscher Text / Uebersetzung (Deutscher Text: ...)\n- komponist = Musik (Musik: ...)\n- arrangeur = Chorsatz / Arrangement\n- rechte = Copyright-Zeile\n- datei_typ = Art der Datei: "chorsatz" (Chor-Noten/SATB/Chorpartitur), "klaviersatz" (Klavier solo), "chor_klavier" (Chor + Klavier zusammen), "orchestersatz" (Orchester), oder "sonstiges"\n- Felder nicht gefunden = leer lassen'}          ]
+            {type:'text',text:`Extrahiere die Lied-Metadaten. Antworte NUR mit JSON, kein Markdown:\n{"liedanfang":"","titel":"","komponist":"","textdichter":"","uebersetzer":"","arrangeur":"","originaltitel":"","besetzung":"","rechte":"","thema":"","anlass":"","datei_typ":""}\n\nRegeln:\n- liedanfang = erster Satz/Vers des Liedes auf Deutsch\n- textdichter = Autor des Originaltexts (Text: ...)\n- uebersetzer = Deutscher Text / Uebersetzung (Deutscher Text: ...)\n- komponist = Musik (Musik: ...)\n- arrangeur = Chorsatz / Arrangement\n- rechte = Copyright-Zeile\n- thema = passendes Thema aus dieser Liste (kommagetrennt wenn mehrere passen): ${existingThemen||'Worship, Advent, Weihnachten, Ostern, Lob, Glaube, Trost, Gebet'}\n- anlass = passender Anlass aus dieser Liste (kommagetrennt wenn mehrere passen): ${existingAnlaesse||'Gottesdienst, Taufe, Abendmahl, Konzert, Hochzeit, Beerdigung'}\n- datei_typ = "chorsatz" wenn Chor-Noten (SATB, mehrstimmig, Chorpartitur), "klaviersatz" wenn nur Klavier, "chor_klavier" wenn Chor UND Klavier zusammen auf einer Partitur, "orchestersatz" wenn Orchester\n- Felder nicht gefunden = leer lassen`}          ]
         }]
       })
     });
@@ -3141,11 +3186,15 @@ async function processSastFile(file){
       uebersetzer:info.uebersetzer||'',
       besetzung:info.besetzung||'',
       rechte:info.rechte||'',
+      thema:info.thema||'',
+      anlass:info.anlass||'',
       lizenz:info.lizenz||'',
       links:[],created_by:currentUser.id,
       _file:file,
       _fileType:info.datei_typ||'chorsatz'
     };
+    if(info.thema)msg+='- Thema: '+info.thema+'\n';
+    if(info.anlass)msg+='- Anlass: '+info.anlass+'\n';
 
     const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
     const _norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();

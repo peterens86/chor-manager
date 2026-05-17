@@ -743,7 +743,13 @@ async function enablePush(){
     const perm=Notification.permission;
     log('Berechtigung: '+perm);
     if(perm==='denied'){log('\u274c Blockiert - Android Einstellungen > Chrome > Benachrichtigungen');return;}
-    if(perm!=='granted'){log('\u274c Nicht erlaubt ('+perm+')');return;}
+    let finalPerm=perm;
+    if(perm!=='granted'){
+      log('Frage Erlaubnis...');
+      finalPerm=await Notification.requestPermission();
+      log('Antwort: '+finalPerm);
+    }
+    if(finalPerm!=='granted'){log('\u274c Abgelehnt: '+finalPerm);return;}
     log('SW holen...');
     // Get registration with 8s timeout
     let reg=null;

@@ -2333,51 +2333,106 @@ async function processAstFile(file){
 async function extractPdfText(file){
   const buf=await file.arrayBuffer();
   const bytes=new Uint8Array(buf);
-  const decoder=new TextDecoder('latin1');
-  const raw=decoder.decode(bytes);
-  let text='';
 
-  // Method 1: BT...ET blocks (standard PDF text rendering)
-  const btEtRe=/BT\s([\s\S]*?)ET/g;
-  let m;
-  while((m=btEtRe.exec(raw))!==null){
-    const block=m[1];
-    const strRe=/\(([^)\\]*(?:\\.[^)\\]*)*)\)|<([0-9A-Fa-f\s]+)>/g;
-    let sm;let lineText='';
-    while((sm=strRe.exec(block))!==null){
-      if(sm[1]!==undefined){
-        const s=sm[1]
-          .replace(/\\n/g,'\n').replace(/\\r/g,'\r').replace(/\\t/g,' ')
+  // Decompress deflate streams in the PDF using DecompressionStream API
+  async function inflateStream(data){
+    try{
+      const ds=new DecompressionStream('deflate');
+      const writer=ds.writable.getWriter();
+      const reader=ds.readable.getReader();
+      writer.write(data);writer.close();
+      const chunks=[];
+      while(true){const{done,value}=await reader.read();if(done)break;chunks.push(value);}
+      const total=chunks.reduce((n,c)=>n+c.length,0);
+      const out=new Uint8Array(total);let off=0;
+      chunks.forEach(c=>{out.set(c,off);off+=c.length;});
+      return out;
+    }catch{return null;}
+  }
+  async function inflateRaw(data){
+    try{
+      const ds=new DecompressionStream('deflate-raw');
+      const writer=ds.writable.getWriter();
+      const reader=ds.readable.getReader();
+      writer.write(data);writer.close();
+      const chunks=[];
+      while(true){const{done,value}=await reader.read();if(done)break;chunks.push(value);}
+      const total=chunks.reduce((n,c)=>n+c.length,0);
+      const out=new Uint8Array(total);let off=0;
+      chunks.forEach(c=>{out.set(c,off);off+=c.length;});
+      return out;
+    }catch{return null;}
+  }
+
+  // Find all stream...endstream blocks and try to decompress them
+  let allText='';
+  const raw=new TextDecoder('latin1').decode(bytes);
+
+  // Find stream positions
+  let pos=0;
+  const streamStarts=[];
+  while((pos=raw.indexOf('stream',pos))!==-1){
+    // Skip 'stream' + newline
+    let start=pos+6;
+    if(raw[start]==='\r')start++;
+    if(raw[start]==='\n')start++;
+    const end=raw.indexOf('endstream',start);
+    if(end===-1){pos++;continue;}
+    streamStarts.push({start,end});
+    pos=end+9;
+  }
+
+  for(const{start,end} of streamStarts){
+    const streamData=bytes.slice(start,end);
+    // Try deflate variants
+    let decoded=await inflateStream(streamData)||await inflateRaw(streamData);
+    let text='';
+    if(decoded){
+      text=new TextDecoder('latin1',{fatal:false}).decode(decoded);
+    } else {
+      // Not compressed – use as-is
+      text=new TextDecoder('latin1',{fatal:false}).decode(streamData);
+    }
+    // Extract text from BT...ET blocks
+    const btEtRe=/BT\s([\s\S]*?)ET/g;
+    let m;
+    while((m=btEtRe.exec(text))!==null){
+      const block=m[1];
+      const strRe=/\(([^)\\]*(?:\\.[^)\\]*)*)\)/g;
+      let sm;let line='';
+      while((sm=strRe.exec(block))!==null){
+        line+=sm[1]
+          .replace(/\\n/g,' ').replace(/\\r/g,' ').replace(/\\t/g,' ')
           .replace(/\\\(/g,'(').replace(/\\\)/g,')').replace(/\\\\/g,'\\')
           .replace(/\\(\d{3})/g,(_,o)=>String.fromCharCode(parseInt(o,8)));
-        lineText+=s;
-      } else if(sm[2]!==undefined){
-        const hex=sm[2].replace(/\s/g,'');
-        for(let i=0;i<hex.length;i+=2){
-          const code=parseInt(hex.substr(i,2),16);
-          if(code>31&&code<127)lineText+=String.fromCharCode(code);
+      }
+      if(line.trim())allText+=line.trim()+'\n';
+    }
+    // Also look for hex strings <...> in BT blocks
+    const hexRe=/BT\s([\s\S]*?)ET/g;
+    while((m=hexRe.exec(text))!==null){
+      const hexStrRe=/<([0-9A-Fa-f\s]+)>/g;
+      let hm;let hexLine='';
+      while((hm=hexStrRe.exec(m[1]))!==null){
+        const h=hm[1].replace(/\s/g,'');
+        for(let i=0;i<h.length;i+=2){
+          const code=parseInt(h.substr(i,2),16);
+          if(code>31&&code<127)hexLine+=String.fromCharCode(code);
         }
       }
+      if(hexLine.trim())allText+=hexLine.trim()+'\n';
     }
-    if(lineText.trim())text+=lineText.trim()+'\n';
   }
 
-  // Method 2: If method 1 gave little, try readable ASCII sequences
-  if(text.trim().length<30){
-    const seenWords=new Set();
-    const asciiRe=/[\x20-\x7E]{4,}/g;
-    const parts=[];
-    while((m=asciiRe.exec(raw))!==null){
-      const s=m[0].trim();
-      if(!s||seenWords.has(s))continue;
-      const alpha=(s.match(/[a-zA-Z\s]/g)||[]).length;
-      if(alpha/s.length>0.45&&s.length<200){seenWords.add(s);parts.push(s);}
-    }
-    text=parts.join('\n');
+  // Also extract /Title, /Author, /Subject from PDF metadata
+  const metaRe=/\/(?:Title|Author|Subject|Keywords)\s*\(([^)]+)\)/g;
+  let mm;
+  while((mm=metaRe.exec(raw))!==null){
+    allText+=mm[1].trim()+'\n';
   }
 
-  console.log('PDF text extracted ('+text.length+' chars):', text.slice(0,200));
-  return text;
+  console.log('PDF extracted ('+allText.length+' chars):', allText.slice(0,300));
+  return allText;
 }
 
 

@@ -744,40 +744,40 @@ async function setupPush(){
 }
 
 async function enablePush(){
-  // Check support
-  if(!('serviceWorker' in navigator)){T('Service Worker nicht unterstützt','err');return;}
-  if(!('PushManager' in window)){T('Push nicht unterstützt – bitte App im Browser öffnen und dort aktivieren','err');return;}
-  if(!('Notification' in window)){T('Benachrichtigungen nicht verfügbar – bitte in Chrome-Einstellungen aktivieren','err');return;}
+  const btn=document.getElementById('push-btn');
+  const log=s=>{T(s);console.log(s);if(btn)btn.textContent=s;};
+  if(!('serviceWorker' in navigator)){log('❌ Kein Service Worker');return;}
+  if(!('PushManager' in window)){log('❌ Kein PushManager');return;}
+  if(!('Notification' in window)){log('❌ Kein Notification API');return;}
+  log('Prüfe Berechtigung…');
   try{
-    T('Wird aktiviert…');
     const perm=Notification.permission;
-    console.log('Current permission:', perm);
+    log('Status: '+perm);
     let finalPerm=perm;
     if(perm==='default'){
+      log('Frage Erlaubnis…');
       finalPerm=await Notification.requestPermission();
+      log('Antwort: '+finalPerm);
     }
-    if(finalPerm==='denied'){
-      T('Benachrichtigungen blockiert – bitte in Android-Einstellungen → App-Info → Benachrichtigungen aktivieren','err');
-      return;
-    }
-    if(finalPerm!=='granted'){T('Berechtigung nicht erteilt','err');return;}
+    if(finalPerm==='denied'){log('❌ Blockiert – in Android Einstellungen freigeben');return;}
+    if(finalPerm!=='granted'){log('❌ Nicht erlaubt: '+finalPerm);return;}
+    log('SW wird geladen…');
     const reg=await navigator.serviceWorker.ready;
+    log('SW bereit');
     const existing=await reg.pushManager.getSubscription();
-    if(existing){
-      await savePushSub(existing);
-      T('🔔 Bereits aktiviert!','ok');return;
-    }
+    if(existing){log('Bereits abonniert!');await savePushSub(existing);log('✓ Aktiv!');return;}
+    log('Abonniere Push…');
     const sub=await reg.pushManager.subscribe({
       userVisibleOnly:true,
       applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
     });
+    log('Speichere…');
     await savePushSub(sub);
-    T('🔔 Benachrichtigungen aktiviert!','ok');
-    document.getElementById('push-btn').textContent='✓ Benachrichtigungen aktiv';
-    document.getElementById('push-btn').disabled=true;
+    log('✓ Benachrichtigungen aktiv!');
+    if(btn)btn.disabled=true;
   }catch(e){
-    console.log('Push error:',e);
-    T('Fehler: '+e.message,'err');
+    log('❌ '+e.message);
+    console.error(e);
   }
 }
 

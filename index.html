@@ -2982,22 +2982,29 @@ async function handleSastFiles(evt){
   for(const f of files){sastUser('\ud83d\udcc4 '+f.name);await processSastFile(f);}
 }
 async function processSastFile(file){
-  sastBot('Lese "'+file.name+'"...');
+  sastBot('Lese "'+file.name+'"…');
   let text='';
   try{
     if(file.name.toLowerCase().endsWith('.pdf')){text=await extractPdfText(file);}
     else{const buf=await file.arrayBuffer();for(const enc of['utf-8','windows-1252']){try{const t=new TextDecoder(enc,{fatal:true}).decode(buf);text=t;break;}catch(e){}}}
     if(text.charCodeAt&&text.charCodeAt(0)===0xFEFF)text=text.slice(1);
-  }catch(e){sastBot('Fehler: '+e.message);return;}
-  if(!text.trim()){
-    // Use filename as title fallback
-    const nameHint=file.name.replace(/\.[^.]+$/,'').replace(/[-_\d]+\s*/g,' ').trim();
-    sastBot('Kein Text aus PDF gelesen (vermutlich gescannt).\n\nIch habe den Dateinamen als Hinweis genommen.\nBitte ergänze die Felder:');
+  }catch(e){sastBot('Fehler beim Lesen: '+e.message);return;}
+
+  const trimmed=text.trim();
+  if(!trimmed){
+    // Fallback: filename as title hint
+    const nameHint=file.name.replace(/\.[^.]+$/,'').replace(/^[\d_\-]+/,'').replace(/[-_]/g,' ').trim();
+    sastBot('⚠️ Kein Text aus PDF gelesen.\nVermutlich ein gescanntes PDF (Bild, kein Text).\n\nDateiname als Liedanfang übernommen – bitte Felder ergänzen:');
     const inp=document.getElementById('sast-input');
     inp.value='Liedanfang: '+nameHint+'\nTitel: \nKomponist: \nTextdichter: \nArrangeur: \nÜbersetzer: \nOriginaltitel: \nBesetzung: \nRechte: ';
     inp.style.minHeight='220px';inp.focus();_sastMode='new_song';return;
   }
-  const rawLines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+
+  // Show what was extracted
+  const preview=trimmed.split('\n').filter(l=>l.trim()).slice(0,8).join('\n');
+  sastBot('✓ Text gelesen. Erste Zeilen:\n\n'+preview+(trimmed.split('\n').length>8?'\n…':''));
+
+  const rawLines=trimmed.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
   await processSastInfoPdf(rawLines,file.name);
 }
 async function processSastInfoPdf(lines,filename){
@@ -3009,6 +3016,26 @@ async function processSastInfoPdf(lines,filename){
   if(!song.title)song.title=song.liedanfang;if(!song.liedanfang)song.liedanfang=song.title;
   const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
   const existing=songs.find(s=>normStr(s.liedanfang||s.title||'')===normStr(song.liedanfang||song.title||''));
+
+  // Check how much we found
+  const foundFields=[song.komponist,song.textdichter,song.arrangeur,song.besetzung,song.rechte].filter(Boolean).length;
+
+  if(!existing&&foundFields<2){
+    // Not enough info extracted – show editable template pre-filled with what we have
+    sastBot('Ich habe wenig Informationen gefunden. Bitte ergänze die Felder:');
+    const inp=document.getElementById('sast-input');
+    inp.value=
+      'Liedanfang: '+(song.liedanfang||'')+'\n'+
+      'Titel: '+(song.title&&song.title!==song.liedanfang?song.title:'')+'\n'+
+      'Komponist: '+(song.komponist||'')+'\n'+
+      'Textdichter: '+(song.textdichter||'')+'\n'+
+      'Arrangeur: '+(song.arrangeur||'')+'\n'+
+      'Übersetzer: '+(song.uebersetzer||'')+'\n'+
+      'Originaltitel: '+(song.originaltitel||'')+'\n'+
+      'Besetzung: '+(song.besetzung||'')+'\n'+
+      'Rechte: '+(song.rechte||'');
+    inp.style.minHeight='220px';inp.focus();_sastMode='new_song';return;
+  }
   let msg='Aus "'+filename+'":\n\n'+(song.title||'Unbekannt')+'\n';
   if(song.komponist)msg+='- Komponist: '+song.komponist+(song.komponist_lz?' ('+song.komponist_lz+')':'')+'\n';
   if(song.textdichter)msg+='- Textdichter: '+song.textdichter+'\n';

@@ -730,44 +730,42 @@ const VAPID_PUBLIC='BPp1ZDfFrJXJ9dIq4H4_2or4nRdTCere6_EchSDS7hn40zUaWpiuDH1SDT1Y
 
 async function setupPush(){
   if(!('serviceWorker' in navigator))return;
-  try{
-    await navigator.serviceWorker.register('./sw.js');
-  }catch(e){console.log('SW register error:',e);}
+  try{navigator.serviceWorker.register('/chor-manager/sw.js');}
+  catch(e){console.log('SW:',e);}
 }
 
 async function enablePush(){
   const btn=document.getElementById('push-btn');
-  const log=s=>{T(s);console.log(s);if(btn)btn.textContent=s;};
-  if(!('serviceWorker' in navigator)){log('\u274c Kein Service Worker');return;}
-  if(!('PushManager' in window)){log('\u274c Kein PushManager');return;}
-  if(!('Notification' in window)){log('\u274c Kein Notification API');return;}
+  const log=s=>{T(s);console.log('Push:',s);if(btn)btn.textContent=s;};
   try{
+    if(!('serviceWorker' in navigator)){log('\u274c Kein SW');return;}
+    if(!('PushManager' in window)){log('\u274c Kein PushManager');return;}
+    // Permission already granted (user just confirmed)
     const perm=Notification.permission;
-    log('Status: '+perm);
-    let fp=perm;
-    if(perm==='default'){fp=await Notification.requestPermission();}
-    if(fp==='denied'){log('\u274c Blockiert \u2192 Android Einstellungen \u2192 Apps \u2192 Chrome \u2192 Benachrichtigungen');return;}
-    if(fp!=='granted'){log('\u274c Nicht erlaubt');return;}
-    log('SW suchen...');
-    const regs=await navigator.serviceWorker.getRegistrations();
-    log('SW gefunden: '+regs.length);
-    let reg=regs.length?regs[0]:null;
-    if(!reg){reg=await navigator.serviceWorker.register('./sw.js');}
-    // Wait up to 5s for SW to be active
-    await new Promise((resolve)=>{
-      if(reg.active){resolve();return;}
-      const sw=reg.installing||reg.waiting;
-      if(sw){sw.addEventListener('statechange',e=>{if(e.target.state==='activated')resolve();});}
-      setTimeout(resolve,5000);
-    });
-    log('Abonniere...');
+    log('Berechtigung: '+perm);
+    if(perm==='denied'){log('\u274c Blockiert in Android-Einstellungen');return;}
+    if(perm!=='granted'){log('\u274c Nicht erlaubt');return;}
+    log('SW registrieren...');
+    const reg=await navigator.serviceWorker.register('/chor-manager/sw.js');
+    log('SW Status: '+(reg.active?'aktiv':reg.installing?'installiert':reg.waiting?'wartend':'?'));
+    log('Versuche Abonnement...');
+    // Use the registration directly - don't wait for active state
     const existing=await reg.pushManager.getSubscription();
-    if(existing){log('Bereits aktiv!');await savePushSub(existing);if(btn)btn.disabled=true;return;}
-    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)});
+    if(existing){
+      log('Bereits abonniert!');
+      await savePushSub(existing);
+      if(btn)btn.disabled=true;
+      return;
+    }
+    const sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
+    });
+    log('Speichere...');
     await savePushSub(sub);
-    log('\u2713 Aktiv!');
+    log('\u2713 Benachrichtigungen aktiv!');
     if(btn)btn.disabled=true;
-  }catch(e){log('\u274c '+e.message);console.error(e);}
+  }catch(e){log('\u274c Fehler: '+e.message);console.error(e);}
 }
 
 

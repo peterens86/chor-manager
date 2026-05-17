@@ -3041,8 +3041,19 @@ async function processSastFile(file){
   // and pre-fill the template for manual completion
   sastBot('Lese "'+file.name+'"...');
 
+  // Clean filename as fallback title
+  let nameHint='';
+  try{
+    // file.name is always a proper JS string - just clean it up
+    nameHint=file.name
+      .replace(/\.[^.]+$/,'')      // remove extension
+      .replace(/^[\d_\-]+/,'')     // remove leading numbers/dashes
+      .replace(/[_\-]/g,' ')       // underscores/dashes to spaces
+      .trim();
+  }catch(e){nameHint='';}
+  // If nameHint looks like garbage or a catalog number, clear it
+  if(/[^\x20-\x7E\u00C0-\u024F]/.test(nameHint)||/^[A-Z]\d{5,}/.test(nameHint))nameHint='';
   let text='';
-  let nameHint=file.name.replace(/\.[^.]+$/,'').replace(/^[\d_\-]+/,'').replace(/[-_]/g,' ').trim();
 
   // Try plain text extraction for non-encrypted PDFs
   try{

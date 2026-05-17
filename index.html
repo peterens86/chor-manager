@@ -859,7 +859,8 @@ async function openSongDetail(id){
   // Song files - display only
   const{data:files}=await SB.from('song_files').select('*').eq('song_id',id);
   const fileLabels={'chorsatz':'PDF Chorsatz','klaviersatz':'PDF Klaviersatz','chor_klavier':'PDF Chor+Klavier','orchestersatz':'PDF Orchestersatz','sibelius':'Sibelius-Datei'};
-  const filesHtml=(files||[]).length?`<div class="ddiv"></div><div class="dl">Dateien</div><div style="margin-top:6px">${(files||[]).map(f=>`<a href="${esc(f.url)}" target="_blank" class="ffile">📄 ${esc(fileLabels[f.file_type]||f.file_type)}</a>`).join('')}</div>`:'';
+  const isAdminFile=currentProfile?.role==='admin';
+  const filesHtml=(files||[]).length?`<div class="ddiv"></div><div class="dl">Dateien</div><div style="margin-top:6px">${(files||[]).map(f=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:3px"><a href="${esc(f.url)}" target="_blank" class="ffile">📄 ${esc(fileLabels[f.file_type]||f.file_type)}</a>${isAdminFile?`<button onclick="deleteSongFile('${f.id}','${esc(f.path||'')}','${id}')" style="background:rgba(224,85,85,.15);border:0.5px solid rgba(224,85,85,.3);color:var(--danger);border-radius:var(--r);width:20px;height:20px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>`:''}​</span>`).join('')}</div>`:'';
   document.getElementById('sd-body').innerHTML=`
     <div class="dgrid" style="margin-bottom:12px">${df('Liedanfang',s.liedanfang)}${df('Refrainanfang',s.refrain)}${df('Besetzung',s.besetzung,'badge')}${df('Thema',s.thema)}${df('Anlass',s.anlass)}${df('Bibelstelle',s.bibelstelle)}${df('Schrank',s.schrank)}</div>
     <div class="ddiv"></div>
@@ -882,6 +883,14 @@ async function openSongDetail(id){
     footer.appendChild(eb);footer.appendChild(db);
   }
   openModal('m-song-detail');
+}
+
+async function deleteSongFile(fileId,path,songId){
+  if(!confirm('Datei löschen?'))return;
+  if(path)await SB.storage.from('choir-media').remove([path]);
+  await SB.from('song_files').delete().eq('id',fileId);
+  T('Datei gelöscht');
+  openSongDetail(songId);
 }
 
 async function uploadSongFile(songId, fileType, inputEl){
@@ -3017,20 +3026,38 @@ async function sendSast(){
 
 async function sastConfirmSong(){
   if(!_sastPendingSong)return;
-  const{_id,...fields}=_sastPendingSong;
+  const{_id,_file,_fileType,links,created_by,...fields}=_sastPendingSong;
+  let songId=_id;
   if(_id){
     const{error}=await SB.from('songs').update(fields).eq('id',_id);
     if(error){sastBot('Fehler: '+error.message);return;}
     sastBot('\u2705 Lied aktualisiert!');
   } else {
-    const{error}=await SB.from('songs').insert({...fields,created_by:currentUser.id});
+    const{data:newSong,error}=await SB.from('songs').insert({...fields,created_by:currentUser.id}).select().single();
     if(error){sastBot('Fehler: '+error.message);return;}
+    songId=newSong.id;
     sastBot('\u2705 Lied aufgenommen!');
+  }
+  // Upload PDF
+  if(_file&&songId){
+    try{
+      const ext=_file.name.split('.').pop().toLowerCase();
+      const ft=_fileType||'chorsatz';
+      const path=`${songId}/${ft}.${ext}`;
+      const{error:upErr}=await SB.storage.from('choir-media').upload(path,_file,{upsert:true});
+      if(!upErr){
+        const{data:{publicUrl}}=SB.storage.from('choir-media').getPublicUrl(path);
+        await SB.from('song_files').upsert({song_id:songId,file_type:ft,url:publicUrl,path},{onConflict:'song_id,file_type'});
+        const lbl={chorsatz:'Chorsatz',klaviersatz:'Klaviersatz',chor_klavier:'Chor+Klavier',orchestersatz:'Orchestersatz',sonstiges:'Sonstiges'};
+        sastBot('\ud83d\udcc4 PDF als '+(lbl[ft]||ft)+' gespeichert!');
+      } else sastBot('\u26a0\ufe0f PDF-Upload: '+upErr.message);
+    }catch(e){sastBot('\u26a0\ufe0f PDF-Fehler: '+e.message);}
   }
   const{data:ns}=await SB.from('songs').select('*').order('liedanfang',{nullsFirst:false});if(ns)cachedSongs=ns;
   _sastMode=null;_sastPendingSong=null;sastClearActions();T('Gespeichert','ok');renderSongs();
-  sastShowActions([{label:'Weiteres Lied',fn:"_sastMode='new_song';const i=document.getElementById('sast-input');i.value='Liedanfang: \\nTitel: \\nKomponist: \\nTextdichter: \\nArrangeur: \\n\u00dcbersetzer: \\nOriginaltitel: \\nBesetzung: \\nRechte: ';i.style.minHeight='220px';i.focus();"},{label:'Fertig',fn:"closeModal('m-song-assistant')"}]);
+  sastShowActions([{label:'Weiteres Lied',fn:"_sastMode='new_song';const i=document.getElementById('sast-input');i.value='Liedanfang: \\nTitel: \\nKomponist: \\nTextdichter: \\nArrangeur: \\n\u00dcbersetzer/Deutscher Text: \\nOriginaltitel: \\nBesetzung: \\nRechte: ';i.style.minHeight='220px';i.focus();"},{label:'Fertig',fn:"closeModal('m-song-assistant')"}]);
 }
+
 
 async function handleSastFiles(evt){
   const files=[...evt.target.files];evt.target.value='';
@@ -3067,8 +3094,7 @@ async function processSastFile(file){
             isPdf
               ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
               :{type:'text',text:new TextDecoder().decode(bytes)},
-            {type:'text',text:'Extrahiere die Lied-Metadaten. Antworte NUR mit JSON, kein Markdown:\n{"liedanfang":"","titel":"","komponist":"","textdichter":"","uebersetzer":"","arrangeur":"","originaltitel":"","besetzung":"","rechte":""}\n\nRegeln:\n- liedanfang = erster Satz/Vers des Liedes auf Deutsch\n- textdichter = Autor des Originaltexts (Text: ...)\n- uebersetzer = Deutscher Text / Uebersetzung (Deutscher Text: ...)\n- komponist = Musik (Musik: ...)\n- arrangeur = Chorsatz / Arrangement\n- rechte = Copyright-Zeile\n- Felder nicht gefunden = leer lassen'}
-          ]
+            {type:'text',text:'Extrahiere die Lied-Metadaten. Antworte NUR mit JSON, kein Markdown:\n{"liedanfang":"","titel":"","komponist":"","textdichter":"","uebersetzer":"","arrangeur":"","originaltitel":"","besetzung":"","rechte":"","datei_typ":""}\n\nRegeln:\n- liedanfang = erster Satz/Vers des Liedes auf Deutsch\n- textdichter = Autor des Originaltexts (Text: ...)\n- uebersetzer = Deutscher Text / Uebersetzung (Deutscher Text: ...)\n- komponist = Musik (Musik: ...)\n- arrangeur = Chorsatz / Arrangement\n- rechte = Copyright-Zeile\n- datei_typ = Art der Datei: "chorsatz" (Chor-Noten/SATB/Chorpartitur), "klaviersatz" (Klavier solo), "chor_klavier" (Chor + Klavier zusammen), "orchestersatz" (Orchester), oder "sonstiges"\n- Felder nicht gefunden = leer lassen'}          ]
         }]
       })
     });
@@ -3101,6 +3127,8 @@ async function processSastFile(file){
     if(info.textdichter)msg+='- Text: '+info.textdichter+'\n';
     if(info.uebersetzer)msg+='- Deutscher Text: '+info.uebersetzer+'\n';
     if(info.arrangeur)msg+='- Chorsatz: '+info.arrangeur+'\n';
+    const fileTypeLabels={chorsatz:'Chorsatz',klaviersatz:'Klaviersatz',chor_klavier:'Chor+Klavier',orchestersatz:'Orchestersatz',sonstiges:'Sonstiges'};
+    if(info.datei_typ)msg+='- Dateityp: '+(fileTypeLabels[info.datei_typ]||info.datei_typ)+'\n';
     if(info.rechte)msg+='- Rechte: '+info.rechte+'\n';
 
     const song={
@@ -3113,7 +3141,10 @@ async function processSastFile(file){
       uebersetzer:info.uebersetzer||'',
       besetzung:info.besetzung||'',
       rechte:info.rechte||'',
-      links:[],created_by:currentUser.id
+      lizenz:info.lizenz||'',
+      links:[],created_by:currentUser.id,
+      _file:file,
+      _fileType:info.datei_typ||'chorsatz'
     };
 
     const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));

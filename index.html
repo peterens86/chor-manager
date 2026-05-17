@@ -3037,131 +3037,117 @@ async function handleSastFiles(evt){
   for(const f of files){sastUser('\ud83d\udcc4 '+f.name);await processSastFile(f);}
 }
 async function processSastFile(file){
-  // Since API calls are blocked, read what we can from the file
-  // and pre-fill the template for manual completion
-  sastBot('Lese "'+file.name+'"...');
-
-  // Clean filename as fallback title
-  let nameHint='';
-  try{
-    // file.name is always a proper JS string - just clean it up
-    nameHint=file.name
-      .replace(/\.[^.]+$/,'')      // remove extension
-      .replace(/^[\d_\-]+/,'')     // remove leading numbers/dashes
-      .replace(/[_\-]/g,' ')       // underscores/dashes to spaces
-      .trim();
-  }catch(e){nameHint='';}
-  // If nameHint looks like garbage or a catalog number, clear it
-  if(/[^\x20-\x7E\u00C0-\u024F]/.test(nameHint)||/^[A-Z]\d{5,}/.test(nameHint))nameHint='';
-  let text='';
-
-  // Try plain text extraction for non-encrypted PDFs
+  sastBot('Analysiere "'+file.name+'" mit KI…');
   try{
     const buf=await file.arrayBuffer();
     const bytes=new Uint8Array(buf);
-    const raw=new TextDecoder('latin1').decode(bytes);
+    let binary='';
+    // Convert to base64 in chunks to avoid stack overflow
+    const chunk=8192;
+    for(let i=0;i<bytes.length;i+=chunk){
+      binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
+    }
+    const base64=btoa(binary);
+    const isPdf=file.name.toLowerCase().endsWith('.pdf');
 
-    // Try to decompress streams
-    const streamRe=/stream\r?\n([\s\S]*?)\r?\nendstream/g;
-    let m;let allText='';
-    while((m=streamRe.exec(raw))!==null){
-      const sdata=bytes.slice(m.index+m[0].indexOf('\n')+1, m.index+m[0].lastIndexOf('\nendstream'));
-      // Try deflate-raw
-      try{
-        const ds=new DecompressionStream('deflate-raw');
-        const w=ds.writable.getWriter();const r=ds.readable.getReader();
-        w.write(sdata);w.close();
-        const chunks=[];while(true){const{done,value}=await r.read();if(done)break;chunks.push(value);}
-        const tot=chunks.reduce((n,c)=>n+c.length,0);
-        const out=new Uint8Array(tot);let off=0;chunks.forEach(c=>{out.set(c,off);off+=c.length;});
-        const dec=new TextDecoder('latin1').decode(out);
-        // Extract BT...ET
-        const bt=/BT\s([\s\S]*?)ET/g;let bm;
-        while((bm=bt.exec(dec))!==null){
-          const strs=[...bm[1].matchAll(/\(([^)\\]*(?:\\.[^)\\]*)*)\)/g)].map(s=>s[1]
-            .replace(/\\\(/g,'(').replace(/\\\)/g,')').replace(/\\(\d{3})/g,(_,o)=>String.fromCharCode(parseInt(o,8)))).join('');
-          if(strs.trim()&&/[a-zA-Z\u00c0-\u024f]{3,}/.test(strs))allText+=strs.trim()+'\n';
-        }
-      }catch{}
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:800,
+        messages:[{
+          role:'user',
+          content:[
+            isPdf
+              ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
+              :{type:'text',text:new TextDecoder().decode(bytes)},
+            {type:'text',text:'Extrahiere die Lied-Metadaten. Antworte NUR mit JSON, kein Markdown:\n{"liedanfang":"","titel":"","komponist":"","textdichter":"","uebersetzer":"","arrangeur":"","originaltitel":"","besetzung":"","rechte":""}\n\nRegeln:\n- liedanfang = erster Satz/Vers des Liedes auf Deutsch\n- textdichter = Autor des Originaltexts (Text: ...)\n- uebersetzer = Deutscher Text / Uebersetzung (Deutscher Text: ...)\n- komponist = Musik (Musik: ...)\n- arrangeur = Chorsatz / Arrangement\n- rechte = Copyright-Zeile\n- Felder nicht gefunden = leer lassen'}
+          ]
+        }]
+      })
+    });
+
+    if(!resp.ok){
+      const err=await resp.json().catch(()=>({}));
+      throw new Error(err.error?.message||'HTTP '+resp.status);
     }
 
-    // Also check PDF metadata
-    const metaRe=/\/(?:Title|Author|Subject|Creator)\s*\(([^)]+)\)/g;
-    while((m=metaRe.exec(raw))!==null)allText+=m[1]+'\n';
-
-    if(allText.trim().length>20){
-      // Validate: must have enough readable characters
-      const readable=(allText.match(/[a-zA-Z\u00C0-\u024F\s]{3,}/g)||[]).join(' ');
-      if(readable.length>30)text=allText;
-      console.log('PDF text OK:',text.slice(0,200));
-    }
-  }catch(e){console.log('PDF read error:',e);}
-
-  // Parse what we have
-  const song={liedanfang:'',titel:'',komponist:'',textdichter:'',arrangeur:'',uebersetzer:'',originaltitel:'',besetzung:'',rechte:''};
-  if(text){
-    const fullT=text.replace(/\n/g,' ');
-    const pats=[
-      {f:'liedanfang',re:/(?:Liedanfang|Anfang):\s*([^\n]+)/i},
-      {f:'originaltitel',re:/(?:Originaltitel|Original[- ]?title):\s*([^\n]+?)(?:\s{2,}|$)/i},
-      {f:'komponist',re:/(?:Musik|Music|Komponist|Composer):\s*([^\n]+?)(?:\s{2,}|$)/i},
-      {f:'textdichter',re:/(?:^|\s)(?:Text|Words|Lyrics|Textdichter):\s*([^\n]+?)(?:\s{2,}|$)/i},
-      {f:'uebersetzer',re:/(?:Deutscher Text|\u00dcbersetzung|German Text):\s*([^\n]+?)(?:\s{2,}|$)/i},
-      {f:'arrangeur',re:/(?:Chorsatz|Arr(?:angement)?|Satz):\s*([^\n]+?)(?:\s{2,}|$)/i},
-      {f:'rechte',re:/(\u00a9\s*\d{4}[^\n]{0,60})/},
-    ];
-    for(const{f,re} of pats){
-      const m=fullT.match(re);
-      if(m&&m[1]){
-        const val=m[1].trim().replace(/\s+/g,' ');
-        // Only accept if mostly readable characters
-        const readable=(val.match(/[a-zA-Z\u00C0-\u024F\s]/g)||[]).length;
-        if(readable/val.length>0.6)song[f]=val;
-      }
+    const data=await resp.json();
+    const raw=data.content?.map(c=>c.text||'').join('')||'';
+    let info={};
+    try{
+      const clean=raw.replace(/```json|```/g,'').trim();
+      info=JSON.parse(clean);
+    }catch{
+      const m=raw.match(/\{[\s\S]+\}/);
+      if(m)try{info=JSON.parse(m[0]);}catch{}
     }
 
-    // Title: first line that looks like real words
-    if(!song.liedanfang){
-      const tlines=text.split('\n').map(l=>l.trim()).filter(l=>{
-        if(l.length<3||l.length>80)return false;
-        if(!/[a-z\u00e4\u00f6\u00fc\u00df]/i.test(l))return false;
-        if(/^(?:Musik|Text|Chorsatz|Piano|\u00a9|L\d)/i.test(l))return false;
-        // Must be mostly readable
-        const readable=(l.match(/[a-zA-Z\u00C0-\u024F\s]/g)||[]).length;
-        return readable/l.length>0.7;
-      });
-      if(tlines[0])song.liedanfang=tlines[0];
+    if(!info||!Object.values(info).some(v=>v?.trim())){
+      throw new Error('Keine Informationen erkannt');
     }
+
+    // Show result
+    let msg='Erkannt:\n\n';
+    if(info.liedanfang)msg+='📖 '+info.liedanfang+'\n';
+    if(info.originaltitel)msg+='- Originaltitel: '+info.originaltitel+'\n';
+    if(info.komponist)msg+='- Musik: '+info.komponist+'\n';
+    if(info.textdichter)msg+='- Text: '+info.textdichter+'\n';
+    if(info.uebersetzer)msg+='- Deutscher Text: '+info.uebersetzer+'\n';
+    if(info.arrangeur)msg+='- Chorsatz: '+info.arrangeur+'\n';
+    if(info.rechte)msg+='- Rechte: '+info.rechte+'\n';
+
+    const song={
+      title:info.titel||info.liedanfang||'',
+      liedanfang:info.liedanfang||info.titel||'',
+      originaltitel:info.originaltitel||'',
+      komponist:info.komponist||'',
+      textdichter:info.textdichter||'',
+      arrangeur:info.arrangeur||'',
+      uebersetzer:info.uebersetzer||'',
+      besetzung:info.besetzung||'',
+      rechte:info.rechte||'',
+      links:[],created_by:currentUser.id
+    };
+
+    const songs=cachedSongs.length?cachedSongs:(await SB.from('songs').select('*').then(r=>r.data||[]));
+    const existing=songs.find(s=>normStr(s.liedanfang||s.title||'')===normStr(song.liedanfang||song.title||''));
+
+    if(existing){
+      const upd=Object.entries(song).filter(([k,v])=>v&&typeof v==='string'&&!['title','links','created_by'].includes(k)&&!existing[k]);
+      if(upd.length){
+        msg+='\n✓ Bereits vorhanden. Fehlende Infos ergänzen:\n'+upd.map(([k,v])=>'+ '+k+': '+v).join('\n');
+        sastBot(msg);_sastPendingSong={_id:existing.id,...Object.fromEntries(upd)};_sastMode='confirm';
+        sastShowActions([{label:'✓ Ergänzen',fn:'sastConfirmSong()'},{label:'✏ Bearbeiten',fn:'_preloadTemplate('+JSON.stringify(song)+')'},{label:'✗ Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);
+      } else {msg+='\n✓ Bereits vollständig vorhanden.';sastBot(msg);}
+    } else {
+      msg+='\nAufnehmen?';sastBot(msg);_sastPendingSong=song;_sastMode='confirm';
+      sastShowActions([{label:'✓ Aufnehmen',fn:'sastConfirmSong()'},{label:'✏ Bearbeiten',fn:'_preloadTemplate('+JSON.stringify(song)+')'},{label:'✗ Abbrechen',fn:"_sastMode=null;sastClearActions();"}]);
+    }
+
+  }catch(e){
+    console.error('PDF AI error:',e);
+    sastBot('KI konnte PDF nicht lesen ('+e.message+').\nBitte Felder manuell ausfüllen:');
+    const inp=document.getElementById('sast-input');
+    inp.value='Liedanfang: \nTitel: \nKomponist: \nTextdichter: \nArrangeur: \nÜbersetzer/Deutscher Text: \nOriginaltitel: \nBesetzung: \nRechte: ';
+    inp.style.minHeight='220px';inp.focus();_sastMode='new_song';
   }
-
-  // Pre-fill template with found values + nameHint as fallback
-  if(!song.liedanfang)song.liedanfang=nameHint;
-
-  const hasInfo=Object.entries(song).filter(([k,v])=>k!=='liedanfang'&&v).length>0;
-  if(hasInfo){
-    sastBot('Folgendes gefunden - bitte pr\u00fcfen und erg\u00e4nzen:');
-  } else {
-    sastBot('Dateiname als Liedanfang verwendet.\nBitte Felder ausf\u00fcllen:');
-  }
-  const inp=document.getElementById('sast-input');
-  inp.value=
-    'Liedanfang: '+song.liedanfang+'\n'+
-    'Titel: '+song.titel+'\n'+
-    'Komponist: '+song.komponist+'\n'+
-    'Textdichter: '+song.textdichter+'\n'+
-    'Arrangeur: '+song.arrangeur+'\n'+
-    '\u00dcbersetzer/Deutscher Text: '+song.uebersetzer+'\n'+
-    'Originaltitel: '+song.originaltitel+'\n'+
-    'Besetzung: '+song.besetzung+'\n'+
-    'Rechte: '+song.rechte;
-  inp.style.minHeight='220px';
-  inp.focus();_sastMode='new_song';
 }
 
 function _preloadTemplate(song){
   _sastMode='new_song';
   const inp=document.getElementById('sast-input');
-  inp.value='Liedanfang: '+(song.liedanfang||'')+'\nTitel: '+(song.title&&song.title!==song.liedanfang?song.title:'')+'\nKomponist: '+(song.komponist||'')+'\nTextdichter: '+(song.textdichter||'')+'\nArrangeur: '+(song.arrangeur||'')+'\n\u00dcbersetzer/Deutscher Text: '+(song.uebersetzer||'')+'\nOriginaltitel: '+(song.originaltitel||'')+'\nBesetzung: '+(song.besetzung||'')+'\nRechte: '+(song.rechte||'');
+  inp.value=
+    'Liedanfang: '+(song.liedanfang||'')+'\n'+
+    'Titel: '+(song.title&&song.title!==song.liedanfang?song.title:'')+'\n'+
+    'Komponist: '+(song.komponist||'')+'\n'+
+    'Textdichter: '+(song.textdichter||'')+'\n'+
+    'Arrangeur: '+(song.arrangeur||'')+'\n'+
+    'Übersetzer/Deutscher Text: '+(song.uebersetzer||'')+'\n'+
+    'Originaltitel: '+(song.originaltitel||'')+'\n'+
+    'Besetzung: '+(song.besetzung||'')+'\n'+
+    'Rechte: '+(song.rechte||'');
   inp.style.minHeight='220px';inp.focus();sastClearActions();
 }
 

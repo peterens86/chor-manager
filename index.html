@@ -1232,8 +1232,20 @@ function filterEvents(){displayEvents(filteredEvents());}
 function displayEvents(data){
   const el=document.getElementById('ev-list');
   if(!data?.length){el.innerHTML='<div class="empty"><p>Keine Veranstaltungen</p></div>';return;}
-  const now=today();
-  const up=data.filter(e=>e.datum>=now),pa=data.filter(e=>e.datum<now).reverse();
+  const nowDate=new Date();
+  const now2h=new Date(nowDate.getTime()-2*60*60*1000);
+  const todayStr=now2h.toISOString().slice(0,10);
+  const up=data.filter(e=>{
+    if(e.datum>todayStr)return true;
+    if(e.datum<todayStr)return false;
+    // Same day: check time + 2h
+    if(!e.uhrzeit)return false;
+    const[h,m]=(e.uhrzeit||'00:00').split(':').map(Number);
+    const evEnd=new Date(nowDate);
+    evEnd.setHours(h+2,m,0,0);
+    return nowDate<evEnd;
+  });
+  const pa=data.filter(e=>!up.includes(e)).reverse();
   let html='';
   if(up.length)html+='<div class="st">Bevorstehend</div>'+up.map(evCard).join('');
   if(pa.length)html+='<div class="st">Vergangen</div>'+pa.map(evCard).join('');
@@ -3139,7 +3151,7 @@ async function processSastFile(file){
             isPdf
               ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
               :{type:'text',text:new TextDecoder().decode(bytes)},
-            {type:'text',text:`Extrahiere die Lied-Metadaten. Antworte NUR mit JSON, kein Markdown:\n{"liedanfang":"","titel":"","komponist":"","textdichter":"","uebersetzer":"","arrangeur":"","originaltitel":"","besetzung":"","rechte":"","thema":"","anlass":"","datei_typ":""}\n\nRegeln:\n- liedanfang = erster Satz/Vers des Liedes auf Deutsch\n- textdichter = Autor des Originaltexts (Text: ...)\n- uebersetzer = Deutscher Text / Uebersetzung (Deutscher Text: ...)\n- komponist = Musik (Musik: ...)\n- arrangeur = Chorsatz / Arrangement\n- rechte = Copyright-Zeile\n- thema = passendes Thema aus dieser Liste (kommagetrennt wenn mehrere passen): ${existingThemen||'Worship, Advent, Weihnachten, Ostern, Lob, Glaube, Trost, Gebet'}\n- anlass = passender Anlass aus dieser Liste (kommagetrennt wenn mehrere passen): ${existingAnlaesse||'Gottesdienst, Taufe, Abendmahl, Konzert, Hochzeit, Beerdigung'}\n- datei_typ = "chorsatz" wenn Chor-Noten (SATB, mehrstimmig, Chorpartitur), "klaviersatz" wenn nur Klavier, "chor_klavier" wenn Chor UND Klavier zusammen auf einer Partitur, "orchestersatz" wenn Orchester\n- Felder nicht gefunden = leer lassen`}          ]
+            {type:'text',text:`Extrahiere die Lied-Metadaten. Antworte NUR mit JSON, kein Markdown:\n{"liedanfang":"","titel":"","komponist":"","textdichter":"","uebersetzer":"","arrangeur":"","originaltitel":"","besetzung":"","rechte":"","thema":"","anlass":"","datei_typ":""}\n\nRegeln:\n- liedanfang = erster Satz/Vers des Liedes auf Deutsch\n- textdichter = Autor des Originaltexts (Text: ...)\n- uebersetzer = Deutscher Text / Uebersetzung (Deutscher Text: ...)\n- komponist = Musik (Musik: ...)\n- arrangeur = Chorsatz / Arrangement\n- rechte = Copyright-Zeile\n- thema = passendes Thema aus dieser Liste (kommagetrennt wenn mehrere passen): ${existingThemen||'Worship, Advent, Weihnachten, Ostern, Lob, Glaube, Trost, Gebet'}\n- anlass = passender Anlass aus dieser Liste (kommagetrennt wenn mehrere passen): ${existingAnlaesse||'Gottesdienst, Taufe, Abendmahl, Konzert, Hochzeit, Beerdigung'}\n- besetzung = Stimmbesetzung des Chors. Erkenne aus Notenbild, Bezeichnungen oder Text: "SATB" (Sopran/Alt/Tenor/Bass gemischt), "TTBB" (Männerchor), "SSAA" (Frauenchor), "SSA", "SAB", "SSATB", "Unisono" usw. Wenn nur eine Chorstimme sichtbar ist = "Unisono". Wenn explizit angegeben (z.B. "für gemischten Chor") auch das verwenden.\n- datei_typ = "chorsatz" wenn Chor-Noten (SATB, mehrstimmig, Chorpartitur ohne vollständigen Klaviersatz), "klaviersatz" wenn nur Klavier, "chor_klavier" wenn Chor UND Klavier vollständig zusammen auf einer Partitur, "orchestersatz" wenn Orchester\n- Felder nicht gefunden = leer lassen`}          ]
         }]
       })
     });
@@ -3174,6 +3186,7 @@ async function processSastFile(file){
     if(info.arrangeur)msg+='- Chorsatz: '+info.arrangeur+'\n';
     const fileTypeLabels={chorsatz:'Chorsatz',klaviersatz:'Klaviersatz',chor_klavier:'Chor+Klavier',orchestersatz:'Orchestersatz',sonstiges:'Sonstiges'};
     if(info.datei_typ)msg+='- Dateityp: '+(fileTypeLabels[info.datei_typ]||info.datei_typ)+'\n';
+    if(info.besetzung)msg+='- Besetzung: '+info.besetzung+'\n';
     if(info.rechte)msg+='- Rechte: '+info.rechte+'\n';
 
     const song={

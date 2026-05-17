@@ -770,9 +770,16 @@ async function renderDash(){
 async function renderAnn(){
   const{data}=await SB.from('announcements').select('*,announcement_reads(user_id),profiles(name)').order('created_at',{ascending:false});
   const el=document.getElementById('ann-list');
-  if(!data?.length){el.innerHTML='<div class="empty"><p>Keine Mitteilungen</p></div>';return;}
+  if(!data?.length){el.innerHTML='<div class="empty"><p>Keine Mitteilungen</p></div>';loadUnread();return;}
   const now=new Date();
-  el.innerHTML=data.filter(a=>!a.expires_at||new Date(a.expires_at)>now).map(a=>{
+  const visible=data.filter(a=>{
+    if(!a.expires_at)return true;
+    const exp=new Date(a.expires_at);
+    exp.setHours(23,59,59,999); // end of expiry day
+    return exp>now;
+  });
+  if(!visible.length){el.innerHTML='<div class="empty"><p>Keine Mitteilungen</p></div>';loadUnread();return;}
+  el.innerHTML=visible.map(a=>{
     const read=(a.announcement_reads||[]).some(r=>r.user_id===currentUser.id);
     return`<div class="acard ${a.priority} ${read?'':'unread'}" onclick="markRead('${a.id}')">
       <b style="font-size:14px">${esc(a.title)}</b>

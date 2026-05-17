@@ -744,23 +744,41 @@ async function setupPush(){
 }
 
 async function enablePush(){
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
-    T('Push nicht unterstützt auf diesem Gerät','err');return;
-  }
+  // Check support
+  if(!('serviceWorker' in navigator)){T('Service Worker nicht unterstützt','err');return;}
+  if(!('PushManager' in window)){T('Push nicht unterstützt – bitte App im Browser öffnen und dort aktivieren','err');return;}
+  if(!('Notification' in window)){T('Benachrichtigungen nicht verfügbar – bitte in Chrome-Einstellungen aktivieren','err');return;}
   try{
-    const perm=await Notification.requestPermission();
-    console.log('Permission:', perm);
-    if(perm!=='granted'){T('Benachrichtigungen wurden abgelehnt','err');return;}
+    T('Wird aktiviert…');
+    const perm=Notification.permission;
+    console.log('Current permission:', perm);
+    let finalPerm=perm;
+    if(perm==='default'){
+      finalPerm=await Notification.requestPermission();
+    }
+    if(finalPerm==='denied'){
+      T('Benachrichtigungen blockiert – bitte in Android-Einstellungen → App-Info → Benachrichtigungen aktivieren','err');
+      return;
+    }
+    if(finalPerm!=='granted'){T('Berechtigung nicht erteilt','err');return;}
     const reg=await navigator.serviceWorker.ready;
+    const existing=await reg.pushManager.getSubscription();
+    if(existing){
+      await savePushSub(existing);
+      T('🔔 Bereits aktiviert!','ok');return;
+    }
     const sub=await reg.pushManager.subscribe({
       userVisibleOnly:true,
       applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
     });
     await savePushSub(sub);
     T('🔔 Benachrichtigungen aktiviert!','ok');
-    // Update button
-    document.getElementById('push-btn')?.remove();
-  }catch(e){console.log('Push enable error:',e);T('Fehler: '+e.message,'err');}
+    document.getElementById('push-btn').textContent='✓ Benachrichtigungen aktiv';
+    document.getElementById('push-btn').disabled=true;
+  }catch(e){
+    console.log('Push error:',e);
+    T('Fehler: '+e.message,'err');
+  }
 }
 
 async function savePushSub(sub){
@@ -3553,7 +3571,7 @@ function openProfile(){
       <div class="df"><div class="dl">Rolle</div><div class="dv"><span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span>${p.role2?` <span class="badge blue">${esc(p.role2.split(',').map(r=>r==='dirigent'?'Dirigent':'Klavier').join(' & '))}</span>`:''}</div></div>
       <div class="fg" style="margin-top:10px"><label class="fl">Neues Passwort</label><input class="fi" id="pm-pass" type="password" placeholder="Leer lassen = nicht ändern"></div>
       <div class="fg"><label class="fl">Passwort bestätigen</label><input class="fi" id="pm-pass2" type="password" placeholder="Passwort wiederholen"></div>
-      ${'Notification' in window?`<button class="btn btn-i" style="width:100%;margin-top:8px" id="push-btn" onclick="enablePush()">🔔 Push-Benachrichtigungen aktivieren</button>`:''}
+      <button class="btn btn-i" style="width:100%;margin-top:8px" id="push-btn" onclick="enablePush()">🔔 Push-Benachrichtigungen aktivieren</button>
       <button class="btn btn-d" style="width:100%;margin-top:8px" onclick="doLogout()">Abmelden</button>
     </div>`;
   openModal('m-profile');

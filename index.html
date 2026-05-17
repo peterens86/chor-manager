@@ -729,57 +729,47 @@ window.addEventListener('popstate',e=>{
 const VAPID_PUBLIC='BPp1ZDfFrJXJ9dIq4H4_2or4nRdTCere6_EchSDS7hn40zUaWpiuDH1SDT1YBL7OTkkdX4ZdGIjOgq-NQu-jsfg';
 
 async function setupPush(){
-  if(!('serviceWorker' in navigator)){console.log('No SW support');return;}
-  if(!('PushManager' in window)){console.log('No Push support');return;}
+  if(!('serviceWorker' in navigator))return;
   try{
-    const reg=await navigator.serviceWorker.register('/chor-manager/sw.js',{scope:'/chor-manager/'});
-    console.log('SW registered:', reg.scope);
-    await navigator.serviceWorker.ready;
-    console.log('SW ready');
-    const existing=await reg.pushManager.getSubscription();
-    if(existing){console.log('Existing push sub found');await savePushSub(existing);return;}
-    // Don't auto-ask – let user trigger via button
-    console.log('No push sub yet – user can enable via profile');
-  }catch(e){console.log('Push setup error:',e);}
+    await navigator.serviceWorker.register('./sw.js');
+  }catch(e){console.log('SW register error:',e);}
 }
 
 async function enablePush(){
   const btn=document.getElementById('push-btn');
   const log=s=>{T(s);console.log(s);if(btn)btn.textContent=s;};
-  if(!('serviceWorker' in navigator)){log('❌ Kein Service Worker');return;}
-  if(!('PushManager' in window)){log('❌ Kein PushManager');return;}
-  if(!('Notification' in window)){log('❌ Kein Notification API');return;}
-  log('Prüfe Berechtigung…');
+  if(!('serviceWorker' in navigator)){log('\u274c Kein Service Worker');return;}
+  if(!('PushManager' in window)){log('\u274c Kein PushManager');return;}
+  if(!('Notification' in window)){log('\u274c Kein Notification API');return;}
   try{
     const perm=Notification.permission;
     log('Status: '+perm);
-    let finalPerm=perm;
-    if(perm==='default'){
-      log('Frage Erlaubnis…');
-      finalPerm=await Notification.requestPermission();
-      log('Antwort: '+finalPerm);
-    }
-    if(finalPerm==='denied'){log('❌ Blockiert – in Android Einstellungen freigeben');return;}
-    if(finalPerm!=='granted'){log('❌ Nicht erlaubt: '+finalPerm);return;}
-    log('SW wird geladen…');
-    const reg=await navigator.serviceWorker.ready;
-    log('SW bereit');
-    const existing=await reg.pushManager.getSubscription();
-    if(existing){log('Bereits abonniert!');await savePushSub(existing);log('✓ Aktiv!');return;}
-    log('Abonniere Push…');
-    const sub=await reg.pushManager.subscribe({
-      userVisibleOnly:true,
-      applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
+    let fp=perm;
+    if(perm==='default'){fp=await Notification.requestPermission();}
+    if(fp==='denied'){log('\u274c Blockiert \u2192 Android Einstellungen \u2192 Apps \u2192 Chrome \u2192 Benachrichtigungen');return;}
+    if(fp!=='granted'){log('\u274c Nicht erlaubt');return;}
+    log('SW suchen...');
+    const regs=await navigator.serviceWorker.getRegistrations();
+    log('SW gefunden: '+regs.length);
+    let reg=regs.length?regs[0]:null;
+    if(!reg){reg=await navigator.serviceWorker.register('./sw.js');}
+    // Wait up to 5s for SW to be active
+    await new Promise((resolve)=>{
+      if(reg.active){resolve();return;}
+      const sw=reg.installing||reg.waiting;
+      if(sw){sw.addEventListener('statechange',e=>{if(e.target.state==='activated')resolve();});}
+      setTimeout(resolve,5000);
     });
-    log('Speichere…');
+    log('Abonniere...');
+    const existing=await reg.pushManager.getSubscription();
+    if(existing){log('Bereits aktiv!');await savePushSub(existing);if(btn)btn.disabled=true;return;}
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)});
     await savePushSub(sub);
-    log('✓ Benachrichtigungen aktiv!');
+    log('\u2713 Aktiv!');
     if(btn)btn.disabled=true;
-  }catch(e){
-    log('❌ '+e.message);
-    console.error(e);
-  }
+  }catch(e){log('\u274c '+e.message);console.error(e);}
 }
+
 
 async function savePushSub(sub){
   const json=sub.toJSON();

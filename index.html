@@ -3181,9 +3181,13 @@ async function processSastFile(file){
       liedanfang:info.liedanfang||info.titel||'',
       originaltitel:info.originaltitel||'',
       komponist:info.komponist||'',
+      komponist_lz:'',
       textdichter:info.textdichter||'',
+      textdichter_lz:'',
       arrangeur:info.arrangeur||'',
+      arrangeur_lz:'',
       uebersetzer:info.uebersetzer||'',
+      uebersetzer_lz:'',
       besetzung:info.besetzung||'',
       rechte:info.rechte||'',
       thema:info.thema||'',
@@ -3193,6 +3197,13 @@ async function processSastFile(file){
       _file:file,
       _fileType:info.datei_typ||'chorsatz'
     };
+    // Auto-fill lebensdaten from existing songs
+    [['komponist','komponist_lz'],['textdichter','textdichter_lz'],['arrangeur','arrangeur_lz'],['uebersetzer','uebersetzer_lz']].forEach(([n,lz])=>{
+      const name=(song[n]||'').toLowerCase().trim();
+      if(name&&personLzMap[name])song[lz]=personLzMap[name];
+    });
+    if(song.komponist_lz)msg+='- Komp. Lebensdaten: '+song.komponist_lz+'\n';
+    if(song.textdichter_lz)msg+='- Text. Lebensdaten: '+song.textdichter_lz+'\n';
     if(info.thema)msg+='- Thema: '+info.thema+'\n';
     if(info.anlass)msg+='- Anlass: '+info.anlass+'\n';
 

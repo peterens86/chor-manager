@@ -689,6 +689,8 @@ function startApp(){
   SB.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'announcements'},()=>{loadUnread();if(document.getElementById('page-ann').classList.contains('active'))renderAnn();}).subscribe();
   // Track last seen
   SB.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id).then(()=>{});
+  // Setup push notifications
+  setupPush();
   loadAutocompleteLists();
   showPage('dashboard');
 }
@@ -722,6 +724,57 @@ window.addEventListener('popstate',e=>{
   const loaders={dashboard:renderDash,ann:renderAnn,songs:renderSongs,events:renderEvents,cal:()=>{if(window.innerWidth<=600)calView='month';renderCal();},stats:initStats,media:renderMedia,settings:renderSettings};
   if(loaders[page])loaders[page]();
 });
+
+// ========== PUSH NOTIFICATIONS ==========
+const VAPID_PUBLIC='BPp1ZDfFrJXJ9dIq4H4_2or4nRdTCere6_EchSDS7hn40zUaWpiuDH1SDT1YBL7OTkkdX4ZdGIjOgq-NQu-jsfg';
+
+async function setupPush(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  try{
+    const reg=await navigator.serviceWorker.register('/chor-manager/sw.js',{scope:'/chor-manager/'});
+    await navigator.serviceWorker.ready;
+    // Check existing subscription
+    const existing=await reg.pushManager.getSubscription();
+    if(existing){await savePushSub(existing);return;}
+    // Ask permission
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted')return;
+    // Subscribe
+    const sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
+    });
+    await savePushSub(sub);
+    T('🔔 Push-Benachrichtigungen aktiviert','ok');
+  }catch(e){console.log('Push setup:',e);}
+}
+
+async function savePushSub(sub){
+  const json=sub.toJSON();
+  await SB.from('push_subscriptions').upsert({
+    user_id:currentUser.id,
+    endpoint:json.endpoint,
+    p256dh:json.keys.p256dh,
+    auth:json.keys.auth
+  },{onConflict:'endpoint',ignoreDuplicates:true});
+}
+
+function urlB64ToUint8(b64){
+  const padding='='.repeat((4-b64.length%4)%4);
+  const base64=(b64+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);
+  return Uint8Array.from(raw,c=>c.charCodeAt(0));
+}
+
+async function sendPushToAll(title,body){
+  try{
+    await fetch(SB_URL+'/functions/v1/send-push',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({title,body})
+    });
+  }catch(e){console.log('Push send error:',e);}
+}
 
 // ========== UNREAD ==========
 async function loadUnread(){
@@ -796,6 +849,8 @@ async function saveAnn(){
   if(!title||!body){T('Titel und Text erforderlich','err');return;}
   await SB.from('announcements').insert({title,body,priority:document.getElementById('af-prio').value,expires_at:document.getElementById('af-exp').value||null,created_by:currentUser.id});
   closeModal('m-ann-form');renderAnn();T('Mitteilung gesendet','ok');
+  // Send push to all
+  sendPushToAll('📢 '+title,body.substring(0,100));
 }
 async function delAnn(id){if(!confirm('Löschen?'))return;await SB.from('announcements').delete().eq('id',id);renderAnn();}
 

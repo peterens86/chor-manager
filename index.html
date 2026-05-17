@@ -729,24 +729,38 @@ window.addEventListener('popstate',e=>{
 const VAPID_PUBLIC='BPp1ZDfFrJXJ9dIq4H4_2or4nRdTCere6_EchSDS7hn40zUaWpiuDH1SDT1YBL7OTkkdX4ZdGIjOgq-NQu-jsfg';
 
 async function setupPush(){
-  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  if(!('serviceWorker' in navigator)){console.log('No SW support');return;}
+  if(!('PushManager' in window)){console.log('No Push support');return;}
   try{
     const reg=await navigator.serviceWorker.register('/chor-manager/sw.js',{scope:'/chor-manager/'});
+    console.log('SW registered:', reg.scope);
     await navigator.serviceWorker.ready;
-    // Check existing subscription
+    console.log('SW ready');
     const existing=await reg.pushManager.getSubscription();
-    if(existing){await savePushSub(existing);return;}
-    // Ask permission
+    if(existing){console.log('Existing push sub found');await savePushSub(existing);return;}
+    // Don't auto-ask – let user trigger via button
+    console.log('No push sub yet – user can enable via profile');
+  }catch(e){console.log('Push setup error:',e);}
+}
+
+async function enablePush(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    T('Push nicht unterstützt auf diesem Gerät','err');return;
+  }
+  try{
     const perm=await Notification.requestPermission();
-    if(perm!=='granted')return;
-    // Subscribe
+    console.log('Permission:', perm);
+    if(perm!=='granted'){T('Benachrichtigungen wurden abgelehnt','err');return;}
+    const reg=await navigator.serviceWorker.ready;
     const sub=await reg.pushManager.subscribe({
       userVisibleOnly:true,
       applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
     });
     await savePushSub(sub);
-    T('🔔 Push-Benachrichtigungen aktiviert','ok');
-  }catch(e){console.log('Push setup:',e);}
+    T('🔔 Benachrichtigungen aktiviert!','ok');
+    // Update button
+    document.getElementById('push-btn')?.remove();
+  }catch(e){console.log('Push enable error:',e);T('Fehler: '+e.message,'err');}
 }
 
 async function savePushSub(sub){
@@ -3539,6 +3553,7 @@ function openProfile(){
       <div class="df"><div class="dl">Rolle</div><div class="dv"><span class="badge ${p.role==='admin'?'warn':''}">${p.role==='admin'?'Admin':'Mitglied'}</span>${p.role2?` <span class="badge blue">${esc(p.role2.split(',').map(r=>r==='dirigent'?'Dirigent':'Klavier').join(' & '))}</span>`:''}</div></div>
       <div class="fg" style="margin-top:10px"><label class="fl">Neues Passwort</label><input class="fi" id="pm-pass" type="password" placeholder="Leer lassen = nicht ändern"></div>
       <div class="fg"><label class="fl">Passwort bestätigen</label><input class="fi" id="pm-pass2" type="password" placeholder="Passwort wiederholen"></div>
+      ${'Notification' in window?`<button class="btn btn-i" style="width:100%;margin-top:8px" id="push-btn" onclick="enablePush()">🔔 Push-Benachrichtigungen aktivieren</button>`:''}
       <button class="btn btn-d" style="width:100%;margin-top:8px" onclick="doLogout()">Abmelden</button>
     </div>`;
   openModal('m-profile');
